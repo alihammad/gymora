@@ -39,10 +39,10 @@ Single Android app module per plan.md Structure Decision:
 **Purpose**: Android project initialization per plan.md Technical Context (Kotlin 2.0,
 Compose + Material 3, Room, Hilt, Coroutines/Flow, Navigation Compose, minSdk 26).
 
-- [ ] T001 Create the Android project scaffold: Gradle Kotlin DSL with version catalog `gradle/libs.versions.toml` (Kotlin 2.0, Compose compiler plugin, KSP, Hilt, Room, Navigation Compose, JUnit, Robolectric, Compose UI test deps), root `settings.gradle.kts`, `app/build.gradle.kts` (minSdk 26, compile/target SDK latest stable, JVM target 17), `app/src/main/AndroidManifest.xml` (single activity, offline — no network permission), `app/proguard-rules.pro`, and `gradle.properties`
-- [ ] T002 [P] Configure static analysis: `config/detekt/detekt.yml` and wire detekt + Android Lint into `app/build.gradle.kts` (Constitution X — never disable checks to pass)
-- [ ] T003 [P] Create Material 3 theme foundation (System/Light/Dark plumbing for FR-051): `com/gymora/ui/theme/Color.kt`, `com/gymora/ui/theme/Type.kt`, `com/gymora/ui/theme/Theme.kt` with gym-comfortable dark palette (FR-051 dark mode, PRD-§40)
-- [ ] T004 [P] Create application entry points: `com/gymora/GymoraApplication.kt` (@HiltAndroidApp) and `com/gymora/MainActivity.kt` (single activity hosting the Compose nav graph)
+- [X] T001 Create the Android project scaffold: Gradle Kotlin DSL with version catalog `gradle/libs.versions.toml` (Kotlin 2.0, Compose compiler plugin, KSP, Hilt, Room, Navigation Compose, JUnit, Robolectric, Compose UI test deps), root `settings.gradle.kts`, `app/build.gradle.kts` (minSdk 26, compile/target SDK latest stable, JVM target 17), `app/src/main/AndroidManifest.xml` (single activity, offline — no network permission), `app/proguard-rules.pro`, and `gradle.properties`
+- [X] T002 [P] Configure static analysis: `config/detekt/detekt.yml` and wire detekt + Android Lint into `app/build.gradle.kts` (Constitution X — never disable checks to pass)
+- [X] T003 [P] Create Material 3 theme foundation (System/Light/Dark plumbing for FR-051): `com/gymora/ui/theme/Color.kt`, `com/gymora/ui/theme/Type.kt`, `com/gymora/ui/theme/Theme.kt` with gym-comfortable dark palette (FR-051 dark mode, PRD-§40)
+- [X] T004 [P] Create application entry points: `com/gymora/GymoraApplication.kt` (@HiltAndroidApp) and `com/gymora/MainActivity.kt` (single activity hosting the Compose nav graph)
 
 ---
 

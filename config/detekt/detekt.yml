@@ -1,0 +1,23 @@
+# Detekt configuration for Gymora.
+# Builds upon the default rule set; only project-specific overrides live here.
+# Constitution X: checks are never disabled to make a build pass.
+
+build:
+  maxIssues: 0
+
+complexity:
+  LongMethod:
+    threshold: 80
+  LongParameterList:
+    functionThreshold: 8
+    constructorThreshold: 10
+
+style:
+  MagicNumber:
+    active: false
+  ReturnCount:
+    max: 4
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']

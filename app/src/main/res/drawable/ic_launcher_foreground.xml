@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Simple barbell glyph -->
+    <group android:scaleX="0.6" android:scaleY="0.6" android:pivotX="54" android:pivotY="54">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M30,44 h6 v20 h-6 z M72,44 h6 v20 h-6 z M24,48 h6 v12 h-6 z M78,48 h6 v12 h-6 z M36,51 h36 v6 h-36 z" />
+    </group>
+</vector>
