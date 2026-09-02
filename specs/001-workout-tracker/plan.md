@@ -110,6 +110,7 @@ app/
     │   ├── AndroidManifest.xml
     │   └── java/com/gymora/
     │       ├── GymoraApplication.kt
+    │       ├── di/                         # Hilt modules (DatabaseModule, RepositoryModule)
     │       ├── ui/                          # Presentation layer (Compose)
     │       │   ├── navigation/             # Nav graph, destinations
     │       │   ├── theme/                  # Material 3 theme, dark mode
@@ -133,9 +134,9 @@ app/
     │           │   ├── dao/                # DAOs
     │           │   └── seed/               # Built-in exercise library seed data
     │           └── repository/             # Repository implementations, mappers
-    ├── test/                               # JVM unit tests (domain, calculators)
-    └── androidTest/                        # Instrumented/Robolectric: Room, DAOs,
-                                            # repositories, migrations, Compose UI tests
+    ├── test/                               # JVM tests: domain/calculator unit tests AND
+    │                                       # Robolectric Room/DAO/repository integration tests
+    └── androidTest/                        # Instrumented: Compose UI tests
 ```
 
 **Structure Decision**: Single Android app module with three layers inside one package
@@ -143,8 +144,8 @@ root — `ui` (presentation) → `domain` (pure Kotlin models, repository interf
 cases, calculators) → `data` (Room entities/DAOs/database, repository implementations,
 seed data). Dependencies point inward only; `domain` has no Android imports. This is the
 simplest structure satisfying Constitution III and PRD-§29/§30 without multi-module
-overhead (Constitution II). Tests live in `test/` (JVM) and `androidTest/` (device/
-Robolectric) per Android convention.
+overhead (Constitution II). Tests live in `test/` (JVM: unit + Robolectric integration)
+and `androidTest/` (device/emulator: Compose UI tests) per Android convention.
 
 ## Complexity Tracking
 

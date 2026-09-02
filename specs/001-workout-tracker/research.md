@@ -245,8 +245,7 @@ Decision / Rationale / Alternatives considered.
   - *JVM unit tests* (`test/`): domain calculators (volume BR-12, duration BR-13, 1RM
     Epley, unit conversion), input validation (BR-16), use-case logic with fake
     repositories.
-  - *Robolectric/JVM integration tests* (`androidTest/` source set run on JVM where
-    possible): DAO behavior, repository flows, **history-protection regression tests**
+  - *Robolectric/JVM integration tests* (`test/` source set, run on the JVM): DAO behavior, repository flows, **history-protection regression tests**
     (routine deletion ≠ history deletion; exercise soft-delete ≠ history corruption;
     rename ≠ history rename), seeding.
   - *Room migration tests*: every schema change ships with a tested, non-destructive
