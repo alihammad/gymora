@@ -1,6 +1,8 @@
 package com.gymora.di
 
+import com.gymora.data.repository.ExerciseRepositoryImpl
 import com.gymora.data.repository.SettingsRepositoryImpl
+import com.gymora.domain.repository.ExerciseRepository
 import com.gymora.domain.repository.SettingsRepository
 import dagger.Binds
 import dagger.Module
@@ -15,4 +17,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindExerciseRepository(impl: ExerciseRepositoryImpl): ExerciseRepository
 }
