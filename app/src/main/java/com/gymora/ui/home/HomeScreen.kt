@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -52,9 +53,15 @@ fun HomeScreen(
     onRecentWorkouts: () -> Unit,
     onHistory: () -> Unit,
     onStartWorkout: ((Long) -> Unit)? = null,
+    onRecentWorkoutClick: ((Long) -> Unit)? = null,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Refresh the recent-workouts section whenever Home becomes visible again.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.loadRecentWorkouts()
+    }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Gymora") }) },
@@ -105,6 +112,24 @@ fun HomeScreen(
                                 onClick = { onRoutineClick(routine.id) },
                                 onStart = { onStartWorkout?.invoke(routine.id) },
                             )
+                        }
+                        // Recent Workouts section (T050a, FR-002, spec Assumption).
+                        if (uiState.recentWorkouts.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "Recent Workouts",
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
+                            items(
+                                uiState.recentWorkouts,
+                                key = { workout -> "recent-${workout.id}" },
+                            ) { workout ->
+                                RecentWorkoutRow(
+                                    workout = workout,
+                                    onClick = { onRecentWorkoutClick?.invoke(workout.id) },
+                                )
+                            }
                         }
                     }
                 }
@@ -157,3 +182,35 @@ private fun RoutineCard(
 
 private fun formatDate(timestamp: Long): String =
     SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(timestamp))
+
+/** Recent-workout row (T050a, FR-002): name, date, duration; tap opens detail. */
+@Composable
+private fun RecentWorkoutRow(
+    workout: com.gymora.domain.model.HistoryEntry,
+    onClick: () -> Unit,
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = workout.routineNameSnapshot, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = formatDate(workout.startedAt.toEpochMilli()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = com.gymora.ui.workout.formatElapsed(workout.duration.seconds),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+}

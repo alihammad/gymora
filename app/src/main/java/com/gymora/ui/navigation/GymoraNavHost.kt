@@ -26,6 +26,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.gymora.ui.history.HistoryScreen
+import com.gymora.ui.history.WorkoutDetailScreen
 import com.gymora.ui.home.HomeScreen
 import com.gymora.ui.library.ExerciseEditorScreen
 import com.gymora.ui.library.ExerciseLibraryScreen
@@ -113,9 +115,18 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
                     onStartWorkout = { routineId ->
                         navController.navigate(Destinations.StartWorkout.create(routineId))
                     },
+                    onRecentWorkoutClick = { sessionId ->
+                        navController.navigate(Destinations.WorkoutDetail.create(sessionId))
+                    },
                 )
             }
-            composable(Destinations.History.route) { PlaceholderScreen("History") }
+            composable(Destinations.History.route) {
+                HistoryScreen(
+                    onEntryClick = { sessionId ->
+                        navController.navigate(Destinations.WorkoutDetail.create(sessionId))
+                    },
+                )
+            }
             composable(Destinations.Exercises.route) {
                 ExerciseLibraryScreen(
                     onExerciseClick = { exerciseId ->
@@ -172,7 +183,9 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
                     },
                 )
             }
-            composable(Destinations.WorkoutDetail.route) { PlaceholderScreen("Workout Detail") }
+            composable(Destinations.WorkoutDetail.route) {
+                WorkoutDetailScreen(onBack = { navController.popBackStack() })
+            }
             composable(Destinations.ExerciseHistory.route) { PlaceholderScreen("Exercise History") }
             composable(Destinations.Records.route) { PlaceholderScreen("Records") }
         }

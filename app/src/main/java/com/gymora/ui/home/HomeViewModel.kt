@@ -2,6 +2,7 @@ package com.gymora.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gymora.domain.repository.HistoryRepository
 import com.gymora.domain.repository.RoutineRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -14,6 +15,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val routineRepository: RoutineRepository,
+    private val historyRepository: HistoryRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -24,6 +26,15 @@ class HomeViewModel @Inject constructor(
             routineRepository.observeAll().collect { routines ->
                 _uiState.update { it.copy(routines = routines, isLoading = false) }
             }
+        }
+        loadRecentWorkouts()
+    }
+
+    /** The 3 most recent completed workouts (spec Assumption, FR-002, T050a). */
+    fun loadRecentWorkouts() {
+        viewModelScope.launch {
+            val recent = historyRepository.listCompleted(limit = RECENT_COUNT, offset = 0)
+            _uiState.update { it.copy(recentWorkouts = recent) }
         }
     }
 
@@ -36,5 +47,9 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             routineRepository.reorder(current.map { it.id })
         }
+    }
+
+    companion object {
+        const val RECENT_COUNT = 3
     }
 }
