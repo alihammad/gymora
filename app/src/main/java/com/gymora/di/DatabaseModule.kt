@@ -5,6 +5,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.gymora.data.local.dao.ExerciseDao
+import com.gymora.data.local.dao.RoutineDao
+import com.gymora.data.local.dao.RoutineExerciseDao
+import com.gymora.data.local.dao.SetTemplateDao
 import com.gymora.data.local.dao.SettingsDao
 import com.gymora.data.local.db.GymoraDatabase
 import com.gymora.data.local.seed.LibrarySeeder
@@ -57,6 +60,17 @@ object DatabaseModule {
 
     @Provides
     fun provideExerciseDao(database: GymoraDatabase): ExerciseDao = database.exerciseDao()
+
+    @Provides
+    fun provideRoutineDao(database: GymoraDatabase): RoutineDao = database.routineDao()
+
+    @Provides
+    fun provideRoutineExerciseDao(database: GymoraDatabase): RoutineExerciseDao =
+        database.routineExerciseDao()
+
+    @Provides
+    fun provideSetTemplateDao(database: GymoraDatabase): SetTemplateDao =
+        database.setTemplateDao()
 
     /** Built-in exercise library seeder (T017, R-08). */
     @Provides
