@@ -51,7 +51,7 @@ the corresponding automated test named in parentheses.
 5. Tap FINISH WORKOUT. **Expect**: confirmation shows duration, exercise count, completed
    set count, total volume; after confirming, summary shows all FR-035 fields.
 6. Verify total volume = Σ(weight × reps) of completed weighted sets (BR-12).
-   *(tests: `WorkoutExecutionTest`, `VolumeCalculatorTest`)*
+   *(tests: `WorkoutExecutionTest`, `WorkoutCalculatorsTest`)*
 
 ### 3. Crash recovery (FR-027, FR-038, FR-039, SC-003)
 

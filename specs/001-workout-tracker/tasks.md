@@ -16,8 +16,9 @@ independent implementation and testing of each story.
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (US1..US11)
 - All paths are relative to the repository root; Android source root is
-  `app/src/main/java/com/gymora/` (abbreviated `com/gymora/` below), JVM tests in
-  `app/src/test/java/com/gymora/`, instrumented/Robolectric tests in
+  `app/src/main/java/com/gymora/` (abbreviated `com/gymora/` below). JVM tests —
+  domain unit tests AND Robolectric Room/repository integration tests — live in
+  `app/src/test/java/com/gymora/`; instrumented Compose UI tests live in
   `app/src/androidTest/java/com/gymora/`.
 
 ## Path Conventions
@@ -40,7 +41,7 @@ Compose + Material 3, Room, Hilt, Coroutines/Flow, Navigation Compose, minSdk 26
 
 - [ ] T001 Create the Android project scaffold: Gradle Kotlin DSL with version catalog `gradle/libs.versions.toml` (Kotlin 2.0, Compose compiler plugin, KSP, Hilt, Room, Navigation Compose, JUnit, Robolectric, Compose UI test deps), root `settings.gradle.kts`, `app/build.gradle.kts` (minSdk 26, compile/target SDK latest stable, JVM target 17), `app/src/main/AndroidManifest.xml` (single activity, offline — no network permission), `app/proguard-rules.pro`, and `gradle.properties`
 - [ ] T002 [P] Configure static analysis: `config/detekt/detekt.yml` and wire detekt + Android Lint into `app/build.gradle.kts` (Constitution X — never disable checks to pass)
-- [ ] T003 [P] Create Material 3 theme foundation (System/Light/Dark plumbing for FR-051): `com/gymora/ui/theme/Color.kt`, `com/gymora/ui/theme/Type.kt`, `com/gymora/ui/theme/Theme.kt` with gym-comfortable dark palette (FR-040 dark mode, PRD-§40)
+- [ ] T003 [P] Create Material 3 theme foundation (System/Light/Dark plumbing for FR-051): `com/gymora/ui/theme/Color.kt`, `com/gymora/ui/theme/Type.kt`, `com/gymora/ui/theme/Theme.kt` with gym-comfortable dark palette (FR-051 dark mode, PRD-§40)
 - [ ] T004 [P] Create application entry points: `com/gymora/GymoraApplication.kt` (@HiltAndroidApp) and `com/gymora/MainActivity.kt` (single activity hosting the Compose nav graph)
 
 ---
@@ -56,9 +57,9 @@ shared UI components.
 - [ ] T005 [P] Create domain enums and value types in `com/gymora/domain/model/Enums.kt`: `WeightUnit { KG, LB }`, `Theme { SYSTEM, LIGHT, DARK }`, `MeasurementType { WEIGHT_AND_REPS, REPS_ONLY }`, `MuscleGroup { CHEST, BACK, SHOULDERS, ARMS, LEGS }`, `SessionStatus { ACTIVE, COMPLETED }` (data-model.md)
 - [ ] T006 [P] Create domain error types in `com/gymora/domain/model/Errors.kt`: `ValidationException(field, message)`, `ActiveWorkoutConflictException(activeSessionId)`, `EntityNotFoundException(id)` (contracts/repositories.md error model)
 - [ ] T007 [P] Create shared UI components: empty-state composable with exact spec copy ("No workout routines yet." + create action; "Your completed workouts will appear here."; no-search-results state) in `com/gymora/ui/components/EmptyStates.kt` and confirm-dialog composable in `com/gymora/ui/components/ConfirmDialogs.kt` (FR-059, FR-012)
-- [ ] T008 Create Room database shell `com/gymora/data/local/db/GymoraDatabase.kt` (version 1, @Database with all 8 entities from data-model.md, `fallbackToDestructiveMigration` NOT configured per BR-19) and Hilt module `com/gymora/di/DatabaseModule.kt` providing database + DAOs + `onCreate` seeding callback hook (R-08)
-- [ ] T009 Create navigation shell `com/gymora/ui/navigation/GymoraNavHost.kt` and `com/gymora/ui/navigation/Destinations.kt`: bottom nav with Home, History, Exercises, Settings (FR-004, PRD-§28) plus destinations for routine detail/editor, exercise editor, active workout (dedicated experience replacing bottom nav — FR-004), workout summary, workout detail, exercise history, records; placeholder screens where needed
-- [ ] T010 Create settings persistence foundation (needed by theme plumbing and many stories): Room entity `com/gymora/data/local/entity/SettingsEntity.kt` (single-row, defaults KG/90s/SYSTEM per data-model.md), DAO `com/gymora/data/local/dao/SettingsDao.kt`, domain model `Settings` in `com/gymora/domain/model/Settings.kt`, `SettingsRepository` interface in `com/gymora/domain/repository/SettingsRepository.kt`, implementation `com/gymora/data/repository/SettingsRepositoryImpl.kt` (FR-048..FR-051; settings in Room, not SharedPreferences — FR-054), Hilt binding in `com/gymora/di/RepositoryModule.kt`, and theme application wiring in `MainActivity.kt`
+- [ ] T008 Create Room database shell `com/gymora/data/local/db/GymoraDatabase.kt` (version 1, @Database declaring ONLY `SettingsEntity` at this point — created here as the single-row entity per data-model.md with defaults KG/90s/SYSTEM; the remaining entities are registered into the @Database entity list by their story tasks T014/T025/T035 as they land, and the schema stays frozen at version 1 until release so no migrations are required; `fallbackToDestructiveMigration` NOT configured per BR-19) and Hilt module `com/gymora/di/DatabaseModule.kt` providing database + DAOs + `onCreate` seeding callback hook (R-08)
+- [ ] T009 Create navigation shell `com/gymora/ui/navigation/GymoraNavHost.kt` and `com/gymora/ui/navigation/Destinations.kt`: bottom nav with Home, History, Exercises, Settings (FR-004, PRD-§28) plus destinations for routine list (My Routines), routine detail/editor, exercise editor, active workout (dedicated experience replacing bottom nav — FR-004), workout summary, workout detail, exercise history, records; placeholder screens where needed
+- [ ] T010 Create settings persistence foundation (needed by theme plumbing and many stories): Room entity `SettingsEntity` is created in T008; here add DAO `com/gymora/data/local/dao/SettingsDao.kt`, domain model `Settings` in `com/gymora/domain/model/Settings.kt`, `SettingsRepository` interface in `com/gymora/domain/repository/SettingsRepository.kt`, implementation `com/gymora/data/repository/SettingsRepositoryImpl.kt` (FR-048..FR-051; settings in Room, not SharedPreferences — FR-054), Hilt binding in `com/gymora/di/RepositoryModule.kt`, and theme application wiring in `MainActivity.kt`
 
 **Checkpoint**: Foundation ready — app builds, navigation shell runs, database creates,
 settings persist. User story implementation can now begin.
@@ -79,12 +80,12 @@ confirm it appears in search — no routine or workout needed (spec US1).
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
 - [ ] T011 [P] [US1] Unit test for exercise input validation (blank name rejected, muscle group restricted) in `app/src/test/java/com/gymora/domain/ExerciseValidationTest.kt`
-- [ ] T012 [P] [US1] Robolectric/Room test: seeding inserts 30+ built-in exercises across 5 muscle groups, is idempotent, and seeds zero routines in `app/src/androidTest/java/com/gymora/data/LibrarySeedingTest.kt` (FR-005, FR-010, SC-008)
-- [ ] T013 [P] [US1] Robolectric/Room test: ExerciseRepository — create custom, edit, search includes custom exercises, soft delete hides from library/search but keeps row in `app/src/androidTest/java/com/gymora/data/ExerciseRepositoryTest.kt` (FR-006..FR-009)
+- [ ] T012 [P] [US1] Robolectric/Room test: seeding inserts 30+ built-in exercises across 5 muscle groups, is idempotent, and seeds zero routines in `app/src/test/java/com/gymora/data/LibrarySeedingTest.kt` (FR-005, FR-010, SC-008)
+- [ ] T013 [P] [US1] Robolectric/Room test: ExerciseRepository — create custom, edit, search includes custom exercises, soft delete hides from library/search but keeps row in `app/src/test/java/com/gymora/data/ExerciseRepositoryTest.kt` (FR-006..FR-009)
 
 ### Implementation for User Story 1
 
-- [ ] T014 [P] [US1] Create Room entity `com/gymora/data/local/entity/ExerciseEntity.kt` per data-model.md (name, muscle_group, description, notes, is_custom, deleted_at, timestamps; partial index for active-name lookup)
+- [ ] T014 [P] [US1] Create Room entity `com/gymora/data/local/entity/ExerciseEntity.kt` per data-model.md (name, muscle_group, description, notes, is_custom, deleted_at, timestamps; partial index for active-name lookup) and register it in the `GymoraDatabase` @Database entity list (per T008 incremental registration)
 - [ ] T015 [P] [US1] Create domain model `com/gymora/domain/model/Exercise.kt`
 - [ ] T016 [US1] Create `com/gymora/data/local/dao/ExerciseDao.kt` (observe active library, case-insensitive name search excluding soft-deleted, insert/update, soft-delete timestamp update, get-by-id)
 - [ ] T017 [US1] Create seed data `com/gymora/data/local/seed/ExerciseSeedData.kt` — 30+ exercises from PRD-§6 lists across Chest/Back/Shoulders/Arms/Legs (SC-008) — and seeder `com/gymora/data/local/seed/LibrarySeeder.kt` invoked transactionally from the Room onCreate callback (R-08)
@@ -111,18 +112,19 @@ workout execution required (spec US2).
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
 - [ ] T022 [P] [US2] Unit tests for routine validation and duplicate naming ("<name> Copy") in `app/src/test/java/com/gymora/domain/RoutineRulesTest.kt` (FR-011, FR-014)
-- [ ] T023 [P] [US2] Robolectric/Room test: RoutineRepository — create/rename/delete/duplicate/reorder, add/remove/reorder exercises, set template CRUD, positions persist in `app/src/androidTest/java/com/gymora/data/RoutineRepositoryTest.kt` (FR-011..FR-018)
-- [ ] T024 [P] [US2] Robolectric/Room regression test: deleting a routine never deletes or alters workout history rows; deleting an exercise referenced by templates removes template references but never touches history (BR-03, BR-04, SC-005) in `app/src/androidTest/java/com/gymora/data/TemplateDeletionHistoryProtectionTest.kt`
+- [ ] T023 [P] [US2] Robolectric/Room test: RoutineRepository — create/rename/delete/duplicate/reorder, add/remove/reorder exercises, set template CRUD, positions persist in `app/src/test/java/com/gymora/data/RoutineRepositoryTest.kt` (FR-011..FR-018)
+- [ ] T024 [P] [US2] Robolectric/Room regression test: deleting a routine never deletes or alters workout history rows; deleting an exercise referenced by templates removes template references but never touches history (BR-03, BR-04, SC-005) in `app/src/test/java/com/gymora/data/TemplateDeletionHistoryProtectionTest.kt`
 
 ### Implementation for User Story 2
 
-- [ ] T025 [P] [US2] Create Room entities `com/gymora/data/local/entity/RoutineEntity.kt` (position column for home order), `RoutineExerciseEntity.kt` (UNIQUE(routine_id, position)), `SetTemplateEntity.kt` (UNIQUE(routine_exercise_id, set_number), measurement_type, target_weight_unit) per data-model.md
+- [ ] T025 [P] [US2] Create Room entities `com/gymora/data/local/entity/RoutineEntity.kt` (position column for home order), `RoutineExerciseEntity.kt` (UNIQUE(routine_id, position)), `SetTemplateEntity.kt` (UNIQUE(routine_exercise_id, set_number), measurement_type, target_weight_unit) per data-model.md, and register all three in the `GymoraDatabase` @Database entity list (per T008 incremental registration)
 - [ ] T026 [P] [US2] Create domain models `com/gymora/domain/model/Routine.kt` (`RoutineSummary`, `RoutineDetail`, `RoutineExerciseDetail`, `SetTemplate`, `SetTemplateInput`)
 - [ ] T027 [US2] Create DAOs `com/gymora/data/local/dao/RoutineDao.kt`, `RoutineExerciseDao.kt`, `SetTemplateDao.kt` (ordered reads by position, cascade-safe deletes, transactional reorder)
 - [ ] T028 [US2] Implement `RoutineRepository` interface in `com/gymora/domain/repository/RoutineRepository.kt` and implementation in `com/gymora/data/repository/RoutineRepositoryImpl.kt` (create/rename/updateDescription/delete/duplicate/reorder + exercise membership + set templates); bind in `com/gymora/di/RepositoryModule.kt` (contracts/repositories.md)
 - [ ] T029 [US2] Implement use cases `com/gymora/domain/usecase/DeleteRoutineUseCase.kt` (template-only deletion, FR-013), `DuplicateRoutineUseCase.kt` (deep copy, R-10), and complete `DeleteExerciseUseCase.kt` in `com/gymora/domain/usecase/DeleteExerciseUseCase.kt` (soft delete + remove from routine templates with confirmation, R-03/OQ-2)
 - [ ] T030 [US2] Implement home screen `com/gymora/ui/home/HomeScreen.kt`, `HomeViewModel.kt`, `HomeUiState.kt`: routine cards (name, exercise count, last-performed date, START), drag-to-reorder persisting positions, Create Routine action, navigation links to My Routines / Recent Workouts / History, empty state (FR-001, FR-002, FR-015, FR-059)
 - [ ] T031 [US2] Implement routine detail/editor `com/gymora/ui/routines/RoutineEditorScreen.kt`, `RoutineEditorViewModel.kt`, `RoutineEditorUiState.kt`: rename, description, add exercises (library picker excluding soft-deleted), remove/reorder exercises, per-exercise notes, set template add/edit/delete (target reps × target weight), duplicate, delete-with-confirmation (FR-011..FR-018, PRD-§36)
+- [ ] T031a [US2] Implement My Routines list destination `com/gymora/ui/routines/RoutineListScreen.kt` + `RoutineListViewModel.kt`: all routines ordered by position (RoutineRepository.observeAll), tap opens routine detail/editor, reachable from the Home "My Routines" link wired in T030 (FR-002)
 
 **Checkpoint**: User Stories 1 and 2 both work independently.
 
@@ -143,12 +145,12 @@ verify summary figures (duration, sets, reps, volume) (spec US3).
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
 - [ ] T032 [P] [US3] Unit tests for calculators in `app/src/test/java/com/gymora/domain/WorkoutCalculatorsTest.kt`: volume = Σ(weight×reps) over completed weighted sets (BR-12), duration/elapsed from timestamps (BR-13), input validation (negative weight/reps rejected, zero weight allowed, decimals accepted — BR-16)
-- [ ] T033 [P] [US3] Robolectric/Room test: start workout copies routine into session rows with status ACTIVE and start timestamp; at-most-one-active enforced; set logging persists immediately; add/delete sets; add exercise (both "add to routine" and "this workout only"); remove exercise leaves routine untouched in `app/src/androidTest/java/com/gymora/data/WorkoutExecutionTest.kt` (FR-019, FR-020, FR-023..FR-029)
-- [ ] T034 [P] [US3] Robolectric/Room test: finish records end timestamp, sets COMPLETED, returns correct summary; discard deletes session permanently; zero-completed-set finish allowed in `app/src/androidTest/java/com/gymora/data/WorkoutFinishDiscardTest.kt` (FR-033..FR-037, BR-15)
+- [ ] T033 [P] [US3] Robolectric/Room test: start workout copies routine into session rows with status ACTIVE and start timestamp; at-most-one-active enforced; set logging persists immediately; add/delete sets; add exercise (both "add to routine" and "this workout only"); remove exercise leaves routine untouched in `app/src/test/java/com/gymora/data/WorkoutExecutionTest.kt` (FR-019, FR-020, FR-023..FR-029)
+- [ ] T034 [P] [US3] Robolectric/Room test: finish records end timestamp, sets COMPLETED, returns correct summary; discard deletes session permanently; zero-completed-set finish allowed in `app/src/test/java/com/gymora/data/WorkoutFinishDiscardTest.kt` (FR-033..FR-037, BR-15)
 
 ### Implementation for User Story 3
 
-- [ ] T035 [P] [US3] Create Room entities `com/gymora/data/local/entity/WorkoutSessionEntity.kt` (routine_name_snapshot NOT NULL, status, partial UNIQUE index on status='ACTIVE' enforcing BR-14 at persistence layer), `WorkoutExerciseEntity.kt` (exercise_name_snapshot, position), `WorkoutSetEntity.kt` (weight+weight_unit, reps, measurement_type, is_completed, completed_at) per data-model.md
+- [ ] T035 [P] [US3] Create Room entities `com/gymora/data/local/entity/WorkoutSessionEntity.kt` (routine_name_snapshot NOT NULL, status, partial UNIQUE index on status='ACTIVE' enforcing BR-14 at persistence layer), `WorkoutExerciseEntity.kt` (exercise_name_snapshot, position), `WorkoutSetEntity.kt` (weight+weight_unit, reps, measurement_type, is_completed, completed_at) per data-model.md, and register all three in the `GymoraDatabase` @Database entity list (per T008 incremental registration; with T014/T025 this completes the full 8-entity schema from data-model.md)
 - [ ] T036 [P] [US3] Create domain models `com/gymora/domain/model/Workout.kt`: `WorkoutSession`, `ActiveWorkout`, `ActiveExercise`, `SetValue`, `WorkoutSummary`, `WorkoutDetail`
 - [ ] T037 [US3] Create DAOs `com/gymora/data/local/dao/WorkoutSessionDao.kt` (observe ACTIVE, insert, finish update, delete), `WorkoutExerciseDao.kt`, `WorkoutSetDao.kt` (immediate single-row writes) with indexes per data-model.md
 - [ ] T038 [US3] Implement calculators `com/gymora/domain/calculator/WorkoutCalculators.kt`: totalVolume (unit-normalized), duration/elapsed from Instants, convertWeight (1 lb = 0.45359237 kg) (BR-12/13, R-04)
@@ -174,7 +176,7 @@ the recovery prompt with correct elapsed time, resume, verify all sets and timer
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T043 [P] [US4] Robolectric test: on launch with an ACTIVE session the recovery state exposes workout name + start time; resume returns full session graph with all logged sets; discard path requires explicit confirmation before deletion in `app/src/androidTest/java/com/gymora/data/WorkoutRecoveryTest.kt` (FR-038, FR-039, SC-003)
+- [ ] T043 [P] [US4] Robolectric test: on launch with an ACTIVE session the recovery state exposes workout name + start time; resume returns full session graph with all logged sets; discard path requires explicit confirmation before deletion in `app/src/test/java/com/gymora/data/WorkoutRecoveryTest.kt` (FR-038, FR-039, SC-003)
 
 ### Implementation for User Story 4
 
@@ -198,14 +200,15 @@ and complete original data (spec US5).
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T046 [P] [US5] Robolectric/Room regression test (mandatory per spec quality constraint): renaming/deleting routines or exercises changes 0 historical records; history detail displays snapshot names in `app/src/androidTest/java/com/gymora/data/HistoryProtectionTest.kt` (FR-043, BR-11, SC-005)
-- [ ] T047 [P] [US5] Robolectric/Room test: history lists only COMPLETED sessions newest-first with LIMIT/OFFSET paging; empty history returns empty list in `app/src/androidTest/java/com/gymora/data/HistoryRepositoryTest.kt` (FR-040, FR-058, R-12)
+- [ ] T046 [P] [US5] Robolectric/Room regression test (mandatory per spec quality constraint): renaming/deleting routines or exercises changes 0 historical records; history detail displays snapshot names in `app/src/test/java/com/gymora/data/HistoryProtectionTest.kt` (FR-043, BR-11, SC-005)
+- [ ] T047 [P] [US5] Robolectric/Room test: history lists only COMPLETED sessions newest-first with LIMIT/OFFSET paging; empty history returns empty list in `app/src/test/java/com/gymora/data/HistoryRepositoryTest.kt` (FR-040, FR-058, R-12)
 
 ### Implementation for User Story 5
 
 - [ ] T048 [US5] Implement `HistoryRepository` interface in `com/gymora/domain/repository/HistoryRepository.kt` and read-side implementation in `com/gymora/data/repository/HistoryRepositoryImpl.kt` (listCompleted paged by started_at DESC, getWorkoutDetail full graph from snapshot rows — no joins to templates for display names) (contracts/repositories.md, R-07)
 - [ ] T049 [US5] Implement history list UI `com/gymora/ui/history/HistoryScreen.kt`, `HistoryViewModel.kt`, `HistoryUiState.kt`: newest-first entries (date, workout name, duration), incremental loading in LazyColumn (FR-040, FR-058), empty state "Your completed workouts will appear here." (FR-059)
 - [ ] T050 [US5] Implement read-only workout detail UI `com/gymora/ui/history/WorkoutDetailScreen.kt` showing every exercise and set as performed (FR-041)
+- [ ] T050a [US5] Implement the Recent Workouts section on `HomeScreen.kt`/`HomeViewModel.kt`: the 3 most recent completed workouts (HistoryRepository.listCompleted(limit=3) per contracts/usecases.md Home mapping; spec Assumption "Recent Workouts on home"), tap opens workout detail, wired to the Home "Recent Workouts" link from T030 (FR-002)
 
 **Checkpoint**: All five P1 stories independently functional — full core product complete.
 
@@ -223,7 +226,7 @@ and fields pre-filled, modify one value, verify the saved set reflects the edit 
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T051 [P] [US6] Robolectric/Room test: previous-performance lookup returns most recent completed sets per exercise; returns null for never-performed exercises; pre-filled values are overridable on save in `app/src/androidTest/java/com/gymora/data/PreviousPerformanceTest.kt` (FR-045, FR-046, SC-002)
+- [ ] T051 [P] [US6] Robolectric/Room test: previous-performance lookup returns most recent completed sets per exercise; returns null for never-performed exercises; pre-filled values are overridable on save in `app/src/test/java/com/gymora/data/PreviousPerformanceTest.kt` (FR-045, FR-046, SC-002)
 
 ### Implementation for User Story 6
 
@@ -245,7 +248,7 @@ dates; both performances appear newest-first with all sets (spec US7).
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T054 [P] [US7] Robolectric/Room test: exercise history returns all performances by date newest-first with all sets, paged via indexed exercise_id lookup in `app/src/androidTest/java/com/gymora/data/ExerciseHistoryTest.kt` (FR-044, R-07)
+- [ ] T054 [P] [US7] Robolectric/Room test: exercise history returns all performances by date newest-first with all sets, paged via indexed exercise_id lookup in `app/src/test/java/com/gymora/data/ExerciseHistoryTest.kt` (FR-044, R-07)
 
 ### Implementation for User Story 7
 
@@ -293,7 +296,7 @@ persisted, with lossless display conversion of all recorded weights on unit swit
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
 - [ ] T060 [P] [US9] Unit test: convertWeight is lossless/reversible (kg→lb→kg returns original typed value) using exact factor 0.45359237 in `app/src/test/java/com/gymora/domain/UnitConversionTest.kt` (FR-049, R-04)
-- [ ] T061 [P] [US9] Robolectric test: settings persist across database reopen; unit switch never rewrites stored weights; display conversion applies to history/summary/previous-performance/records values in `app/src/androidTest/java/com/gymora/data/SettingsPersistenceTest.kt` (FR-048..FR-052)
+- [ ] T061 [P] [US9] Robolectric test: settings persist across database reopen; unit switch never rewrites stored weights; display conversion applies to history/summary/previous-performance/records values in `app/src/test/java/com/gymora/data/SettingsPersistenceTest.kt` (FR-048..FR-052)
 
 ### Implementation for User Story 9
 
@@ -317,7 +320,7 @@ expectations and update when surpassed (spec US10).
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
 - [ ] T064 [P] [US10] Unit test for Epley 1RM (weight × (1 + reps/30); reps ≥ 1; excludes REPS_ONLY/zero-weight sets) and records selection logic in `app/src/test/java/com/gymora/domain/PersonalRecordsTest.kt` (FR-047, R-09)
-- [ ] T065 [P] [US10] Robolectric/Room test: records computed from completed sessions update when surpassed and carry exercise/date context in `app/src/androidTest/java/com/gymora/data/RecordsRepositoryTest.kt` (FR-047)
+- [ ] T065 [P] [US10] Robolectric/Room test: records computed from completed sessions update when surpassed and carry exercise/date context in `app/src/test/java/com/gymora/data/RecordsRepositoryTest.kt` (FR-047)
 
 ### Implementation for User Story 10
 
@@ -341,7 +344,7 @@ history, routines, and templates remain untouched (spec US11).
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T068 [P] [US11] Robolectric/Room test: historical corrections write only to the target session's rows; routines/templates/other workouts unchanged; history stays read-only unless edit explicitly chosen in `app/src/androidTest/java/com/gymora/data/HistoricalCorrectionTest.kt` (FR-042, BR-11)
+- [ ] T068 [P] [US11] Robolectric/Room test: historical corrections write only to the target session's rows; routines/templates/other workouts unchanged; history stays read-only unless edit explicitly chosen in `app/src/test/java/com/gymora/data/HistoricalCorrectionTest.kt` (FR-042, BR-11)
 
 ### Implementation for User Story 11
 
@@ -357,8 +360,8 @@ history, routines, and templates remain untouched (spec US11).
 **Purpose**: Improvements affecting multiple stories; final validation against the spec.
 
 - [ ] T071 [P] Accessibility pass (FR-061, PRD-§52): content descriptions, labeled controls, touch target sizes, readable contrast, set-completion indication not color-only — across `com/gymora/ui/` screens
-- [ ] T072 [P] Large-history performance validation (SC-006, quickstart scenario 7): fixture generating 1,000+ completed workouts and `app/src/androidTest/java/com/gymora/data/HistoryPagingTest.kt` verifying incremental loading and responsive scrolling
-- [ ] T073 [P] Compose UI tests for critical journeys in `app/src/androidTest/java/com/gymora/ui/`: start→log→finish workout, recovery prompt flow, cancel/discard confirmation, empty states (Constitution VII end-to-end coverage)
+- [ ] T072 [P] Large-history performance validation (SC-006, quickstart scenario 7): fixture generating 1,000+ completed workouts and `app/src/test/java/com/gymora/data/HistoryPagingTest.kt` verifying incremental loading and responsive scrolling
+- [ ] T073 [P] Compose UI tests for critical journeys in `app/src/androidTest/java/com/gymora/ui/`: start→log→finish workout, recovery prompt flow, cancel/discard confirmation, empty states, and elapsed-timer accuracy after navigation/backgrounding (displayed elapsed matches timestamp-derived duration — SC-004) (Constitution VII end-to-end coverage)
 - [ ] T074 Error-handling audit (FR-060, R-15): verify all repository failures map to user-friendly messages, no stack traces surface, recoverable UI state preserved — across ViewModels in `com/gymora/ui/`
 - [ ] T075 Offline verification (SC-007): confirm zero network permissions/usage and full functionality with connectivity disabled; document result in `specs/001-workout-tracker/quickstart.md` validation notes
 - [ ] T076 Run full quickstart.md validation (all 10 scenarios + definition-of-done checklist) in `specs/001-workout-tracker/quickstart.md` and fix any failures
@@ -411,8 +414,8 @@ history, routines, and templates remain untouched (spec US11).
 ```bash
 # Launch all US1 tests together (write first, expect failures):
 Task: "Unit test for exercise input validation in app/src/test/java/com/gymora/domain/ExerciseValidationTest.kt"
-Task: "Robolectric/Room test: seeding in app/src/androidTest/java/com/gymora/data/LibrarySeedingTest.kt"
-Task: "Robolectric/Room test: ExerciseRepository in app/src/androidTest/java/com/gymora/data/ExerciseRepositoryTest.kt"
+Task: "Robolectric/Room test: seeding in app/src/test/java/com/gymora/data/LibrarySeedingTest.kt"
+Task: "Robolectric/Room test: ExerciseRepository in app/src/test/java/com/gymora/data/ExerciseRepositoryTest.kt"
 
 # Launch US1 entity + domain model together:
 Task: "Create Room entity com/gymora/data/local/entity/ExerciseEntity.kt"
@@ -424,8 +427,8 @@ Task: "Create domain model com/gymora/domain/model/Exercise.kt"
 ```bash
 # Launch all US3 tests together:
 Task: "Unit tests for calculators in app/src/test/java/com/gymora/domain/WorkoutCalculatorsTest.kt"
-Task: "Robolectric/Room test: workout execution in app/src/androidTest/java/com/gymora/data/WorkoutExecutionTest.kt"
-Task: "Robolectric/Room test: finish/discard in app/src/androidTest/java/com/gymora/data/WorkoutFinishDiscardTest.kt"
+Task: "Robolectric/Room test: workout execution in app/src/test/java/com/gymora/data/WorkoutExecutionTest.kt"
+Task: "Robolectric/Room test: finish/discard in app/src/test/java/com/gymora/data/WorkoutFinishDiscardTest.kt"
 
 # Launch US3 entities + domain models together:
 Task: "Create Room entities WorkoutSessionEntity/WorkoutExerciseEntity/WorkoutSetEntity"

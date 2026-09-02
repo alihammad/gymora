@@ -333,7 +333,7 @@ If the user entered data incorrectly in a past workout, they can correct it. His
 - **Routine**: A reusable workout template. Attributes: identity, name, optional description, creation/update timestamps.
 - **Routine Exercise**: The ordered link between a routine and an exercise, with position and optional notes.
 - **Set Template**: A planned set within a routine exercise: set number, target repetitions, target weight.
-- **Workout Session**: A historical record of one gym session. Attributes: identity, optional reference to the source routine, snapshot of the routine name at workout time, start time, end time, status (active / completed / discarded), optional notes, creation time.
+- **Workout Session**: A historical record of one gym session. Attributes: identity, optional reference to the source routine, snapshot of the routine name at workout time, start time, end time, status (active / completed), optional notes, creation time. (Discarded sessions are removed permanently per BR-15 and never appear in history.)
 - **Workout Exercise**: An exercise as performed in a session: ordered position, optional reference to the exercise, snapshot of the exercise name at workout time, optional notes.
 - **Workout Set**: A set as actually performed: set number, repetitions, weight, completion status, completion time, optional notes.
 - **Settings**: User preferences — weight unit, default rest duration, theme, and room for future preferences.
