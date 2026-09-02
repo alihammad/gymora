@@ -79,20 +79,20 @@ confirm it appears in search — no routine or workout needed (spec US1).
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T011 [P] [US1] Unit test for exercise input validation (blank name rejected, muscle group restricted) in `app/src/test/java/com/gymora/domain/ExerciseValidationTest.kt`
-- [ ] T012 [P] [US1] Robolectric/Room test: seeding inserts 30+ built-in exercises across 5 muscle groups, is idempotent, and seeds zero routines in `app/src/test/java/com/gymora/data/LibrarySeedingTest.kt` (FR-005, FR-010, SC-008)
-- [ ] T013 [P] [US1] Robolectric/Room test: ExerciseRepository — create custom, edit, search includes custom exercises, soft delete hides from library/search but keeps row in `app/src/test/java/com/gymora/data/ExerciseRepositoryTest.kt` (FR-006..FR-009)
+- [X] T011 [P] [US1] Unit test for exercise input validation (blank name rejected, muscle group restricted) in `app/src/test/java/com/gymora/domain/ExerciseValidationTest.kt`
+- [X] T012 [P] [US1] Robolectric/Room test: seeding inserts 30+ built-in exercises across 5 muscle groups, is idempotent, and seeds zero routines in `app/src/test/java/com/gymora/data/LibrarySeedingTest.kt` (FR-005, FR-010, SC-008)
+- [X] T013 [P] [US1] Robolectric/Room test: ExerciseRepository — create custom, edit, search includes custom exercises, soft delete hides from library/search but keeps row in `app/src/test/java/com/gymora/data/ExerciseRepositoryTest.kt` (FR-006..FR-009)
 
 ### Implementation for User Story 1
 
-- [ ] T014 [P] [US1] Create Room entity `com/gymora/data/local/entity/ExerciseEntity.kt` per data-model.md (name, muscle_group, description, notes, is_custom, deleted_at, timestamps; partial index for active-name lookup) and register it in the `GymoraDatabase` @Database entity list (per T008 incremental registration)
-- [ ] T015 [P] [US1] Create domain model `com/gymora/domain/model/Exercise.kt`
-- [ ] T016 [US1] Create `com/gymora/data/local/dao/ExerciseDao.kt` (observe active library, case-insensitive name search excluding soft-deleted, insert/update, soft-delete timestamp update, get-by-id)
-- [ ] T017 [US1] Create seed data `com/gymora/data/local/seed/ExerciseSeedData.kt` — 30+ exercises from PRD-§6 lists across Chest/Back/Shoulders/Arms/Legs (SC-008) — and seeder `com/gymora/data/local/seed/LibrarySeeder.kt` invoked transactionally from the Room onCreate callback (R-08)
-- [ ] T018 [US1] Implement `ExerciseRepository` interface in `com/gymora/domain/repository/ExerciseRepository.kt` and implementation with entity↔domain mappers in `com/gymora/data/repository/ExerciseRepositoryImpl.kt`; bind in `com/gymora/di/RepositoryModule.kt` (contracts/repositories.md)
-- [ ] T019 [US1] Implement library browse/search UI: `com/gymora/ui/library/ExerciseLibraryScreen.kt`, `ExerciseLibraryViewModel.kt`, `ExerciseLibraryUiState.kt` — grouped by muscle group, search field with empty-result state (FR-008)
-- [ ] T020 [US1] Implement custom exercise create/edit UI: `com/gymora/ui/library/ExerciseEditorScreen.kt`, `ExerciseEditorViewModel.kt` — name required, optional muscle group/description/notes (FR-006, FR-007)
-- [ ] T021 [US1] Implement exercise delete flow with confirmation dialog in `ExerciseLibraryScreen.kt` calling soft delete; wire `DeleteExerciseUseCase` stub behavior (template-reference removal lands in US2's routine tables) (FR-009, R-03)
+- [X] T014 [P] [US1] Create Room entity `com/gymora/data/local/entity/ExerciseEntity.kt` per data-model.md (name, muscle_group, description, notes, is_custom, deleted_at, timestamps; partial index for active-name lookup) and register it in the `GymoraDatabase` @Database entity list (per T008 incremental registration)
+- [X] T015 [P] [US1] Create domain model `com/gymora/domain/model/Exercise.kt`
+- [X] T016 [US1] Create `com/gymora/data/local/dao/ExerciseDao.kt` (observe active library, case-insensitive name search excluding soft-deleted, insert/update, soft-delete timestamp update, get-by-id)
+- [X] T017 [US1] Create seed data `com/gymora/data/local/seed/ExerciseSeedData.kt` — 30+ exercises from PRD-§6 lists across Chest/Back/Shoulders/Arms/Legs (SC-008) — and seeder `com/gymora/data/local/seed/LibrarySeeder.kt` invoked transactionally from the Room onCreate callback (R-08)
+- [X] T018 [US1] Implement `ExerciseRepository` interface in `com/gymora/domain/repository/ExerciseRepository.kt` and implementation with entity↔domain mappers in `com/gymora/data/repository/ExerciseRepositoryImpl.kt`; bind in `com/gymora/di/RepositoryModule.kt` (contracts/repositories.md)
+- [X] T019 [US1] Implement library browse/search UI: `com/gymora/ui/library/ExerciseLibraryScreen.kt`, `ExerciseLibraryViewModel.kt`, `ExerciseLibraryUiState.kt` — grouped by muscle group, search field with empty-result state (FR-008)
+- [X] T020 [US1] Implement custom exercise create/edit UI: `com/gymora/ui/library/ExerciseEditorScreen.kt`, `ExerciseEditorViewModel.kt` — name required, optional muscle group/description/notes (FR-006, FR-007)
+- [X] T021 [US1] Implement exercise delete flow with confirmation dialog in `ExerciseLibraryScreen.kt` calling soft delete; wire `DeleteExerciseUseCase` stub behavior (template-reference removal lands in US2's routine tables) (FR-009, R-03)
 
 **Checkpoint**: User Story 1 fully functional and independently testable (MVP).
 

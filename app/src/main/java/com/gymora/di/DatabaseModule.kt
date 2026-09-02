@@ -4,10 +4,11 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.gymora.data.local.dao.ExerciseDao
 import com.gymora.data.local.dao.SettingsDao
 import com.gymora.data.local.db.GymoraDatabase
 import com.gymora.data.local.seed.LibrarySeeder
-import com.gymora.data.local.seed.NoOpLibrarySeeder
+import com.gymora.data.local.seed.LibrarySeederImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -54,8 +55,11 @@ object DatabaseModule {
     @Provides
     fun provideSettingsDao(database: GymoraDatabase): SettingsDao = database.settingsDao()
 
-    /** Temporary no-op seeder; replaced by the real implementation in T017 (US1). */
+    @Provides
+    fun provideExerciseDao(database: GymoraDatabase): ExerciseDao = database.exerciseDao()
+
+    /** Built-in exercise library seeder (T017, R-08). */
     @Provides
     @Singleton
-    fun provideLibrarySeeder(): LibrarySeeder = NoOpLibrarySeeder
+    fun provideLibrarySeeder(): LibrarySeeder = LibrarySeederImpl()
 }

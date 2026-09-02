@@ -24,6 +24,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.gymora.ui.library.ExerciseEditorScreen
+import com.gymora.ui.library.ExerciseLibraryScreen
 
 private data class BottomTab(
     val destination: Destinations,
@@ -37,6 +39,9 @@ private val bottomTabs = listOf(
     BottomTab(Destinations.Exercises, "Exercises", Icons.Filled.FitnessCenter),
     BottomTab(Destinations.Settings, "Settings", Icons.Filled.Settings),
 )
+
+/** Sentinel id for creating a new exercise (no existing id). */
+const val NEW_EXERCISE_ID = 0L
 
 /**
  * Root navigation host (FR-004). Bottom nav for Home/History/Exercises/Settings;
@@ -84,11 +89,22 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
         ) {
             composable(Destinations.Home.route) { PlaceholderScreen("Home") }
             composable(Destinations.History.route) { PlaceholderScreen("History") }
-            composable(Destinations.Exercises.route) { PlaceholderScreen("Exercises") }
+            composable(Destinations.Exercises.route) {
+                ExerciseLibraryScreen(
+                    onExerciseClick = { exerciseId ->
+                        navController.navigate(Destinations.ExerciseEditor.create(exerciseId))
+                    },
+                    onCreateExercise = {
+                        navController.navigate(Destinations.ExerciseEditor.create(NEW_EXERCISE_ID))
+                    },
+                )
+            }
             composable(Destinations.Settings.route) { PlaceholderScreen("Settings") }
             composable(Destinations.RoutineList.route) { PlaceholderScreen("My Routines") }
             composable(Destinations.RoutineEditor.route) { PlaceholderScreen("Routine Editor") }
-            composable(Destinations.ExerciseEditor.route) { PlaceholderScreen("Exercise Editor") }
+            composable(Destinations.ExerciseEditor.route) {
+                ExerciseEditorScreen(onBack = { navController.popBackStack() })
+            }
             composable(Destinations.ActiveWorkout.route) { PlaceholderScreen("Active Workout") }
             composable(Destinations.WorkoutSummary.route) { PlaceholderScreen("Workout Summary") }
             composable(Destinations.WorkoutDetail.route) { PlaceholderScreen("Workout Detail") }
