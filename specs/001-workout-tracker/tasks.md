@@ -176,12 +176,12 @@ the recovery prompt with correct elapsed time, resume, verify all sets and timer
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T043 [P] [US4] Robolectric test: on launch with an ACTIVE session the recovery state exposes workout name + start time; resume returns full session graph with all logged sets; discard path requires explicit confirmation before deletion in `app/src/test/java/com/gymora/data/WorkoutRecoveryTest.kt` (FR-038, FR-039, SC-003)
+- [X] T043 [P] [US4] Robolectric test: on launch with an ACTIVE session the recovery state exposes workout name + start time; resume returns full session graph with all logged sets; discard path requires explicit confirmation before deletion in `app/src/test/java/com/gymora/data/WorkoutRecoveryTest.kt` (FR-038, FR-039, SC-003)
 
 ### Implementation for User Story 4
 
-- [ ] T044 [US4] Implement `ResumeWorkoutUseCase.kt` in `com/gymora/domain/usecase/ResumeWorkoutUseCase.kt` (detect ACTIVE session, expose name + startedAt, restore graph)
-- [ ] T045 [US4] Implement recovery prompt UI `com/gymora/ui/workout/RecoveryPromptScreen.kt` ("Workout in progress — <name>, started X ago" + RESUME, FR-038) shown on launch from `MainActivity.kt`/nav startup logic, with discard-confirmation reusing `ConfirmDialogs.kt`
+- [X] T044 [US4] Implement `ResumeWorkoutUseCase.kt` in `com/gymora/domain/usecase/ResumeWorkoutUseCase.kt` (detect ACTIVE session, expose name + startedAt, restore graph)
+- [X] T045 [US4] Implement recovery prompt UI `com/gymora/ui/workout/RecoveryPromptScreen.kt` ("Workout in progress — <name>, started X ago" + RESUME, FR-038) shown on launch from `MainActivity.kt`/nav startup logic, with discard-confirmation reusing `ConfirmDialogs.kt`
 
 **Checkpoint**: Stories 1–4 independently functional; crash-safe core loop complete.
 

@@ -15,10 +15,12 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -30,6 +32,8 @@ import com.gymora.ui.library.ExerciseLibraryScreen
 import com.gymora.ui.routines.RoutineEditorScreen
 import com.gymora.ui.routines.RoutineListScreen
 import com.gymora.ui.workout.ActiveWorkoutScreen
+import com.gymora.ui.workout.RecoveryPromptDialog
+import com.gymora.ui.workout.RecoveryViewModel
 import com.gymora.ui.workout.WorkoutSummaryScreen
 
 private data class BottomTab(
@@ -172,6 +176,21 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
             composable(Destinations.ExerciseHistory.route) { PlaceholderScreen("Exercise History") }
             composable(Destinations.Records.route) { PlaceholderScreen("Records") }
         }
+    }
+
+    // FR-038 / T045: recovery prompt on launch when an unfinished workout exists.
+    val recoveryViewModel: RecoveryViewModel = hiltViewModel()
+    val pendingWorkout by recoveryViewModel.pendingWorkout.collectAsState()
+    pendingWorkout?.let { workout ->
+        RecoveryPromptDialog(
+            workout = workout,
+            onResume = {
+                recoveryViewModel.onDismissed()
+                navController.navigate(Destinations.ActiveWorkout.create(workout.session.id))
+            },
+            onDiscard = recoveryViewModel::onDiscarded,
+            onDismiss = recoveryViewModel::onDismissed,
+        )
     }
 }
 
