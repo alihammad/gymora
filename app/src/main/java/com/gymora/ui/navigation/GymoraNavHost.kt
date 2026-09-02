@@ -24,8 +24,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.gymora.ui.home.HomeScreen
 import com.gymora.ui.library.ExerciseEditorScreen
 import com.gymora.ui.library.ExerciseLibraryScreen
+import com.gymora.ui.routines.RoutineEditorScreen
+import com.gymora.ui.routines.RoutineListScreen
 
 private data class BottomTab(
     val destination: Destinations,
@@ -42,6 +45,9 @@ private val bottomTabs = listOf(
 
 /** Sentinel id for creating a new exercise (no existing id). */
 const val NEW_EXERCISE_ID = 0L
+
+/** Sentinel id for creating a new routine (no existing id). */
+const val NEW_ROUTINE_ID = 0L
 
 /**
  * Root navigation host (FR-004). Bottom nav for Home/History/Exercises/Settings;
@@ -87,7 +93,19 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
             startDestination = Destinations.Home.route,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable(Destinations.Home.route) { PlaceholderScreen("Home") }
+            composable(Destinations.Home.route) {
+                HomeScreen(
+                    onRoutineClick = { routineId ->
+                        navController.navigate(Destinations.RoutineEditor.create(routineId))
+                    },
+                    onCreateRoutine = {
+                        navController.navigate(Destinations.RoutineEditor.create(NEW_ROUTINE_ID))
+                    },
+                    onMyRoutines = { navController.navigate(Destinations.RoutineList.route) },
+                    onRecentWorkouts = { navController.navigate(Destinations.History.route) },
+                    onHistory = { navController.navigate(Destinations.History.route) },
+                )
+            }
             composable(Destinations.History.route) { PlaceholderScreen("History") }
             composable(Destinations.Exercises.route) {
                 ExerciseLibraryScreen(
@@ -100,8 +118,17 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
                 )
             }
             composable(Destinations.Settings.route) { PlaceholderScreen("Settings") }
-            composable(Destinations.RoutineList.route) { PlaceholderScreen("My Routines") }
-            composable(Destinations.RoutineEditor.route) { PlaceholderScreen("Routine Editor") }
+            composable(Destinations.RoutineList.route) {
+                RoutineListScreen(
+                    onBack = { navController.popBackStack() },
+                    onRoutineClick = { routineId ->
+                        navController.navigate(Destinations.RoutineEditor.create(routineId))
+                    },
+                )
+            }
+            composable(Destinations.RoutineEditor.route) {
+                RoutineEditorScreen(onBack = { navController.popBackStack() })
+            }
             composable(Destinations.ExerciseEditor.route) {
                 ExerciseEditorScreen(onBack = { navController.popBackStack() })
             }
