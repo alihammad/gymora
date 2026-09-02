@@ -200,15 +200,15 @@ and complete original data (spec US5).
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T046 [P] [US5] Robolectric/Room regression test (mandatory per spec quality constraint): renaming/deleting routines or exercises changes 0 historical records; history detail displays snapshot names in `app/src/test/java/com/gymora/data/HistoryProtectionTest.kt` (FR-043, BR-11, SC-005)
-- [ ] T047 [P] [US5] Robolectric/Room test: history lists only COMPLETED sessions newest-first with LIMIT/OFFSET paging; empty history returns empty list in `app/src/test/java/com/gymora/data/HistoryRepositoryTest.kt` (FR-040, FR-058, R-12)
+- [X] T046 [P] [US5] Robolectric/Room regression test (mandatory per spec quality constraint): renaming/deleting routines or exercises changes 0 historical records; history detail displays snapshot names in `app/src/test/java/com/gymora/data/HistoryProtectionTest.kt` (FR-043, BR-11, SC-005)
+- [X] T047 [P] [US5] Robolectric/Room test: history lists only COMPLETED sessions newest-first with LIMIT/OFFSET paging; empty history returns empty list in `app/src/test/java/com/gymora/data/HistoryRepositoryTest.kt` (FR-040, FR-058, R-12)
 
 ### Implementation for User Story 5
 
-- [ ] T048 [US5] Implement `HistoryRepository` interface in `com/gymora/domain/repository/HistoryRepository.kt` and read-side implementation in `com/gymora/data/repository/HistoryRepositoryImpl.kt` (listCompleted paged by started_at DESC, getWorkoutDetail full graph from snapshot rows — no joins to templates for display names) (contracts/repositories.md, R-07)
-- [ ] T049 [US5] Implement history list UI `com/gymora/ui/history/HistoryScreen.kt`, `HistoryViewModel.kt`, `HistoryUiState.kt`: newest-first entries (date, workout name, duration), incremental loading in LazyColumn (FR-040, FR-058), empty state "Your completed workouts will appear here." (FR-059)
-- [ ] T050 [US5] Implement read-only workout detail UI `com/gymora/ui/history/WorkoutDetailScreen.kt` showing every exercise and set as performed (FR-041)
-- [ ] T050a [US5] Implement the Recent Workouts section on `HomeScreen.kt`/`HomeViewModel.kt`: the 3 most recent completed workouts (HistoryRepository.listCompleted(limit=3) per contracts/usecases.md Home mapping; spec Assumption "Recent Workouts on home"), tap opens workout detail, wired to the Home "Recent Workouts" link from T030 (FR-002)
+- [X] T048 [US5] Implement `HistoryRepository` interface in `com/gymora/domain/repository/HistoryRepository.kt` and read-side implementation in `com/gymora/data/repository/HistoryRepositoryImpl.kt` (listCompleted paged by started_at DESC, getWorkoutDetail full graph from snapshot rows — no joins to templates for display names) (contracts/repositories.md, R-07)
+- [X] T049 [US5] Implement history list UI `com/gymora/ui/history/HistoryScreen.kt`, `HistoryViewModel.kt`, `HistoryUiState.kt`: newest-first entries (date, workout name, duration), incremental loading in LazyColumn (FR-040, FR-058), empty state "Your completed workouts will appear here." (FR-059)
+- [X] T050 [US5] Implement read-only workout detail UI `com/gymora/ui/history/WorkoutDetailScreen.kt` showing every exercise and set as performed (FR-041)
+- [X] T050a [US5] Implement the Recent Workouts section on `HomeScreen.kt`/`HomeViewModel.kt`: the 3 most recent completed workouts (HistoryRepository.listCompleted(limit=3) per contracts/usecases.md Home mapping; spec Assumption "Recent Workouts on home"), tap opens workout detail, wired to the Home "Recent Workouts" link from T030 (FR-002)
 
 **Checkpoint**: All five P1 stories independently functional — full core product complete.
 
