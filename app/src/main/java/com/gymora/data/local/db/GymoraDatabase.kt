@@ -7,11 +7,17 @@ import com.gymora.data.local.dao.RoutineDao
 import com.gymora.data.local.dao.RoutineExerciseDao
 import com.gymora.data.local.dao.SetTemplateDao
 import com.gymora.data.local.dao.SettingsDao
+import com.gymora.data.local.dao.WorkoutExerciseDao
+import com.gymora.data.local.dao.WorkoutSessionDao
+import com.gymora.data.local.dao.WorkoutSetDao
 import com.gymora.data.local.entity.ExerciseEntity
 import com.gymora.data.local.entity.RoutineEntity
 import com.gymora.data.local.entity.RoutineExerciseEntity
 import com.gymora.data.local.entity.SetTemplateEntity
 import com.gymora.data.local.entity.SettingsEntity
+import com.gymora.data.local.entity.WorkoutExerciseEntity
+import com.gymora.data.local.entity.WorkoutSessionEntity
+import com.gymora.data.local.entity.WorkoutSetEntity
 
 /**
  * Gymora Room database — the offline source of truth (FR-053, BR-18, BR-21).
@@ -29,6 +35,9 @@ import com.gymora.data.local.entity.SettingsEntity
         RoutineEntity::class, // registered by T025 (US2)
         RoutineExerciseEntity::class, // registered by T025 (US2)
         SetTemplateEntity::class, // registered by T025 (US2)
+        WorkoutSessionEntity::class, // registered by T035 (US3)
+        WorkoutExerciseEntity::class, // registered by T035 (US3)
+        WorkoutSetEntity::class, // registered by T035 (US3)
     ],
     version = 1,
     exportSchema = true,
@@ -44,6 +53,12 @@ abstract class GymoraDatabase : RoomDatabase() {
     abstract fun routineExerciseDao(): RoutineExerciseDao
 
     abstract fun setTemplateDao(): SetTemplateDao
+
+    abstract fun workoutSessionDao(): WorkoutSessionDao
+
+    abstract fun workoutExerciseDao(): WorkoutExerciseDao
+
+    abstract fun workoutSetDao(): WorkoutSetDao
 
     companion object {
         const val NAME = "gymora.db"

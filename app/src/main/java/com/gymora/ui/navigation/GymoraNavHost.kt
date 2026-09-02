@@ -29,6 +29,8 @@ import com.gymora.ui.library.ExerciseEditorScreen
 import com.gymora.ui.library.ExerciseLibraryScreen
 import com.gymora.ui.routines.RoutineEditorScreen
 import com.gymora.ui.routines.RoutineListScreen
+import com.gymora.ui.workout.ActiveWorkoutScreen
+import com.gymora.ui.workout.WorkoutSummaryScreen
 
 private data class BottomTab(
     val destination: Destinations,
@@ -52,7 +54,7 @@ const val NEW_ROUTINE_ID = 0L
 /**
  * Root navigation host (FR-004). Bottom nav for Home/History/Exercises/Settings;
  * dedicated destinations for routines, exercises, workouts, and records.
- * Screens are placeholders until their story phases land.
+ * The active workout is a dedicated experience replacing the bottom nav.
  */
 @Composable
 fun GymoraNavHost(modifier: Modifier = Modifier) {
@@ -104,6 +106,9 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
                     onMyRoutines = { navController.navigate(Destinations.RoutineList.route) },
                     onRecentWorkouts = { navController.navigate(Destinations.History.route) },
                     onHistory = { navController.navigate(Destinations.History.route) },
+                    onStartWorkout = { routineId ->
+                        navController.navigate(Destinations.StartWorkout.create(routineId))
+                    },
                 )
             }
             composable(Destinations.History.route) { PlaceholderScreen("History") }
@@ -132,8 +137,37 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
             composable(Destinations.ExerciseEditor.route) {
                 ExerciseEditorScreen(onBack = { navController.popBackStack() })
             }
-            composable(Destinations.ActiveWorkout.route) { PlaceholderScreen("Active Workout") }
-            composable(Destinations.WorkoutSummary.route) { PlaceholderScreen("Workout Summary") }
+            composable(Destinations.ActiveWorkout.route) {
+                ActiveWorkoutScreen(
+                    onFinished = { sessionId ->
+                        navController.navigate(Destinations.WorkoutSummary.create(sessionId)) {
+                            popUpTo(Destinations.Home.route)
+                        }
+                    },
+                    onDiscarded = {
+                        navController.popBackStack(Destinations.Home.route, inclusive = false)
+                    },
+                )
+            }
+            composable(Destinations.StartWorkout.route) {
+                ActiveWorkoutScreen(
+                    onFinished = { sessionId ->
+                        navController.navigate(Destinations.WorkoutSummary.create(sessionId)) {
+                            popUpTo(Destinations.Home.route)
+                        }
+                    },
+                    onDiscarded = {
+                        navController.popBackStack(Destinations.Home.route, inclusive = false)
+                    },
+                )
+            }
+            composable(Destinations.WorkoutSummary.route) {
+                WorkoutSummaryScreen(
+                    onDone = {
+                        navController.popBackStack(Destinations.Home.route, inclusive = false)
+                    },
+                )
+            }
             composable(Destinations.WorkoutDetail.route) { PlaceholderScreen("Workout Detail") }
             composable(Destinations.ExerciseHistory.route) { PlaceholderScreen("Exercise History") }
             composable(Destinations.Records.route) { PlaceholderScreen("Records") }
