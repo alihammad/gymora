@@ -43,6 +43,14 @@ object DatabaseModule {
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
+                    // BR-14 / Constitution V: at most one active session, enforced
+                    // at the persistence layer. Room's @Index cannot express a
+                    // partial index, so it is created here (data-model.md).
+                    db.execSQL(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS " +
+                            "index_workout_sessions_single_active " +
+                            "ON workout_sessions(status) WHERE status = 'ACTIVE'",
+                    )
                     // R-08: seed the built-in exercise library on first database
                     // creation. Runs after the database object is fully built.
                     CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
