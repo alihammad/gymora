@@ -118,8 +118,23 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getPreviousPerformance(exerciseId: Long): PreviousPerformance? {
-        // Full implementation lands in US6 (T052).
-        return null
+        // Most recent completed session containing this exercise (FR-045, T052).
+        val session = sessionDao.latestCompletedSessionForExercise(exerciseId) ?: return null
+        val exercise = exerciseDao.getForSession(session.id)
+            .firstOrNull { it.exerciseId == exerciseId } ?: return null
+        val sets = setDao.getForExercise(exercise.id).filter { it.isCompleted }
+        if (sets.isEmpty()) return null
+        return PreviousPerformance(
+            exerciseId = exerciseId,
+            date = Instant.ofEpochMilli(session.startedAt),
+            sets = sets.map { set ->
+                com.gymora.domain.model.SetValue(
+                    weight = set.weight,
+                    weightUnit = set.weightUnit?.let { WeightUnit.valueOf(it) },
+                    reps = set.reps,
+                )
+            },
+        )
     }
 
     override suspend fun updateSetValues(

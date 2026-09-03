@@ -231,7 +231,7 @@ and fields pre-filled, modify one value, verify the saved set reflects the edit 
 ### Implementation for User Story 6
 
 - [ ] T052 [US6] Implement previous-performance query in `WorkoutSessionDao.kt` / `WorkoutSessionRepositoryImpl.kt` (latest COMPLETED session's completed sets for an exercise) and `PreviousPerformanceUseCase.kt` in `com/gymora/domain/usecase/PreviousPerformanceUseCase.kt` (contracts/repositories.md)
-- [ ] T053 [US6] Extend `ActiveWorkoutScreen.kt` and `ActiveWorkoutViewModel.kt`: previous-performance column beside today's sets, pre-fill weight/reps from previous values keeping fields editable, empty for never-performed exercises (FR-045, FR-046, PRD-§9/§10)
+- [X] T053 [US6] Extend `ActiveWorkoutScreen.kt` and `ActiveWorkoutViewModel.kt`: previous-performance column beside today's sets, pre-fill weight/reps from previous values keeping fields editable, empty for never-performed exercises (FR-045, FR-046, PRD-§9/§10)
 
 **Checkpoint**: Story 6 independently verifiable on top of the core loop.
 

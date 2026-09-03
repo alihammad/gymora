@@ -41,7 +41,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gymora.domain.model.ActiveExercise
 import com.gymora.domain.model.ActiveSet
+import com.gymora.domain.model.PreviousPerformance
+import com.gymora.domain.model.SetValue
 import com.gymora.ui.components.ConfirmDialog
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * Active workout screen (FR-022..FR-037): timestamp-derived timer, per-set
@@ -113,6 +118,9 @@ fun ActiveWorkoutScreen(
                     items(workout.exercises, key = { it.workoutExerciseId }) { exercise ->
                         ExerciseCard(
                             exercise = exercise,
+                            previousPerformance = exercise.exerciseId?.let {
+                                uiState.previousPerformanceMap[it]
+                            },
                             onWeightChanged = viewModel::onWeightChanged,
                             onRepsChanged = viewModel::onRepsChanged,
                             onToggleComplete = viewModel::onToggleComplete,
@@ -219,6 +227,7 @@ fun ActiveWorkoutScreen(
 @Composable
 private fun ExerciseCard(
     exercise: ActiveExercise,
+    previousPerformance: PreviousPerformance?,
     onWeightChanged: (Long, String) -> Unit,
     onRepsChanged: (Long, String) -> Unit,
     onToggleComplete: (Long, Boolean) -> Unit,
@@ -242,9 +251,23 @@ private fun ExerciseCard(
                 }
             }
 
-            exercise.sets.forEach { set ->
+            // FR-045: show previous performance header if available
+            if (previousPerformance != null && previousPerformance.sets.isNotEmpty()) {
+                Text(
+                    text = "Previous: ${formatPreviousDate(previousPerformance.date)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+            }
+
+            exercise.sets.forEachIndexed { index, set ->
+                // FR-046: pre-fill from previous performance if available
+                val prevSet = previousPerformance?.sets?.getOrNull(index)
                 SetRow(
                     set = set,
+                    preFillWeight = prevSet?.weight,
+                    preFillReps = prevSet?.reps,
                     onWeightChanged = { onWeightChanged(set.id, it) },
                     onRepsChanged = { onRepsChanged(set.id, it) },
                     onToggleComplete = { onToggleComplete(set.id, it) },
@@ -261,6 +284,8 @@ private fun ExerciseCard(
 @Composable
 private fun SetRow(
     set: ActiveSet,
+    preFillWeight: Double?,
+    preFillReps: Int?,
     onWeightChanged: (String) -> Unit,
     onRepsChanged: (String) -> Unit,
     onToggleComplete: (Boolean) -> Unit,
@@ -281,6 +306,7 @@ private fun SetRow(
             value = set.weight?.toString().orEmpty(),
             onValueChange = onWeightChanged,
             label = { Text("Weight") },
+            placeholder = preFillWeight?.let { { Text(it.toString()) } },
             singleLine = true,
             modifier = Modifier.weight(1f),
         )
@@ -288,9 +314,29 @@ private fun SetRow(
             value = set.reps?.toString().orEmpty(),
             onValueChange = onRepsChanged,
             label = { Text("Reps") },
+            placeholder = preFillReps?.let { { Text(it.toString()) } },
             singleLine = true,
             modifier = Modifier.weight(1f),
         )
+        // FR-045: show previous performance value beside today's set
+        if (preFillWeight != null || preFillReps != null) {
+            Column(modifier = Modifier.padding(start = 4.dp)) {
+                if (preFillWeight != null) {
+                    Text(
+                        text = "${preFillWeight}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (preFillReps != null) {
+                    Text(
+                        text = "${preFillReps} reps",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
         // FR-025 / FR-061: completion marked with a check icon, not color alone.
         IconButton(onClick = { onToggleComplete(!set.isCompleted) }) {
             Icon(
@@ -312,4 +358,10 @@ internal fun formatElapsed(seconds: Long): String {
     val m = (seconds % 3600) / 60
     val s = seconds % 60
     return "%02d:%02d:%02d".format(h, m, s)
+}
+
+/** Short date format for previous performance label (FR-045). */
+private fun formatPreviousDate(instant: Instant): String {
+    val formatter = DateTimeFormatter.ofPattern("MMM d").withZone(ZoneId.systemDefault())
+    return formatter.format(instant)
 }
