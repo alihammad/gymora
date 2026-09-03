@@ -277,7 +277,7 @@ verify new default applies (spec US8).
 ### Implementation for User Story 8
 
 - [X] T058 [US8] Implement ephemeral rest-timer state in `ActiveWorkoutViewModel.kt` (countdown end-instant in memory, not persisted — R-06) with Skip/+30s/Restart actions and default from `SettingsRepository` (FR-031, FR-032)
-- [ ] T059 [US8] Implement rest-timer UI component in `com/gymora/ui/workout/RestTimerBar.kt` shown during active workout without interfering with the duration ticker (FR-032)
+- [X] T059 [US8] Implement rest-timer UI component in `com/gymora/ui/workout/RestTimerBar.kt` shown during active workout without interfering with the duration ticker (FR-032)
 
 **Checkpoint**: Story 8 independently verifiable.
 
@@ -295,13 +295,13 @@ persisted, with lossless display conversion of all recorded weights on unit swit
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T060 [P] [US9] Unit test: convertWeight is lossless/reversible (kg→lb→kg returns original typed value) using exact factor 0.45359237 in `app/src/test/java/com/gymora/domain/UnitConversionTest.kt` (FR-049, R-04)
-- [ ] T061 [P] [US9] Robolectric test: settings persist across database reopen; unit switch never rewrites stored weights; display conversion applies to history/summary/previous-performance/records values in `app/src/test/java/com/gymora/data/SettingsPersistenceTest.kt` (FR-048..FR-052)
+- [X] T060 [P] [US9] Unit test: convertWeight is lossless/reversible (kg→lb→kg returns original typed value) using exact factor 0.45359237 in `app/src/test/java/com/gymora/domain/UnitConversionTest.kt` (FR-049, R-04)
+- [X] T061 [P] [US9] Robolectric test: settings persist across database reopen; unit switch never rewrites stored weights; display conversion applies to history/summary/previous-performance/records values in `app/src/test/java/com/gymora/data/SettingsPersistenceTest.kt` (FR-048..FR-052)
 
 ### Implementation for User Story 9
 
-- [ ] T062 [US9] Implement settings UI `com/gymora/ui/settings/SettingsScreen.kt` + `SettingsViewModel.kt`: weight unit selector (kg/lb), default rest duration (30s/60s/90s/2min/3min/custom), theme selector (System/Light/Dark) (FR-048, FR-050, FR-051, PRD-§39)
-- [ ] T063 [US9] Apply display-unit conversion across all weight-rendering surfaces (active workout, summary, history detail, previous performance, records) via domain `convertWeight`, keeping stored values untouched (FR-049, FR-052, R-04)
+- [X] T062 [US9] Implement settings UI `com/gymora/ui/settings/SettingsScreen.kt` + `SettingsViewModel.kt`: weight unit selector (kg/lb), default rest duration (30s/60s/90s/2min/3min/custom), theme selector (System/Light/Dark) (FR-048, FR-050, FR-051, PRD-§39)
+- [X] T063 [US9] Apply display-unit conversion across all weight-rendering surfaces (active workout, summary, history detail, previous performance, records) via domain `convertWeight`, keeping stored values untouched (FR-049, FR-052, R-04)
 
 **Checkpoint**: Story 9 independently verifiable.
 

@@ -3,7 +3,9 @@ package com.gymora.ui.workout
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gymora.domain.model.WeightUnit
 import com.gymora.domain.model.WorkoutSummary
+import com.gymora.domain.repository.SettingsRepository
 import com.gymora.domain.repository.WorkoutSessionRepository
 import com.gymora.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,6 +13,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -18,12 +21,14 @@ import kotlinx.coroutines.launch
 data class WorkoutSummaryUiState(
     val summary: WorkoutSummary? = null,
     val isLoading: Boolean = true,
+    val displayUnit: WeightUnit = WeightUnit.KG,
 )
 
 @HiltViewModel
 class WorkoutSummaryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val workoutSessionRepository: WorkoutSessionRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     private val sessionId: Long = savedStateHandle.get<String>(Destinations.WorkoutSummary.ARG)
@@ -34,6 +39,8 @@ class WorkoutSummaryViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            val settings = settingsRepository.observeSettings().first()
+            _uiState.update { it.copy(displayUnit = settings.weightUnit) }
             runCatching { workoutSessionRepository.getSummary(sessionId) }
                 .onSuccess { summary ->
                     _uiState.update { it.copy(summary = summary, isLoading = false) }

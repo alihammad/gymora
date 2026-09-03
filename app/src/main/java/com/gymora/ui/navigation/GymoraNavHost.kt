@@ -34,6 +34,7 @@ import com.gymora.ui.library.ExerciseEditorScreen
 import com.gymora.ui.library.ExerciseLibraryScreen
 import com.gymora.ui.routines.RoutineEditorScreen
 import com.gymora.ui.routines.RoutineListScreen
+import com.gymora.ui.settings.SettingsScreen
 import com.gymora.ui.workout.ActiveWorkoutScreen
 import com.gymora.ui.workout.RecoveryPromptDialog
 import com.gymora.ui.workout.RecoveryViewModel
@@ -141,7 +142,7 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
                     },
                 )
             }
-            composable(Destinations.Settings.route) { PlaceholderScreen("Settings") }
+            composable(Destinations.Settings.route) { SettingsScreen() }
             composable(Destinations.RoutineList.route) {
                 RoutineListScreen(
                     onBack = { navController.popBackStack() },
