@@ -13,6 +13,7 @@ import com.gymora.domain.usecase.DiscardWorkoutUseCase
 import com.gymora.domain.usecase.FinishWorkoutUseCase
 import com.gymora.domain.usecase.LogSetUseCase
 import com.gymora.domain.usecase.ModifySessionStructureUseCase
+import com.gymora.domain.usecase.PreviousPerformanceUseCase
 import com.gymora.domain.usecase.StartWorkoutUseCase
 import com.gymora.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,6 +39,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     private val discardWorkoutUseCase: DiscardWorkoutUseCase,
     private val exerciseRepository: ExerciseRepository,
     private val workoutSessionRepository: com.gymora.domain.repository.WorkoutSessionRepository,
+    private val previousPerformanceUseCase: PreviousPerformanceUseCase,
 ) : ViewModel() {
 
     private var sessionId: Long = savedStateHandle.get<String>(Destinations.ActiveWorkout.ARG)
@@ -82,12 +84,32 @@ class ActiveWorkoutViewModel @Inject constructor(
                 .onSuccess { workout ->
                     _uiState.update { it.copy(activeWorkout = workout, isLoading = false) }
                     startTicker(workout.startedAt)
+                    loadPreviousPerformance(workout)
                 }
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(isLoading = false, errorMessage = friendlyMessage(error))
                     }
                 }
+        }
+    }
+
+    /**
+     * FR-045 / FR-046: fetch the most recent completed performance for each
+     * exercise in the active workout so the UI can show previous values and
+     * pre-fill today's fields.
+     */
+    private fun loadPreviousPerformance(workout: ActiveWorkout) {
+        viewModelScope.launch {
+            val map = mutableMapOf<Long, com.gymora.domain.model.PreviousPerformance>()
+            workout.exercises.forEach { exercise ->
+                exercise.exerciseId?.let { id ->
+                    previousPerformanceUseCase(id)?.let { perf ->
+                        map[id] = perf
+                    }
+                }
+            }
+            _uiState.update { it.copy(previousPerformanceMap = map) }
         }
     }
 
