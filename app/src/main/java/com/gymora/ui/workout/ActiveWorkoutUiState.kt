@@ -18,4 +18,6 @@ data class ActiveWorkoutUiState(
     val errorMessage: String? = null,
     /** Previous performance per exercise for pre-fill display (FR-045, FR-046). */
     val previousPerformanceMap: Map<Long, PreviousPerformance> = emptyMap(),
+    /** Ephemeral rest-timer state (FR-031, FR-032, R-06). */
+    val restTimer: RestTimerState = RestTimerState(),
 )
