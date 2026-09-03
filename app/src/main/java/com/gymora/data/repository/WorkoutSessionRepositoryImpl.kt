@@ -1,6 +1,7 @@
 package com.gymora.data.repository
 
 import androidx.room.withTransaction
+import com.gymora.data.local.dao.SettingsDao
 import com.gymora.data.local.dao.WorkoutExerciseDao
 import com.gymora.data.local.dao.WorkoutSessionDao
 import com.gymora.data.local.dao.WorkoutSetDao
@@ -38,6 +39,7 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
     private val sessionDao: WorkoutSessionDao get() = database.workoutSessionDao()
     private val exerciseDao: WorkoutExerciseDao get() = database.workoutExerciseDao()
     private val setDao: WorkoutSetDao get() = database.workoutSetDao()
+    private val settingsDao: SettingsDao get() = database.settingsDao()
 
     override fun observeActiveSession(): Flow<ActiveWorkout?> =
         sessionDao.observeActive().map { entity ->
@@ -247,6 +249,11 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
         val allSets = exercises.flatMap { exercise -> exercise.sets }
         val completedSets = allSets.filter { it.isCompleted }
 
+        // Use the user's preferred weight unit for display (FR-049, FR-052)
+        val displayUnit = settingsDao.getOnce()?.let { entity ->
+            try { WeightUnit.valueOf(entity.weightUnit) } catch (_: Exception) { WeightUnit.KG }
+        } ?: WeightUnit.KG
+
         return WorkoutSummary(
             sessionId = sessionId,
             routineNameSnapshot = session.routineNameSnapshot,
@@ -264,7 +271,7 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
                         isCompleted = set.isCompleted,
                     )
                 },
-                displayUnit = WeightUnit.KG,
+                displayUnit = displayUnit,
             ),
             perExerciseBreakdown = exercises.map { exercise ->
                 ExerciseSummary(

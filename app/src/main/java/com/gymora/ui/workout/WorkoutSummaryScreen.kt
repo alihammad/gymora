@@ -59,7 +59,7 @@ fun WorkoutSummaryScreen(
             SummaryRow("Exercises", summary.exerciseCount.toString())
             SummaryRow("Completed sets", summary.completedSetCount.toString())
             SummaryRow("Total reps", summary.totalReps.toString())
-            SummaryRow("Total volume", "%.1f kg".format(summary.totalVolume))
+            SummaryRow("Total volume", "%.1f %s".format(summary.totalVolume, uiState.displayUnit.name.lowercase()))
 
             Text("Per-exercise breakdown", style = MaterialTheme.typography.titleMedium)
             summary.perExerciseBreakdown.forEach { exercise ->
