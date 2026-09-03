@@ -30,4 +30,20 @@ interface WorkoutExerciseDao {
 
     @Query("SELECT * FROM workout_exercises WHERE id = :id")
     suspend fun getById(id: Long): WorkoutExerciseEntity?
+
+    /** FR-044: find all workout exercises for a given exercise across sessions. */
+    @Query(
+        """
+        SELECT we.* FROM workout_exercises we
+        INNER JOIN workout_sessions ws ON ws.id = we.session_id
+        WHERE we.exercise_id = :exerciseId AND ws.status = 'COMPLETED'
+        ORDER BY ws.started_at DESC
+        LIMIT :limit OFFSET :offset
+        """,
+    )
+    suspend fun getForExerciseAcrossSessions(
+        exerciseId: Long,
+        limit: Int,
+        offset: Int,
+    ): List<WorkoutExerciseEntity>
 }
