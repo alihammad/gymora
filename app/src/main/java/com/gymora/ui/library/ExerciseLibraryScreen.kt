@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -47,6 +48,7 @@ import java.util.Locale
 fun ExerciseLibraryScreen(
     onExerciseClick: (Long) -> Unit,
     onCreateExercise: () -> Unit,
+    onExerciseHistory: (Long) -> Unit = {},
     viewModel: ExerciseLibraryViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -97,6 +99,7 @@ fun ExerciseLibraryScreen(
                         ExerciseList(
                             exercises = uiState.searchResults.orEmpty(),
                             onExerciseClick = onExerciseClick,
+                            onExerciseHistory = onExerciseHistory,
                             onDelete = viewModel::onDeleteRequested,
                         )
                     }
@@ -106,6 +109,7 @@ fun ExerciseLibraryScreen(
                     ExerciseList(
                         exercises = uiState.groupedExercises.values.flatten(),
                         onExerciseClick = onExerciseClick,
+                        onExerciseHistory = onExerciseHistory,
                         onDelete = viewModel::onDeleteRequested,
                     )
                 }
@@ -129,6 +133,7 @@ fun ExerciseLibraryScreen(
 private fun ExerciseList(
     exercises: List<Exercise>,
     onExerciseClick: (Long) -> Unit,
+    onExerciseHistory: (Long) -> Unit,
     onDelete: (Exercise) -> Unit,
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -155,6 +160,12 @@ private fun ExerciseList(
                                 if (exercise.isCustom) Text("Custom")
                             },
                         )
+                        IconButton(onClick = { onExerciseHistory(exercise.id) }) {
+                            Icon(
+                                Icons.Filled.History,
+                                contentDescription = "View history for ${exercise.name}",
+                            )
+                        }
                         IconButton(onClick = { onDelete(exercise) }) {
                             Icon(
                                 Icons.Filled.Delete,

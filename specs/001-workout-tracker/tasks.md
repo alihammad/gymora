@@ -248,12 +248,12 @@ dates; both performances appear newest-first with all sets (spec US7).
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T054 [P] [US7] Robolectric/Room test: exercise history returns all performances by date newest-first with all sets, paged via indexed exercise_id lookup in `app/src/test/java/com/gymora/data/ExerciseHistoryTest.kt` (FR-044, R-07)
+- [X] T054 [P] [US7] Robolectric/Room test: exercise history returns all performances by date newest-first with all sets, paged via indexed exercise_id lookup in `app/src/test/java/com/gymora/data/ExerciseHistoryTest.kt` (FR-044, R-07)
 
 ### Implementation for User Story 7
 
-- [ ] T055 [US7] Implement `getExerciseHistory` in `HistoryRepositoryImpl.kt` + supporting DAO query (filter by indexed `exercise_id`, ORDER BY session started_at DESC, LIMIT/OFFSET) (FR-044)
-- [ ] T056 [US7] Implement exercise history UI `com/gymora/ui/history/ExerciseHistoryScreen.kt` + ViewModel (performances grouped by date with all sets), reachable from exercise library and workout detail (PRD-§17)
+- [X] T055 [US7] Implement `getExerciseHistory` in `HistoryRepositoryImpl.kt` + supporting DAO query (filter by indexed `exercise_id`, ORDER BY session started_at DESC, LIMIT/OFFSET) (FR-044)
+- [X] T056 [US7] Implement exercise history UI `com/gymora/ui/history/ExerciseHistoryScreen.kt` + ViewModel (performances grouped by date with all sets), reachable from exercise library and workout detail (PRD-§17)
 
 **Checkpoint**: Story 7 independently verifiable.
 

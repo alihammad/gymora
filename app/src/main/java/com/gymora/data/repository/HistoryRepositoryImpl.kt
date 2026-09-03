@@ -62,8 +62,17 @@ class HistoryRepositoryImpl @Inject constructor(
         limit: Int,
         offset: Int,
     ): List<ExercisePerformance> {
-        // Implemented in US7 (T055).
-        return emptyList()
+        val workoutExercises = exerciseDao.getForExerciseAcrossSessions(
+            exerciseId, limit, offset,
+        )
+        return workoutExercises.map { we ->
+            val session = sessionDao.getById(we.sessionId)
+            ExercisePerformance(
+                sessionId = we.sessionId,
+                date = session?.let { Instant.ofEpochMilli(it.startedAt) } ?: Instant.EPOCH,
+                sets = setDao.getForExercise(we.id).map { it.toDomain() },
+            )
+        }
     }
 
     // --- FR-042 historical correction (US11, T069) ---

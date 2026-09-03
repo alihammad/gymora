@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,6 +40,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun WorkoutDetailScreen(
     onBack: () -> Unit,
+    onExerciseHistory: (Long) -> Unit = {},
     viewModel: WorkoutDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -90,7 +92,10 @@ fun WorkoutDetailScreen(
                         }
                     }
                     items(detail.exercises, key = { it.workoutExerciseId }) { exercise ->
-                        HistoricalExerciseCard(exercise = exercise)
+                        HistoricalExerciseCard(
+                            exercise = exercise,
+                            onExerciseHistory = { exercise.exerciseId?.let(onExerciseHistory) },
+                        )
                     }
                 }
             }
@@ -99,13 +104,31 @@ fun WorkoutDetailScreen(
 }
 
 @Composable
-private fun HistoricalExerciseCard(exercise: ActiveExercise) {
+private fun HistoricalExerciseCard(
+    exercise: ActiveExercise,
+    onExerciseHistory: () -> Unit = {},
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = exercise.exerciseName,
-                style = MaterialTheme.typography.titleMedium,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = exercise.exerciseName,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                if (exercise.exerciseId != null) {
+                    IconButton(onClick = onExerciseHistory) {
+                        Icon(
+                            Icons.Filled.History,
+                            contentDescription = "View history for ${exercise.exerciseName}",
+                        )
+                    }
+                }
+            }
             exercise.sets.forEach { set ->
                 Row(
                     modifier = Modifier
