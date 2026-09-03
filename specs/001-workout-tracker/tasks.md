@@ -226,11 +226,11 @@ and fields pre-filled, modify one value, verify the saved set reflects the edit 
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T051 [P] [US6] Robolectric/Room test: previous-performance lookup returns most recent completed sets per exercise; returns null for never-performed exercises; pre-filled values are overridable on save in `app/src/test/java/com/gymora/data/PreviousPerformanceTest.kt` (FR-045, FR-046, SC-002)
+- [X] T051 [P] [US6] Robolectric/Room test: previous-performance lookup returns most recent completed sets per exercise; returns null for never-performed exercises; pre-filled values are overridable on save in `app/src/test/java/com/gymora/data/PreviousPerformanceTest.kt` (FR-045, FR-046, SC-002)
 
 ### Implementation for User Story 6
 
-- [ ] T052 [US6] Implement previous-performance query in `WorkoutSessionDao.kt` / `WorkoutSessionRepositoryImpl.kt` (latest COMPLETED session's completed sets for an exercise) and `PreviousPerformanceUseCase.kt` in `com/gymora/domain/usecase/PreviousPerformanceUseCase.kt` (contracts/repositories.md)
+- [X] T052 [US6] Implement previous-performance query in `WorkoutSessionDao.kt` / `WorkoutSessionRepositoryImpl.kt` (latest COMPLETED session's completed sets for an exercise) and `PreviousPerformanceUseCase.kt` in `com/gymora/domain/usecase/PreviousPerformanceUseCase.kt` (contracts/repositories.md)
 - [X] T053 [US6] Extend `ActiveWorkoutScreen.kt` and `ActiveWorkoutViewModel.kt`: previous-performance column beside today's sets, pre-fill weight/reps from previous values keeping fields editable, empty for never-performed exercises (FR-045, FR-046, PRD-§9/§10)
 
 **Checkpoint**: Story 6 independently verifiable on top of the core loop.
@@ -272,11 +272,11 @@ verify new default applies (spec US8).
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T057 [P] [US8] Unit test for rest-timer state machine (start/skip/+30s/restart, default from settings, end-instant math) in `app/src/test/java/com/gymora/ui/workout/RestTimerTest.kt` (FR-031, FR-032)
+- [X] T057 [P] [US8] Unit test for rest-timer state machine (start/skip/+30s/restart, default from settings, end-instant math) in `app/src/test/java/com/gymora/ui/workout/RestTimerTest.kt` (FR-031, FR-032)
 
 ### Implementation for User Story 8
 
-- [ ] T058 [US8] Implement ephemeral rest-timer state in `ActiveWorkoutViewModel.kt` (countdown end-instant in memory, not persisted — R-06) with Skip/+30s/Restart actions and default from `SettingsRepository` (FR-031, FR-032)
+- [X] T058 [US8] Implement ephemeral rest-timer state in `ActiveWorkoutViewModel.kt` (countdown end-instant in memory, not persisted — R-06) with Skip/+30s/Restart actions and default from `SettingsRepository` (FR-031, FR-032)
 - [ ] T059 [US8] Implement rest-timer UI component in `com/gymora/ui/workout/RestTimerBar.kt` shown during active workout without interfering with the duration ticker (FR-032)
 
 **Checkpoint**: Story 8 independently verifiable.

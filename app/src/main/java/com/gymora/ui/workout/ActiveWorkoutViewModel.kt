@@ -4,11 +4,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gymora.domain.calculator.WorkoutCalculators
+import com.gymora.domain.model.ActiveWorkout
 import com.gymora.domain.model.ActiveWorkoutConflictException
 import com.gymora.domain.model.EntityNotFoundException
 import com.gymora.domain.model.ValidationException
 import com.gymora.domain.model.WeightUnit
 import com.gymora.domain.repository.ExerciseRepository
+import com.gymora.domain.repository.SettingsRepository
 import com.gymora.domain.usecase.DiscardWorkoutUseCase
 import com.gymora.domain.usecase.FinishWorkoutUseCase
 import com.gymora.domain.usecase.LogSetUseCase
@@ -40,6 +42,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     private val exerciseRepository: ExerciseRepository,
     private val workoutSessionRepository: com.gymora.domain.repository.WorkoutSessionRepository,
     private val previousPerformanceUseCase: PreviousPerformanceUseCase,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     private var sessionId: Long = savedStateHandle.get<String>(Destinations.ActiveWorkout.ARG)
@@ -51,6 +54,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     private var tickerJob: Job? = null
 
     init {
+        loadRestDefault()
         if (sessionId == NEW_SESSION_ID) {
             // Started via START on a routine card: routineId is passed via a
             // separate saved-state key set by the navigation caller.
@@ -102,15 +106,90 @@ class ActiveWorkoutViewModel @Inject constructor(
     private fun loadPreviousPerformance(workout: ActiveWorkout) {
         viewModelScope.launch {
             val map = mutableMapOf<Long, com.gymora.domain.model.PreviousPerformance>()
-            workout.exercises.forEach { exercise ->
-                exercise.exerciseId?.let { id ->
-                    previousPerformanceUseCase(id)?.let { perf ->
-                        map[id] = perf
-                    }
+            for (exercise in workout.exercises) {
+                val id = exercise.exerciseId ?: continue
+                previousPerformanceUseCase(id)?.let { perf ->
+                    map[id] = perf
                 }
             }
             _uiState.update { it.copy(previousPerformanceMap = map) }
         }
+    }
+
+    // --- Rest timer (FR-031, FR-032, R-06) ---
+
+    private var restTimerJob: Job? = null
+
+    private fun loadRestDefault() {
+        viewModelScope.launch {
+            settingsRepository.observeSettings().first().let { settings ->
+                _uiState.update {
+                    it.copy(restTimer = it.restTimer.copy(defaultSeconds = settings.defaultRestSeconds))
+                }
+            }
+        }
+    }
+
+    /** Start rest countdown after a set is completed (FR-031). */
+    fun onSetCompleted() {
+        val defaultSeconds = _uiState.value.restTimer.defaultSeconds
+        val endInstant = System.currentTimeMillis() + defaultSeconds * 1000L
+        _uiState.update {
+            it.copy(restTimer = RestTimerState(isRunning = true, endInstantMs = endInstant, defaultSeconds = defaultSeconds))
+        }
+        startRestTicker()
+    }
+
+    /** Skip the rest timer (FR-032). */
+    fun onRestTimerSkip() {
+        stopRestTicker()
+        _uiState.update { it.copy(restTimer = RestTimerState(defaultSeconds = it.restTimer.defaultSeconds)) }
+    }
+
+    /** Add 30 seconds to the current rest timer (FR-032). */
+    fun onRestTimerAdd30s() {
+        val current = _uiState.value.restTimer
+        val newEnd = (current.endInstantMs ?: System.currentTimeMillis()) + 30_000L
+        _uiState.update { it.copy(restTimer = current.copy(endInstantMs = newEnd)) }
+    }
+
+    /** Restart the rest timer from the default duration (FR-032). */
+    fun onRestTimerRestart() {
+        val defaultSeconds = _uiState.value.restTimer.defaultSeconds
+        val endInstant = System.currentTimeMillis() + defaultSeconds * 1000L
+        _uiState.update {
+            it.copy(restTimer = RestTimerState(isRunning = true, endInstantMs = endInstant, defaultSeconds = defaultSeconds))
+        }
+        startRestTicker()
+    }
+
+    private fun startRestTicker() {
+        restTimerJob?.cancel()
+        restTimerJob = viewModelScope.launch {
+            while (isActive) {
+                val timer = _uiState.value.restTimer
+                val endMs = timer.endInstantMs
+                if (endMs == null || !timer.isRunning) {
+                    stopRestTicker()
+                    return@launch
+                }
+                val remaining = (endMs - System.currentTimeMillis()) / 1000
+                if (remaining <= 0) {
+                    _uiState.update {
+                        it.copy(restTimer = RestTimerState(defaultSeconds = timer.defaultSeconds))
+                    }
+                    stopRestTicker()
+                    return@launch
+                }
+                _uiState.update { it.copy(restTimer = timer.copy(remainingSeconds = remaining)) }
+                delay(1_000)
+            }
+        }
+    }
+
+    private fun stopRestTicker() {
+        restTimerJob?.cancel()
+        restTimerJob = null
     }
 
     /**
@@ -158,6 +237,7 @@ class ActiveWorkoutViewModel @Inject constructor(
         viewModelScope.launch {
             if (completed) logSetUseCase.complete(setId) else logSetUseCase.uncomplete(setId)
             loadSession()
+            if (completed) onSetCompleted()
         }
     }
 

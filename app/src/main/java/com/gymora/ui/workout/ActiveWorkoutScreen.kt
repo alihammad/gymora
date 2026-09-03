@@ -108,13 +108,20 @@ fun ActiveWorkoutScreen(
                     modifier = Modifier.padding(innerPadding).padding(16.dp),
                 )
             } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // FR-031/032: rest timer bar shown during active workout
+                    RestTimerBar(
+                        state = uiState.restTimer,
+                        onSkip = viewModel::onRestTimerSkip,
+                        onAdd30s = viewModel::onRestTimerAdd30s,
+                        onRestart = viewModel::onRestTimerRestart,
+                    )
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
                     items(workout.exercises, key = { it.workoutExerciseId }) { exercise ->
                         ExerciseCard(
                             exercise = exercise,
@@ -144,6 +151,7 @@ fun ActiveWorkoutScreen(
                         ) {
                             Text("FINISH WORKOUT")
                         }
+                    }
                     }
                 }
             }
