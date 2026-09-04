@@ -344,12 +344,12 @@ history, routines, and templates remain untouched (spec US11).
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T068 [P] [US11] Robolectric/Room test: historical corrections write only to the target session's rows; routines/templates/other workouts unchanged; history stays read-only unless edit explicitly chosen in `app/src/test/java/com/gymora/data/HistoricalCorrectionTest.kt` (FR-042, BR-11)
+- [X] T068 [P] [US11] Robolectric/Room test: historical corrections write only to the target session's rows; routines/templates/other workouts unchanged; history stays read-only unless edit explicitly chosen in `app/src/test/java/com/gymora/data/HistoricalCorrectionTest.kt` (FR-042, BR-11)
 
 ### Implementation for User Story 11
 
-- [ ] T069 [US11] Implement correction methods in `HistoryRepositoryImpl.kt` (correctSet, addExerciseToHistoricalWorkout with name snapshot at edit time, removeExerciseFromHistoricalWorkout, updateHistoricalWorkoutNotes — all scoped by session id) and `CorrectHistoricalWorkoutUseCase.kt` in `com/gymora/domain/usecase/CorrectHistoricalWorkoutUseCase.kt` (contracts/repositories.md)
-- [ ] T070 [US11] Implement edit mode in `WorkoutDetailScreen.kt`: explicit Edit action unlocks editing of set values/completion/notes, add/remove exercise within the workout, workout-level notes; save persists via correction APIs; default remains read-only (FR-042, PRD-§16)
+- [X] T069 [US11] Implement correction methods in `HistoryRepositoryImpl.kt` (correctSet, addExerciseToHistoricalWorkout with name snapshot at edit time, removeExerciseFromHistoricalWorkout, updateHistoricalWorkoutNotes — all scoped by session id) and `CorrectHistoricalWorkoutUseCase.kt` in `com/gymora/domain/usecase/CorrectHistoricalWorkoutUseCase.kt` (contracts/repositories.md)
+- [X] T070 [US11] Implement edit mode in `WorkoutDetailScreen.kt`: explicit Edit action unlocks editing of set values/completion/notes, add/remove exercise within the workout, workout-level notes; save persists via correction APIs; default remains read-only (FR-042, PRD-§16)
 
 **Checkpoint**: All 11 user stories independently functional.
 

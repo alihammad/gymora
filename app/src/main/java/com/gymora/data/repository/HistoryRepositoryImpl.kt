@@ -1,6 +1,8 @@
 package com.gymora.data.repository
 
 import com.gymora.data.local.db.GymoraDatabase
+import com.gymora.data.local.entity.WorkoutExerciseEntity
+import com.gymora.domain.calculator.WorkoutCalculators
 import com.gymora.domain.model.ActiveExercise
 import com.gymora.domain.model.ActiveSet
 import com.gymora.domain.model.EntityNotFoundException
@@ -85,19 +87,50 @@ class HistoryRepositoryImpl @Inject constructor(
         isCompleted: Boolean,
         notes: String?,
     ) {
-        // Implemented in US11 (T069).
+        // BR-16 validation at the correction boundary, mirroring live logging.
+        WorkoutCalculators.validateSetInput(weight, reps)
+        val entity = setDao.getById(setId) ?: throw EntityNotFoundException(setId)
+        setDao.update(
+            entity.copy(
+                weight = weight,
+                weightUnit = weightUnit?.name,
+                reps = reps,
+                isCompleted = isCompleted,
+                completedAt = when {
+                    isCompleted && entity.completedAt == null -> System.currentTimeMillis()
+                    !isCompleted -> null
+                    else -> entity.completedAt
+                },
+                notes = notes,
+            ),
+        )
     }
 
     override suspend fun addExerciseToHistoricalWorkout(sessionId: Long, exerciseId: Long) {
-        // Implemented in US11 (T069).
+        val session = sessionDao.getById(sessionId) ?: throw EntityNotFoundException(sessionId)
+        val exerciseEntity = database.exerciseDao().getById(exerciseId)
+            ?: throw EntityNotFoundException(exerciseId)
+
+        exerciseDao.insert(
+            WorkoutExerciseEntity(
+                sessionId = sessionId,
+                exerciseId = exerciseId,
+                // Name snapshot captured at edit time (FR-056).
+                exerciseNameSnapshot = exerciseEntity.name,
+                position = exerciseDao.nextPosition(sessionId),
+                notes = null,
+            ),
+        )
     }
 
     override suspend fun removeExerciseFromHistoricalWorkout(workoutExerciseId: Long) {
-        // Implemented in US11 (T069).
+        // CASCADE removes the exercise's sets; scoped strictly to this session (BR-11).
+        exerciseDao.deleteById(workoutExerciseId)
     }
 
     override suspend fun updateHistoricalWorkoutNotes(sessionId: Long, notes: String?) {
-        // Implemented in US11 (T069).
+        val entity = sessionDao.getById(sessionId) ?: throw EntityNotFoundException(sessionId)
+        sessionDao.update(entity.copy(notes = notes))
     }
 
     private fun com.gymora.data.local.entity.WorkoutSessionEntity.toDomain(): WorkoutSession =
