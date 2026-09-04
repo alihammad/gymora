@@ -319,13 +319,13 @@ expectations and update when surpassed (spec US10).
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T064 [P] [US10] Unit test for Epley 1RM (weight × (1 + reps/30); reps ≥ 1; excludes REPS_ONLY/zero-weight sets) and records selection logic in `app/src/test/java/com/gymora/domain/PersonalRecordsTest.kt` (FR-047, R-09)
-- [ ] T065 [P] [US10] Robolectric/Room test: records computed from completed sessions update when surpassed and carry exercise/date context in `app/src/test/java/com/gymora/data/RecordsRepositoryTest.kt` (FR-047)
+- [X] T064 [P] [US10] Unit test for Epley 1RM (weight × (1 + reps/30); reps ≥ 1; excludes REPS_ONLY/zero-weight sets) and records selection logic in `app/src/test/java/com/gymora/domain/PersonalRecordsTest.kt` (FR-047, R-09)
+- [X] T065 [P] [US10] Robolectric/Room test: records computed from completed sessions update when surpassed and carry exercise/date context in `app/src/test/java/com/gymora/data/RecordsRepositoryTest.kt` (FR-047)
 
 ### Implementation for User Story 10
 
-- [ ] T066 [US10] Implement `estimatedOneRepMax` in `com/gymora/domain/calculator/WorkoutCalculators.kt` (Epley, R-09) and `RecordsRepository` interface in `com/gymora/domain/repository/RecordsRepository.kt` + implementation in `com/gymora/data/repository/RecordsRepositoryImpl.kt` (on-demand computation over completed sets; bind in `com/gymora/di/RepositoryModule.kt`) (contracts/repositories.md)
-- [ ] T067 [US10] Implement records UI `com/gymora/ui/records/RecordsScreen.kt` + ViewModel showing the four records with exercise + date context, reachable from navigation (FR-047, PRD-§18)
+- [X] T066 [US10] Implement `estimatedOneRepMax` in `com/gymora/domain/calculator/WorkoutCalculators.kt` (Epley, R-09) and `RecordsRepository` interface in `com/gymora/domain/repository/RecordsRepository.kt` + implementation in `com/gymora/data/repository/RecordsRepositoryImpl.kt` (on-demand computation over completed sets; bind in `com/gymora/di/RepositoryModule.kt`) (contracts/repositories.md)
+- [X] T067 [US10] Implement records UI `com/gymora/ui/records/RecordsScreen.kt` + ViewModel showing the four records with exercise + date context, reachable from navigation (FR-047, PRD-§18)
 
 **Checkpoint**: Story 10 independently verifiable.
 

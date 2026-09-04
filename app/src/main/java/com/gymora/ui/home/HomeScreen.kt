@@ -52,6 +52,7 @@ fun HomeScreen(
     onMyRoutines: () -> Unit,
     onRecentWorkouts: () -> Unit,
     onHistory: () -> Unit,
+    onRecords: () -> Unit,
     onStartWorkout: ((Long) -> Unit)? = null,
     onRecentWorkoutClick: ((Long) -> Unit)? = null,
     viewModel: HomeViewModel = hiltViewModel(),
@@ -85,6 +86,7 @@ fun HomeScreen(
                 TextButton(onClick = onMyRoutines) { Text("My Routines") }
                 TextButton(onClick = onRecentWorkouts) { Text("Recent Workouts") }
                 TextButton(onClick = onHistory) { Text("History") }
+                TextButton(onClick = onRecords) { Text("Records") }
             }
 
             when {
