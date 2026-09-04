@@ -97,7 +97,6 @@ class HistoryProtectionTest {
         val before = historyRowSnapshot()
 
         // Rename the routine and the exercise.
-        val routine = routineRepository.observeAll()
         val routineId = database.routineDao().getAllOnce().first().id
         routineRepository.rename(routineId, "Renamed Routine")
         val exerciseId = database.exerciseDao().getAllActiveOnce().first().id

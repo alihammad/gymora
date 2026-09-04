@@ -62,13 +62,20 @@ class ExerciseLibraryViewModel @Inject constructor(
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(
-                            errorMessage = error.message,
+                            errorMessage = friendlyMessage(error),
                             pendingDelete = null,
                         )
                     }
                 }
             _uiState.update { it.copy(pendingDelete = null) }
         }
+    }
+
+    /** FR-060: no stack traces surface; map domain failures to friendly copy. */
+    private fun friendlyMessage(error: Throwable): String = when (error) {
+        is com.gymora.domain.model.EntityNotFoundException ->
+            "This exercise no longer exists."
+        else -> "Something went wrong. Please try again."
     }
 
     fun onDeleteDismissed() {

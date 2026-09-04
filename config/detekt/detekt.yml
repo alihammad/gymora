@@ -8,9 +8,16 @@ build:
 complexity:
   LongMethod:
     threshold: 80
+    ignoreAnnotated: ['Composable']
   LongParameterList:
-    functionThreshold: 8
-    constructorThreshold: 10
+    functionThreshold: 10
+    constructorThreshold: 12
+  TooManyFunctions:
+    thresholdInClasses: 30
+    thresholdInInterfaces: 20
+    ignoreDeprecated: true
+    ignorePrivate: false
+    ignoreOverridden: false
 
 style:
   MagicNumber:

@@ -68,10 +68,16 @@ class WorkoutDetailViewModel @Inject constructor(
                 }
                 .onFailure { error ->
                     _uiState.update {
-                        it.copy(isLoading = false, errorMessage = error.message)
+                        it.copy(isLoading = false, errorMessage = friendlyMessage(error))
                     }
                 }
         }
+    }
+
+    /** FR-060: no stack traces surface; map domain failures to friendly copy. */
+    private fun friendlyMessage(error: Throwable): String = when (error) {
+        is com.gymora.domain.model.EntityNotFoundException -> "This workout no longer exists."
+        else -> "Something went wrong. Please try again."
     }
 
     /** FR-042: history is read-only unless the user explicitly opts into editing. */
@@ -160,7 +166,7 @@ class WorkoutDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(isEditing = false, editableSets = emptyMap()) }
                 loadDetail()
             }.onFailure { error ->
-                _uiState.update { it.copy(errorMessage = error.message) }
+                _uiState.update { it.copy(errorMessage = friendlyMessage(error)) }
             }
         }
     }
@@ -184,7 +190,9 @@ class WorkoutDetailViewModel @Inject constructor(
                     loadDetail()
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(showAddExercise = false, errorMessage = error.message) }
+                    _uiState.update {
+                        it.copy(showAddExercise = false, errorMessage = friendlyMessage(error))
+                    }
                 }
         }
     }
@@ -206,7 +214,9 @@ class WorkoutDetailViewModel @Inject constructor(
                     loadDetail()
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(pendingRemoveExerciseId = null, errorMessage = error.message) }
+                    _uiState.update {
+                        it.copy(pendingRemoveExerciseId = null, errorMessage = friendlyMessage(error))
+                    }
                 }
         }
     }

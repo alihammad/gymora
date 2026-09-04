@@ -135,7 +135,13 @@ class ActiveWorkoutViewModel @Inject constructor(
         val defaultSeconds = _uiState.value.restTimer.defaultSeconds
         val endInstant = System.currentTimeMillis() + defaultSeconds * 1000L
         _uiState.update {
-            it.copy(restTimer = RestTimerState(isRunning = true, endInstantMs = endInstant, defaultSeconds = defaultSeconds))
+            it.copy(
+                restTimer = RestTimerState(
+                    isRunning = true,
+                    endInstantMs = endInstant,
+                    defaultSeconds = defaultSeconds,
+                ),
+            )
         }
         startRestTicker()
     }
@@ -143,7 +149,9 @@ class ActiveWorkoutViewModel @Inject constructor(
     /** Skip the rest timer (FR-032). */
     fun onRestTimerSkip() {
         stopRestTicker()
-        _uiState.update { it.copy(restTimer = RestTimerState(defaultSeconds = it.restTimer.defaultSeconds)) }
+        _uiState.update {
+            it.copy(restTimer = RestTimerState(defaultSeconds = it.restTimer.defaultSeconds))
+        }
     }
 
     /** Add 30 seconds to the current rest timer (FR-032). */
@@ -158,7 +166,13 @@ class ActiveWorkoutViewModel @Inject constructor(
         val defaultSeconds = _uiState.value.restTimer.defaultSeconds
         val endInstant = System.currentTimeMillis() + defaultSeconds * 1000L
         _uiState.update {
-            it.copy(restTimer = RestTimerState(isRunning = true, endInstantMs = endInstant, defaultSeconds = defaultSeconds))
+            it.copy(
+                restTimer = RestTimerState(
+                    isRunning = true,
+                    endInstantMs = endInstant,
+                    defaultSeconds = defaultSeconds,
+                ),
+            )
         }
         startRestTicker()
     }

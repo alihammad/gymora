@@ -1,5 +1,6 @@
 package com.gymora.ui.library
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -154,7 +155,9 @@ private fun ExerciseList(
                 items(groupExercises, key = { it.id }) { exercise ->
                     Row(modifier = Modifier.fillMaxWidth()) {
                         ListItem(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { onExerciseClick(exercise.id) },
                             headlineContent = { Text(exercise.name) },
                             supportingContent = {
                                 if (exercise.isCustom) Text("Custom")
