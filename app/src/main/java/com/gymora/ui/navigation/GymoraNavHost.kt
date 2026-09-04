@@ -32,6 +32,7 @@ import com.gymora.ui.history.WorkoutDetailScreen
 import com.gymora.ui.home.HomeScreen
 import com.gymora.ui.library.ExerciseEditorScreen
 import com.gymora.ui.library.ExerciseLibraryScreen
+import com.gymora.ui.records.RecordsScreen
 import com.gymora.ui.routines.RoutineEditorScreen
 import com.gymora.ui.routines.RoutineListScreen
 import com.gymora.ui.settings.SettingsScreen
@@ -114,6 +115,7 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
                     onMyRoutines = { navController.navigate(Destinations.RoutineList.route) },
                     onRecentWorkouts = { navController.navigate(Destinations.History.route) },
                     onHistory = { navController.navigate(Destinations.History.route) },
+                    onRecords = { navController.navigate(Destinations.Records.route) },
                     onStartWorkout = { routineId ->
                         navController.navigate(Destinations.StartWorkout.create(routineId))
                     },
@@ -199,7 +201,9 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
             composable(Destinations.ExerciseHistory.route) {
                 ExerciseHistoryScreen(onBack = { navController.popBackStack() })
             }
-            composable(Destinations.Records.route) { PlaceholderScreen("Records") }
+            composable(Destinations.Records.route) {
+                RecordsScreen(onBack = { navController.popBackStack() })
+            }
         }
     }
 

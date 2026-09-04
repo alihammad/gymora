@@ -2,11 +2,13 @@ package com.gymora.di
 
 import com.gymora.data.repository.ExerciseRepositoryImpl
 import com.gymora.data.repository.HistoryRepositoryImpl
+import com.gymora.data.repository.RecordsRepositoryImpl
 import com.gymora.data.repository.RoutineRepositoryImpl
 import com.gymora.data.repository.SettingsRepositoryImpl
 import com.gymora.data.repository.WorkoutSessionRepositoryImpl
 import com.gymora.domain.repository.ExerciseRepository
 import com.gymora.domain.repository.HistoryRepository
+import com.gymora.domain.repository.RecordsRepository
 import com.gymora.domain.repository.RoutineRepository
 import com.gymora.domain.repository.SettingsRepository
 import com.gymora.domain.repository.WorkoutSessionRepository
@@ -41,4 +43,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindHistoryRepository(impl: HistoryRepositoryImpl): HistoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindRecordsRepository(impl: RecordsRepositoryImpl): RecordsRepository
 }
