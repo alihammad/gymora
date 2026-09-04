@@ -53,7 +53,8 @@ fun WorkoutSummaryScreen(
             SummaryRow("Routine", summary.routineNameSnapshot)
             SummaryRow(
                 "Date",
-                DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm").format(summary.date.atZone(java.time.ZoneId.systemDefault())),
+                DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
+                    .format(summary.date.atZone(java.time.ZoneId.systemDefault())),
             )
             SummaryRow("Duration", formatElapsed(summary.duration.seconds))
             SummaryRow("Exercises", summary.exerciseCount.toString())

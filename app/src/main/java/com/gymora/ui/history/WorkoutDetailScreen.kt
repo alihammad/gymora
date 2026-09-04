@@ -63,138 +63,197 @@ fun WorkoutDetailScreen(
                     }
                 },
                 actions = {
-                    if (uiState.detail != null && !uiState.isLoading) {
-                        if (uiState.isEditing) {
-                            TextButton(onClick = viewModel::save) { Text("Save") }
-                            TextButton(onClick = viewModel::cancelEdit) { Text("Cancel") }
-                        } else {
-                            // FR-042: history is read-only unless Edit is explicitly chosen.
-                            IconButton(onClick = viewModel::enterEditMode) {
-                                Icon(Icons.Filled.Edit, contentDescription = "Edit workout")
-                            }
-                        }
-                    }
+                    DetailActions(
+                        showActions = uiState.detail != null && !uiState.isLoading,
+                        isEditing = uiState.isEditing,
+                        onSave = viewModel::save,
+                        onCancel = viewModel::cancelEdit,
+                        onEdit = viewModel::enterEditMode,
+                    )
                 },
             )
         },
     ) { innerPadding ->
-        if (uiState.isLoading) {
-            CircularProgressIndicator(modifier = Modifier.padding(innerPadding).padding(16.dp))
-        } else {
-            val detail = uiState.detail
-            if (detail == null) {
-                Text(
-                    text = uiState.errorMessage ?: "Workout not found.",
-                    modifier = Modifier.padding(innerPadding).padding(16.dp),
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    item {
-                        Column {
-                            Text(
-                                text = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
-                                    .format(detail.session.startedAt.atZone(java.time.ZoneId.systemDefault())),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            detail.session.endedAt?.let { ended ->
-                                Text(
-                                    text = "Duration: ${formatElapsed(java.time.Duration.between(detail.session.startedAt, ended).seconds)}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                    // Workout-level notes: read-only in view mode, editable in edit mode.
-                    if (uiState.isEditing || detail.session.notes != null) {
-                        item {
-                            WorkoutNotesSection(
-                                notes = detail.session.notes,
-                                isEditing = uiState.isEditing,
-                                editableNotes = uiState.editableNotes,
-                                onNotesChanged = viewModel::onWorkoutNotesChanged,
-                            )
-                        }
-                    }
-                    items(detail.exercises, key = { it.workoutExerciseId }) { exercise ->
-                        if (uiState.isEditing) {
-                            EditableExerciseCard(
-                                exercise = exercise,
-                                editableSets = uiState.editableSets,
-                                onWeightChanged = viewModel::onWeightChanged,
-                                onRepsChanged = viewModel::onRepsChanged,
-                                onSetNotesChanged = viewModel::onSetNotesChanged,
-                                onToggleComplete = viewModel::onToggleComplete,
-                                onRemove = { viewModel.onRemoveExerciseClicked(exercise.workoutExerciseId) },
-                            )
-                        } else {
-                            HistoricalExerciseCard(
-                                exercise = exercise,
-                                onExerciseHistory = { exercise.exerciseId?.let(onExerciseHistory) },
-                            )
-                        }
-                    }
-                    if (uiState.isEditing) {
-                        item {
-                            Button(
-                                onClick = viewModel::onAddExerciseClicked,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Icon(Icons.Filled.Add, contentDescription = null)
-                                Text("Add exercise")
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        WorkoutDetailContent(
+            innerPadding = innerPadding,
+            uiState = uiState,
+            onExerciseHistory = onExerciseHistory,
+            viewModel = viewModel,
+        )
     }
 
     // Add-exercise picker dialog (edit mode, FR-042).
     if (uiState.showAddExercise) {
-        AlertDialog(
-            onDismissRequest = viewModel::onAddExerciseDismissed,
-            title = { Text("Add exercise") },
-            text = {
-                LazyColumn {
-                    items(uiState.libraryExercises, key = { it.id }) { exercise ->
-                        TextButton(
-                            onClick = { viewModel.onExerciseSelected(exercise.id) },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(exercise.name, modifier = Modifier.fillMaxWidth())
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = viewModel::onAddExerciseDismissed) { Text("Cancel") }
-            },
+        AddExerciseDialog(
+            exercises = uiState.libraryExercises,
+            onSelected = viewModel::onExerciseSelected,
+            onDismiss = viewModel::onAddExerciseDismissed,
         )
     }
 
     // Remove-exercise confirmation (edit mode, FR-042).
-    uiState.pendingRemoveExerciseId?.let { id ->
-        AlertDialog(
-            onDismissRequest = viewModel::onRemoveExerciseDismissed,
-            title = { Text("Remove exercise?") },
-            text = { Text("This removes the exercise from this workout only.") },
-            confirmButton = {
-                TextButton(onClick = viewModel::onRemoveExerciseConfirmed) { Text("Remove") }
-            },
-            dismissButton = {
-                TextButton(onClick = viewModel::onRemoveExerciseDismissed) { Text("Cancel") }
-            },
+    uiState.pendingRemoveExerciseId?.let {
+        RemoveExerciseDialog(
+            onConfirm = viewModel::onRemoveExerciseConfirmed,
+            onDismiss = viewModel::onRemoveExerciseDismissed,
         )
     }
+}
+
+@Composable
+private fun DetailActions(
+    showActions: Boolean,
+    isEditing: Boolean,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+    onEdit: () -> Unit,
+) {
+    if (!showActions) return
+    if (isEditing) {
+        TextButton(onClick = onSave) { Text("Save") }
+        TextButton(onClick = onCancel) { Text("Cancel") }
+    } else {
+        // FR-042: history is read-only unless Edit is explicitly chosen.
+        IconButton(onClick = onEdit) {
+            Icon(Icons.Filled.Edit, contentDescription = "Edit workout")
+        }
+    }
+}
+
+@Composable
+private fun WorkoutDetailContent(
+    innerPadding: androidx.compose.foundation.layout.PaddingValues,
+    uiState: WorkoutDetailUiState,
+    onExerciseHistory: (Long) -> Unit,
+    viewModel: WorkoutDetailViewModel,
+) {
+    if (uiState.isLoading) {
+        CircularProgressIndicator(modifier = Modifier.padding(innerPadding).padding(16.dp))
+        return
+    }
+    val detail = uiState.detail
+    if (detail == null) {
+        Text(
+            text = uiState.errorMessage ?: "Workout not found.",
+            modifier = Modifier.padding(innerPadding).padding(16.dp),
+        )
+        return
+    }
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Column {
+                Text(
+                    text = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
+                        .format(detail.session.startedAt.atZone(java.time.ZoneId.systemDefault())),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                detail.session.endedAt?.let { ended ->
+                    val seconds = java.time.Duration.between(
+                        detail.session.startedAt,
+                        ended,
+                    ).seconds
+                    Text(
+                        text = "Duration: ${formatElapsed(seconds)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        // Workout-level notes: read-only in view mode, editable in edit mode.
+        if (uiState.isEditing || detail.session.notes != null) {
+            item {
+                WorkoutNotesSection(
+                    notes = detail.session.notes,
+                    isEditing = uiState.isEditing,
+                    editableNotes = uiState.editableNotes,
+                    onNotesChanged = viewModel::onWorkoutNotesChanged,
+                )
+            }
+        }
+        items(detail.exercises, key = { it.workoutExerciseId }) { exercise ->
+            if (uiState.isEditing) {
+                EditableExerciseCard(
+                    exercise = exercise,
+                    editableSets = uiState.editableSets,
+                    onWeightChanged = viewModel::onWeightChanged,
+                    onRepsChanged = viewModel::onRepsChanged,
+                    onSetNotesChanged = viewModel::onSetNotesChanged,
+                    onToggleComplete = viewModel::onToggleComplete,
+                    onRemove = { viewModel.onRemoveExerciseClicked(exercise.workoutExerciseId) },
+                )
+            } else {
+                HistoricalExerciseCard(
+                    exercise = exercise,
+                    onExerciseHistory = { exercise.exerciseId?.let(onExerciseHistory) },
+                )
+            }
+        }
+        if (uiState.isEditing) {
+            item {
+                Button(
+                    onClick = viewModel::onAddExerciseClicked,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Text("Add exercise")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddExerciseDialog(
+    exercises: List<Exercise>,
+    onSelected: (Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add exercise") },
+        text = {
+            LazyColumn {
+                items(exercises, key = { it.id }) { exercise ->
+                    TextButton(
+                        onClick = { onSelected(exercise.id) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(exercise.name, modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+private fun RemoveExerciseDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Remove exercise?") },
+        text = { Text("This removes the exercise from this workout only.") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text("Remove") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
 }
 
 @Composable

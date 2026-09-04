@@ -1,6 +1,8 @@
 package com.gymora.data.repository
 
 import com.gymora.data.local.db.GymoraDatabase
+import com.gymora.data.local.entity.WorkoutSessionEntity
+import com.gymora.data.local.entity.WorkoutSetEntity
 import com.gymora.domain.calculator.WorkoutCalculators
 import com.gymora.domain.model.PersonalRecord
 import com.gymora.domain.model.PersonalRecords
@@ -22,62 +24,73 @@ class RecordsRepositoryImpl @Inject constructor(
 ) : RecordsRepository {
 
     override suspend fun getPersonalRecords(): PersonalRecords {
-        val setDao = database.workoutSetDao()
-        val exerciseDao = database.workoutExerciseDao()
-        val sessionDao = database.workoutSessionDao()
-
-        val sessions = sessionDao.listCompleted(limit = Int.MAX_VALUE, offset = 0)
+        val sessions = database.workoutSessionDao()
+            .listCompleted(limit = Int.MAX_VALUE, offset = 0)
         if (sessions.isEmpty()) return PersonalRecords(null, null, null, null)
 
-        // A performed set with exercise/date context; weight normalized to KG (R-04).
-        data class PerformedSet(
-            val weightKg: Double?,
-            val reps: Int?,
-            val isCompleted: Boolean,
-            val exerciseName: String,
-            val sessionDate: Instant,
-        )
+        val performedSets = collectPerformedSets(sessions)
 
-        val allSets = mutableListOf<PerformedSet>()
-        for (session in sessions) {
-            val exercises = exerciseDao.getForSession(session.id)
-            for (exercise in exercises) {
-                val sets = setDao.getForExercise(exercise.id)
-                for (set in sets) {
-                    val unit = parseWeightUnit(set.weightUnit)
-                    val weightKg = set.weight?.let { w ->
-                        WorkoutCalculators.convertWeight(w, unit, WeightUnit.KG)
-                    }
-                    allSets.add(
-                        PerformedSet(
-                            weightKg = weightKg,
-                            reps = set.reps,
-                            isCompleted = set.isCompleted,
-                            exerciseName = exercise.exerciseNameSnapshot,
-                            sessionDate = Instant.ofEpochMilli(session.startedAt),
-                        ),
+        return PersonalRecords(
+            heaviestWeight = heaviestWeight(performedSets),
+            highestReps = highestReps(performedSets),
+            bestEstimatedOneRepMax = bestEstimatedOneRepMax(performedSets),
+            largestWorkoutVolume = largestWorkoutVolume(sessions),
+        )
+    }
+
+    /** A performed set with exercise/date context; weight normalized to KG (R-04). */
+    private data class PerformedSet(
+        val weightKg: Double?,
+        val reps: Int?,
+        val isCompleted: Boolean,
+        val exerciseName: String,
+        val sessionDate: Instant,
+    )
+
+    private suspend fun collectPerformedSets(
+        sessions: List<WorkoutSessionEntity>,
+    ): List<PerformedSet> {
+        val setDao = database.workoutSetDao()
+        val exerciseDao = database.workoutExerciseDao()
+        return sessions.flatMap { session ->
+            exerciseDao.getForSession(session.id).flatMap { exercise ->
+                setDao.getForExercise(exercise.id).map { set ->
+                    PerformedSet(
+                        weightKg = set.weight?.let { weight ->
+                            WorkoutCalculators.convertWeight(
+                                weight,
+                                parseWeightUnit(set.weightUnit),
+                                WeightUnit.KG,
+                            )
+                        },
+                        reps = set.reps,
+                        isCompleted = set.isCompleted,
+                        exerciseName = exercise.exerciseNameSnapshot,
+                        sessionDate = Instant.ofEpochMilli(session.startedAt),
                     )
                 }
             }
         }
+    }
 
-        // Heaviest weight: max completed weighted set with weight > 0 (FR-047).
-        val heaviestWeight = allSets
+    private fun heaviestWeight(sets: List<PerformedSet>): PersonalRecord? =
+        sets.asSequence()
             .filter { it.isCompleted && it.weightKg != null && it.weightKg > 0 }
             .maxByOrNull { it.weightKg!! }
             ?.let { PersonalRecord(it.weightKg!!, it.exerciseName, it.sessionDate) }
 
-        // Highest reps: max completed set with reps > 0 (FR-047).
-        val highestReps = allSets
+    private fun highestReps(sets: List<PerformedSet>): PersonalRecord? =
+        sets.asSequence()
             .filter { it.isCompleted && it.reps != null && it.reps > 0 }
             .maxByOrNull { it.reps!! }
             ?.let { PersonalRecord(it.reps!!.toDouble(), it.exerciseName, it.sessionDate) }
 
-        // Best estimated 1RM (Epley): max among completed weighted sets, reps ≥ 1 (R-09).
-        val bestEpley = allSets
-            .filter {
-                it.isCompleted && it.weightKg != null && it.weightKg > 0 &&
-                    it.reps != null && it.reps >= 1
+    private fun bestEstimatedOneRepMax(sets: List<PerformedSet>): PersonalRecord? =
+        sets.asSequence()
+            .filter { set ->
+                set.isCompleted &&
+                    set.weightKg != null && set.weightKg > 0 &&
+                    set.reps != null && set.reps >= 1
             }
             .maxByOrNull { WorkoutCalculators.estimatedOneRepMax(it.weightKg!!, it.reps!!) }
             ?.let {
@@ -88,34 +101,41 @@ class RecordsRepositoryImpl @Inject constructor(
                 )
             }
 
-        // Largest workout volume: per-session Σ(weight × reps) over completed weighted sets.
-        val largestVolume = sessions
-            .mapNotNull { session ->
-                val volume = exerciseDao.getForSession(session.id)
-                    .flatMap { ex -> setDao.getForExercise(ex.id) }
-                    .sumOf { set ->
-                        if (!set.isCompleted || set.weight == null || set.weight <= 0 || set.reps == null) {
-                            0.0
-                        } else {
-                            val unit = parseWeightUnit(set.weightUnit)
-                            WorkoutCalculators.convertWeight(set.weight, unit, WeightUnit.KG) * set.reps
-                        }
-                    }
-                if (volume > 0) {
-                    Triple(session.routineNameSnapshot, volume, Instant.ofEpochMilli(session.startedAt))
-                } else {
-                    null
-                }
-            }
-            .maxByOrNull { it.second }
-            ?.let { (name, volume, date) -> PersonalRecord(volume, name, date) }
+    private suspend fun largestWorkoutVolume(
+        sessions: List<WorkoutSessionEntity>,
+    ): PersonalRecord? {
+        var best: Triple<String, Double, Instant>? = null
+        for (session in sessions) {
+            val volume = sessionVolume(session) ?: continue
+            if (best == null || volume.second > best.second) best = volume
+        }
+        return best?.let { (name, volume, date) -> PersonalRecord(volume, name, date) }
+    }
 
-        return PersonalRecords(
-            heaviestWeight = heaviestWeight,
-            highestReps = highestReps,
-            bestEstimatedOneRepMax = bestEpley,
-            largestWorkoutVolume = largestVolume,
+    private suspend fun sessionVolume(
+        session: WorkoutSessionEntity,
+    ): Triple<String, Double, Instant>? {
+        val volume = database.workoutExerciseDao()
+            .getForSession(session.id)
+            .flatMap { exercise -> database.workoutSetDao().getForExercise(exercise.id) }
+            .sumOf(::completedSetVolume)
+        if (volume <= 0) return null
+        return Triple(
+            session.routineNameSnapshot,
+            volume,
+            Instant.ofEpochMilli(session.startedAt),
         )
+    }
+
+    private fun completedSetVolume(set: WorkoutSetEntity): Double {
+        val weight = set.weight ?: return 0.0
+        val reps = set.reps ?: return 0.0
+        if (!set.isCompleted || weight <= 0) return 0.0
+        return WorkoutCalculators.convertWeight(
+            weight,
+            parseWeightUnit(set.weightUnit),
+            WeightUnit.KG,
+        ) * reps
     }
 
     private fun parseWeightUnit(raw: String?): WeightUnit =

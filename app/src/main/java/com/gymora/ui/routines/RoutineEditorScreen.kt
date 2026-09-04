@@ -313,10 +313,10 @@ private fun SetTemplateEditDialog(
                 onClick = {
                     val reps = repsText.toIntOrNull()
                     val weight = weightText.toDoubleOrNull()
-                    if (reps != null && reps >= 0 && (weight == null || weight >= 0)) {
+                    if (isValidTemplate(reps, weight)) {
                         onSave(
                             com.gymora.domain.model.SetTemplateInput(
-                                targetReps = reps,
+                                targetReps = reps!!,
                                 targetWeight = weight,
                                 weightUnit = template.weightUnit,
                                 measurementType = template.measurementType,
@@ -333,3 +333,6 @@ private fun SetTemplateEditDialog(
         },
     )
 }
+
+private fun isValidTemplate(reps: Int?, weight: Double?): Boolean =
+    reps != null && reps >= 0 && (weight == null || weight >= 0)

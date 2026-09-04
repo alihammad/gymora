@@ -359,13 +359,13 @@ history, routines, and templates remain untouched (spec US11).
 
 **Purpose**: Improvements affecting multiple stories; final validation against the spec.
 
-- [ ] T071 [P] Accessibility pass (FR-061, PRD-§52): content descriptions, labeled controls, touch target sizes, readable contrast, set-completion indication not color-only — across `com/gymora/ui/` screens
-- [ ] T072 [P] Large-history performance validation (SC-006, quickstart scenario 7): fixture generating 1,000+ completed workouts and `app/src/test/java/com/gymora/data/HistoryPagingTest.kt` verifying incremental loading and responsive scrolling
-- [ ] T073 [P] Compose UI tests for critical journeys in `app/src/androidTest/java/com/gymora/ui/`: start→log→finish workout, recovery prompt flow, cancel/discard confirmation, empty states, and elapsed-timer accuracy after navigation/backgrounding (displayed elapsed matches timestamp-derived duration — SC-004) (Constitution VII end-to-end coverage)
-- [ ] T074 Error-handling audit (FR-060, R-15): verify all repository failures map to user-friendly messages, no stack traces surface, recoverable UI state preserved — across ViewModels in `com/gymora/ui/`
-- [ ] T075 Offline verification (SC-007): confirm zero network permissions/usage and full functionality with connectivity disabled; document result in `specs/001-workout-tracker/quickstart.md` validation notes
-- [ ] T076 Run full quickstart.md validation (all 10 scenarios + definition-of-done checklist) in `specs/001-workout-tracker/quickstart.md` and fix any failures
-- [ ] T077 Run detekt/lint and full test suites (`testDebugUnitTest`, `connectedDebugAndroidTest`); fix violations without disabling rules (Constitution X)
+- [X] T071 [P] Accessibility pass (FR-061, PRD-§52): content descriptions, labeled controls, touch target sizes, readable contrast, set-completion indication not color-only — across `com/gymora/ui/` screens
+- [X] T072 [P] Large-history performance validation (SC-006, quickstart scenario 7): fixture generating 1,000+ completed workouts and `app/src/test/java/com/gymora/data/HistoryPagingTest.kt` verifying incremental loading and responsive scrolling
+- [X] T073 [P] Compose UI tests for critical journeys in `app/src/androidTest/java/com/gymora/ui/`: start→log→finish workout, recovery prompt flow, cancel/discard confirmation, empty states, and elapsed-timer accuracy after navigation/backgrounding (displayed elapsed matches timestamp-derived duration — SC-004) (Constitution VII end-to-end coverage)
+- [X] T074 Error-handling audit (FR-060, R-15): verify all repository failures map to user-friendly messages, no stack traces surface, recoverable UI state preserved — across ViewModels in `com/gymora/ui/`
+- [X] T075 Offline verification (SC-007): confirm zero network permissions/usage and full functionality with connectivity disabled; document result in `specs/001-workout-tracker/quickstart.md` validation notes
+- [X] T076 Run full quickstart.md validation (all 10 scenarios + definition-of-done checklist) in `specs/001-workout-tracker/quickstart.md` and fix any failures
+- [X] T077 Run detekt/lint and full test suites (`testDebugUnitTest`, `connectedDebugAndroidTest`); fix violations without disabling rules (Constitution X)
 
 ---
 
