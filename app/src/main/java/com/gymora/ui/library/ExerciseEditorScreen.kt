@@ -94,8 +94,7 @@ fun ExerciseEditorScreen(
                 onExpandedChange = { menuExpanded = it },
             ) {
                 OutlinedTextField(
-                    value = uiState.muscleGroup?.name?.lowercase()
-                        ?.replaceFirstChar { it.titlecase() } ?: "None",
+                    value = uiState.muscleGroup?.displayName ?: "None",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Muscle group") },
@@ -117,7 +116,7 @@ fun ExerciseEditorScreen(
                     )
                     MuscleGroup.entries.forEach { group ->
                         DropdownMenuItem(
-                            text = { Text(group.name.lowercase().replaceFirstChar { it.titlecase() }) },
+                            text = { Text(group.displayName) },
                             onClick = {
                                 viewModel.onMuscleGroupChanged(group)
                                 menuExpanded = false

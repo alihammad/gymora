@@ -159,7 +159,7 @@ fun RoutineEditorScreen(
                         ListItem(
                             headlineContent = { Text(exercise.name) },
                             supportingContent = {
-                                Text(exercise.muscleGroup?.name?.lowercase() ?: "")
+                                Text(exercise.muscleGroup?.displayName ?: "")
                             },
                             trailingContent = {
                                 IconButton(onClick = { viewModel.onExercisePicked(exercise.id) }) {

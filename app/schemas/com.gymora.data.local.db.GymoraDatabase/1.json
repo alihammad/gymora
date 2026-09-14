@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "7f2a580a0d43cd7d7c3ec94f7bb26f2f",
+    "identityHash": "7bc1f79f85215e5687c3d0451c826a44",
     "entities": [
       {
         "tableName": "settings",
@@ -48,7 +48,7 @@
       },
       {
         "tableName": "exercises",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `muscle_group` TEXT, `description` TEXT, `notes` TEXT, `is_custom` INTEGER NOT NULL, `deleted_at` INTEGER, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `muscle_group` TEXT, `description` TEXT, `notes` TEXT, `is_custom` INTEGER NOT NULL, `deleted_at` INTEGER, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `type` TEXT, `difficulty_level` TEXT, `force_type` TEXT, `mechanics` TEXT, `category` TEXT, `instructions_json` TEXT, `muscle_groups_json` TEXT, `equipment_json` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -99,6 +99,46 @@
             "columnName": "updated_at",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "difficultyLevel",
+            "columnName": "difficulty_level",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "forceType",
+            "columnName": "force_type",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "mechanics",
+            "columnName": "mechanics",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "instructionsJson",
+            "columnName": "instructions_json",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "muscleGroupsJson",
+            "columnName": "muscle_groups_json",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "equipmentJson",
+            "columnName": "equipment_json",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -626,7 +666,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7f2a580a0d43cd7d7c3ec94f7bb26f2f')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7bc1f79f85215e5687c3d0451c826a44')"
     ]
   }
 }

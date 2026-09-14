@@ -38,7 +38,6 @@ import com.gymora.domain.model.MuscleGroup
 import com.gymora.ui.components.ConfirmDialog
 import com.gymora.ui.components.EmptyState
 import com.gymora.ui.components.EmptyStateCopy
-import java.util.Locale
 
 /**
  * Exercise library: browse grouped by muscle group, search (incl. custom),
@@ -145,9 +144,7 @@ private fun ExerciseList(
             .forEach { (group, groupExercises) ->
                 item(key = "header-${group?.name ?: "none"}") {
                     Text(
-                        text = group?.name?.lowercase()
-                            ?.replaceFirstChar { it.titlecase(Locale.getDefault()) }
-                            ?: "Other",
+                        text = group?.displayName ?: "Other",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
@@ -160,7 +157,15 @@ private fun ExerciseList(
                                 .clickable { onExerciseClick(exercise.id) },
                             headlineContent = { Text(exercise.name) },
                             supportingContent = {
-                                if (exercise.isCustom) Text("Custom")
+                                val tags = buildList {
+                                    if (exercise.isCustom) add("Custom")
+                                    exercise.category?.displayName?.let { add(it) }
+                                    exercise.difficultyLevel?.displayName?.let { add(it) }
+                                    exercise.equipment.firstOrNull()?.name?.let { add(it) }
+                                }
+                                if (tags.isNotEmpty()) {
+                                    Text(tags.joinToString(" · "))
+                                }
                             },
                         )
                         IconButton(onClick = { onExerciseHistory(exercise.id) }) {
