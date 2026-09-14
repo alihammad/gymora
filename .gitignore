@@ -3,6 +3,7 @@
 build/
 out/
 local.properties
+bugs.md
 
 # Keep the Gradle wrapper jar
 !gradle/wrapper/gradle-wrapper.jar

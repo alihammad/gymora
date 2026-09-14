@@ -25,4 +25,13 @@ data class ExerciseEntity(
     @ColumnInfo(name = "deleted_at") val deletedAt: Long?,
     @ColumnInfo(name = "created_at") val createdAt: Long,
     @ColumnInfo(name = "updated_at") val updatedAt: Long,
+    // Extended descriptive metadata from docs/exercises.json.
+    @ColumnInfo(name = "type") val type: String? = null,
+    @ColumnInfo(name = "difficulty_level") val difficultyLevel: String? = null,
+    @ColumnInfo(name = "force_type") val forceType: String? = null,
+    @ColumnInfo(name = "mechanics") val mechanics: String? = null,
+    @ColumnInfo(name = "category") val category: String? = null,
+    @ColumnInfo(name = "instructions_json") val instructionsJson: String? = null,
+    @ColumnInfo(name = "muscle_groups_json") val muscleGroupsJson: String? = null,
+    @ColumnInfo(name = "equipment_json") val equipmentJson: String? = null,
 )

@@ -49,7 +49,7 @@ class ExerciseRepositoryTest {
         val created = repository.createCustom(
             CreateExerciseInput(
                 name = "My Custom Curl",
-                muscleGroup = MuscleGroup.ARMS,
+                muscleGroup = MuscleGroup.BICEPS,
                 description = null,
                 notes = null,
             ),
@@ -70,14 +70,14 @@ class ExerciseRepositoryTest {
             created.id,
             UpdateExerciseInput(
                 name = "New Name",
-                muscleGroup = MuscleGroup.LEGS,
+                muscleGroup = MuscleGroup.QUADRICEPS,
                 description = "Updated",
                 notes = null,
             ),
         )
 
         assertEquals("New Name", updated.name)
-        assertEquals(MuscleGroup.LEGS, updated.muscleGroup)
+        assertEquals(MuscleGroup.QUADRICEPS, updated.muscleGroup)
         assertEquals(updated, repository.getById(created.id))
     }
 

@@ -30,7 +30,7 @@ class LibrarySeedingTest {
             ApplicationProvider.getApplicationContext(),
             GymoraDatabase::class.java,
         ).allowMainThreadQueries().build()
-        seeder = LibrarySeederImpl()
+        seeder = LibrarySeederImpl(ApplicationProvider.getApplicationContext())
     }
 
     @After
@@ -46,8 +46,17 @@ class LibrarySeedingTest {
         assertTrue("expected 30+ seeded exercises, got ${exercises.size}", exercises.size >= 30)
         assertTrue("all seeded exercises are built-in", exercises.none { it.isCustom })
 
+        // docs/exercises.json spans far more than 5 muscle groups.
         val groups = exercises.mapNotNull { it.muscleGroup }.distinct()
-        assertEquals("expected all 5 muscle groups", 5, groups.size)
+        assertTrue("expected many muscle groups, got ${groups.size}", groups.size >= 5)
+
+        // The seed carries full descriptive metadata (instructions + equipment + muscle refs).
+        val hasInstructions = exercises.any { it.instructionsJson != null }
+        val hasEquipment = exercises.any { it.equipmentJson != null }
+        val hasMuscleGroups = exercises.any { it.muscleGroupsJson != null }
+        assertTrue("expected instructions metadata", hasInstructions)
+        assertTrue("expected equipment metadata", hasEquipment)
+        assertTrue("expected muscle-group metadata", hasMuscleGroups)
     }
 
     @Test

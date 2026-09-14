@@ -21,6 +21,10 @@ sealed class Destinations(val route: String) {
         fun create(exerciseId: Long) = "exercise/$exerciseId"
         const val ARG = "exerciseId"
     }
+    data object ExerciseDetail : Destinations("exercise/detail/{exerciseId}") {
+        fun create(exerciseId: Long) = "exercise/detail/$exerciseId"
+        const val ARG = "exerciseId"
+    }
     data object ActiveWorkout : Destinations("workout/active/{sessionId}") {
         fun create(sessionId: Long) = "workout/active/$sessionId"
         const val ARG = "sessionId"

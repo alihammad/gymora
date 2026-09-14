@@ -12,6 +12,8 @@ import com.gymora.data.local.dao.SettingsDao
 import com.gymora.data.local.db.GymoraDatabase
 import com.gymora.data.local.seed.LibrarySeeder
 import com.gymora.data.local.seed.LibrarySeederImpl
+import com.gymora.data.local.seed.RoutineSeeder
+import com.gymora.data.local.seed.RoutineSeederImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,6 +35,7 @@ object DatabaseModule {
     fun provideDatabase(
         @ApplicationContext context: Context,
         seeder: LibrarySeeder,
+        routineSeeder: RoutineSeeder,
     ): GymoraDatabase {
         val databaseRef = AtomicReference<GymoraDatabase>()
         val database = Room.databaseBuilder(
@@ -54,7 +57,11 @@ object DatabaseModule {
                     // R-08: seed the built-in exercise library on first database
                     // creation. Runs after the database object is fully built.
                     CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-                        databaseRef.get()?.let { seeder.seed(it) }
+                        databaseRef.get()?.let { db ->
+                            seeder.seed(db)
+                            // Default routines depend on the library being seeded first.
+                            routineSeeder.seed(db)
+                        }
                     }
                 }
             })
@@ -80,8 +87,13 @@ object DatabaseModule {
     fun provideSetTemplateDao(database: GymoraDatabase): SetTemplateDao =
         database.setTemplateDao()
 
+
+    /** Default-routine seeder (seeds home-screen routines on first launch). */
+    @Provides
+    @Singleton
+    fun provideRoutineSeeder(seeder: RoutineSeederImpl): RoutineSeeder = seeder
     /** Built-in exercise library seeder (T017, R-08). */
     @Provides
     @Singleton
-    fun provideLibrarySeeder(): LibrarySeeder = LibrarySeederImpl()
+    fun provideLibrarySeeder(seeder: LibrarySeederImpl): LibrarySeeder = seeder
 }
