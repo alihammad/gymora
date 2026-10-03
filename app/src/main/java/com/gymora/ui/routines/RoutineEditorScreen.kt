@@ -3,6 +3,7 @@ package com.gymora.ui.routines
 import com.gymora.ui.components.GymoraLoading
 import com.gymora.ui.theme.GymoraShapes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import com.gymora.ui.components.Button
 import com.gymora.ui.components.Card
@@ -196,23 +198,62 @@ fun RoutineEditorScreen(
     }
 
     if (uiState.showExercisePicker) {
+        var query by remember { mutableStateOf("") }
+        val filtered = remember(uiState.libraryExercises, query) {
+            val q = query.trim()
+            if (q.isEmpty()) {
+                uiState.libraryExercises
+            } else {
+                uiState.libraryExercises.filter {
+                    it.name.contains(q, ignoreCase = true) ||
+                        it.muscleGroup?.displayName?.contains(q, ignoreCase = true) == true
+                }
+            }
+        }
         AlertDialog(
             onDismissRequest = viewModel::onExercisePickerDismissed,
             title = { Text("Add exercise") },
             text = {
-                LazyColumn {
-                    items(uiState.libraryExercises, key = { it.id }) { exercise ->
-                        ListItem(
-                            headlineContent = { Text(exercise.name) },
-                            supportingContent = {
-                                Text(exercise.muscleGroup?.displayName ?: "")
-                            },
-                            trailingContent = {
-                                IconButton(onClick = { viewModel.onExercisePicked(exercise.id) }) {
-                                    Icon(Icons.Filled.Add, contentDescription = "Add ${exercise.name}")
+                Column {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Search exercises") },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (query.isNotEmpty()) {
+                                IconButton(onClick = { query = "" }) {
+                                    Icon(Icons.Filled.Close, contentDescription = "Clear search")
                                 }
-                            },
+                            }
+                        },
+                        singleLine = true,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    if (filtered.isEmpty()) {
+                        Text(
+                            "No exercises match \"${query.trim()}\".",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(vertical = 16.dp),
                         )
+                    } else {
+                        LazyColumn {
+                            items(filtered, key = { it.id }) { exercise ->
+                                ListItem(
+                                    headlineContent = { Text(exercise.name) },
+                                    supportingContent = {
+                                        Text(exercise.muscleGroup?.displayName ?: "")
+                                    },
+                                    trailingContent = {
+                                        IconButton(onClick = { viewModel.onExercisePicked(exercise.id) }) {
+                                            Icon(Icons.Filled.Add, contentDescription = "Add ${exercise.name}")
+                                        }
+                                    },
+                                    modifier = Modifier.clickable { viewModel.onExercisePicked(exercise.id) },
+                                )
+                            }
+                        }
                     }
                 }
             },

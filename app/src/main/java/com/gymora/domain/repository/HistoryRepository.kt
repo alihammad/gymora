@@ -31,6 +31,9 @@ interface HistoryRepository {
     /** Training volume (kg) per session for every routine performed since [sinceMillis]. */
     suspend fun getRoutineProgressSince(sinceMillis: Long): List<com.gymora.domain.model.ProgressSeries>
 
+    /** Headline stats of every completed workout, oldest first (profile charts and calendar). */
+    suspend fun getWorkoutStats(): List<com.gymora.domain.model.WorkoutStat>
+
     /** Full read-only workout graph from snapshot rows (FR-041). */
     suspend fun getWorkoutDetail(sessionId: Long): WorkoutDetail
 

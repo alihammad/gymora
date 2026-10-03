@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +37,7 @@ import com.gymora.ui.exercisedetail.ExerciseDetailScreen
 import com.gymora.ui.exercisefilter.ExerciseFilterScreen
 import com.gymora.ui.library.ExerciseEditorScreen
 import com.gymora.ui.library.ExerciseLibraryScreen
+import com.gymora.ui.profile.ProfileScreen
 import com.gymora.ui.records.RecordsScreen
 import com.gymora.ui.routines.RoutineEditorScreen
 import com.gymora.ui.routines.RoutineListScreen
@@ -55,6 +57,7 @@ private val bottomTabs = listOf(
     BottomTab(Destinations.Home, "Home", Icons.Filled.Home),
     BottomTab(Destinations.History, "History", Icons.Filled.History),
     BottomTab(Destinations.Exercises, "Exercises", Icons.Filled.FitnessCenter),
+    BottomTab(Destinations.Profile, "Profile", Icons.Filled.Person),
     BottomTab(Destinations.Settings, "Settings", Icons.Filled.Settings),
 )
 
@@ -162,6 +165,13 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
                     },
                     onExerciseHistory = { exerciseId ->
                         navController.navigate(Destinations.ExerciseHistory.create(exerciseId))
+                    },
+                )
+            }
+            composable(Destinations.Profile.route) {
+                ProfileScreen(
+                    onWorkoutClick = { sessionId ->
+                        navController.navigate(Destinations.WorkoutDetail.create(sessionId))
                     },
                 )
             }

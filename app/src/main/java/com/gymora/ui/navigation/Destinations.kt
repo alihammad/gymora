@@ -2,7 +2,7 @@ package com.gymora.ui.navigation
 
 /**
  * Navigation destinations for the Gymora nav graph (FR-004).
- * Bottom-nav tabs: Home, History, Exercises, Settings.
+ * Bottom-nav tabs: Home, History, Exercises, Profile, Settings.
  * Push destinations: routine list/detail/editor, exercise editor, active workout,
  * workout summary, workout detail, exercise history, records.
  */
@@ -10,6 +10,7 @@ sealed class Destinations(val route: String) {
     data object Home : Destinations("home")
     data object History : Destinations("history")
     data object Exercises : Destinations("exercises")
+    data object Profile : Destinations("profile")
     data object Settings : Destinations("settings")
 
     data object RoutineList : Destinations("routines")
