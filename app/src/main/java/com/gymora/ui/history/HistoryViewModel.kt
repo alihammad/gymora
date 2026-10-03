@@ -34,7 +34,13 @@ class HistoryViewModel @Inject constructor(
 
     private fun loadInitial() {
         viewModelScope.launch {
-            val entries = historyRepository.listCompleted(limit = PAGE_SIZE, offset = 0)
+            val entries = try {
+                historyRepository.listCompleted(limit = PAGE_SIZE, offset = 0)
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList()
+            }
             _uiState.update {
                 it.copy(
                     entries = entries,
@@ -48,7 +54,7 @@ class HistoryViewModel @Inject constructor(
     /** Incremental loading (FR-058, R-07): never the full lifetime history at once. */
     fun onLoadMore() {
         val state = _uiState.value
-        if (state.isLoadingMore || !state.hasMore) return
+        if (state.isLoading || state.isLoadingMore || !state.hasMore) return
         _uiState.update { it.copy(isLoadingMore = true) }
         viewModelScope.launch {
             val more = historyRepository.listCompleted(
@@ -57,7 +63,7 @@ class HistoryViewModel @Inject constructor(
             )
             _uiState.update {
                 it.copy(
-                    entries = it.entries + more,
+                    entries = (it.entries + more).distinctBy { e -> e.id },
                     isLoadingMore = false,
                     hasMore = more.size == PAGE_SIZE,
                 )

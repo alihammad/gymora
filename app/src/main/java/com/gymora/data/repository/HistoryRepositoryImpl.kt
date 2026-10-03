@@ -40,6 +40,102 @@ class HistoryRepositoryImpl @Inject constructor(
             )
         }
 
+    override suspend fun completedDays(
+        from: java.time.LocalDate,
+        toExclusive: java.time.LocalDate,
+    ): Set<java.time.LocalDate> {
+        val zone = java.time.ZoneId.systemDefault()
+        return sessionDao.completedStartTimesBetween(
+            from.atStartOfDay(zone).toInstant().toEpochMilli(),
+            toExclusive.atStartOfDay(zone).toInstant().toEpochMilli(),
+        ).map { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }.toSet()
+    }
+
+    override suspend fun getWorkoutsOn(day: java.time.LocalDate): List<WorkoutDetail> {
+        val zone = java.time.ZoneId.systemDefault()
+        return sessionDao.listCompletedBetween(
+            day.atStartOfDay(zone).toInstant().toEpochMilli(),
+            day.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli(),
+        ).map { getWorkoutDetail(it.id) }
+    }
+
+    override suspend fun getRoutineProgress(
+        routineId: Long,
+        limit: Int,
+    ): List<com.gymora.domain.model.RoutineSessionPoint> =
+        sessionDao.listCompletedForRoutine(routineId, limit).reversed().map { session ->
+            val sets = exerciseDao.getForSession(session.id)
+                .flatMap { setDao.getForExercise(it.id) }
+            com.gymora.domain.model.RoutineSessionPoint(
+                sessionId = session.id,
+                date = Instant.ofEpochMilli(session.startedAt),
+                volumeKg = WorkoutCalculators.totalVolume(
+                    sets.map {
+                        com.gymora.domain.model.CompletedSet(
+                            weight = it.weight,
+                            reps = it.reps,
+                            weightUnit = it.weightUnit?.let { u -> WeightUnit.valueOf(u) },
+                            isCompleted = it.isCompleted,
+                        )
+                    },
+                    WeightUnit.KG,
+                ),
+                completedSets = sets.count { it.isCompleted },
+            )
+        }
+
+    override suspend fun getExerciseProgress(
+        sinceMillis: Long,
+    ): List<com.gymora.domain.model.ProgressSeries> {
+        // exerciseId -> (name, per-session best estimated 1RM), sessions oldest first.
+        val byExercise = linkedMapOf<Long, Pair<String, MutableList<Double>>>()
+        sessionDao.listCompletedSince(sinceMillis).forEach { session ->
+            exerciseDao.getForSession(session.id).forEach { we ->
+                val exerciseId = we.exerciseId ?: return@forEach
+                val best = setDao.getForExercise(we.id)
+                    .filter { it.isCompleted && (it.weight ?: 0.0) > 0 && (it.reps ?: 0) > 0 }
+                    .maxOfOrNull {
+                        WorkoutCalculators.estimatedOneRepMax(
+                            WorkoutCalculators.convertWeight(
+                                it.weight!!,
+                                it.weightUnit?.let { u -> WeightUnit.valueOf(u) } ?: WeightUnit.KG,
+                                WeightUnit.KG,
+                            ),
+                            it.reps!!,
+                        )
+                    } ?: return@forEach
+                byExercise.getOrPut(exerciseId) { we.exerciseNameSnapshot to mutableListOf() }
+                    .second.add(best)
+            }
+        }
+        return byExercise.map { (id, v) -> com.gymora.domain.model.ProgressSeries(id, v.first, v.second) }
+    }
+
+    override suspend fun getRoutineProgressSince(
+        sinceMillis: Long,
+    ): List<com.gymora.domain.model.ProgressSeries> {
+        val byRoutine = linkedMapOf<Long, Pair<String, MutableList<Double>>>()
+        sessionDao.listCompletedSince(sinceMillis).forEach { session ->
+            val routineId = session.routineId ?: return@forEach
+            val sets = exerciseDao.getForSession(session.id).flatMap { setDao.getForExercise(it.id) }
+            val volume = WorkoutCalculators.totalVolume(
+                sets.map {
+                    com.gymora.domain.model.CompletedSet(
+                        weight = it.weight,
+                        reps = it.reps,
+                        weightUnit = it.weightUnit?.let { u -> WeightUnit.valueOf(u) },
+                        isCompleted = it.isCompleted,
+                    )
+                },
+                WeightUnit.KG,
+            )
+            // Latest snapshot name wins if the routine was renamed.
+            val entry = byRoutine.getOrPut(routineId) { session.routineNameSnapshot to mutableListOf() }
+            byRoutine[routineId] = session.routineNameSnapshot to entry.second.also { it.add(volume) }
+        }
+        return byRoutine.map { (id, v) -> com.gymora.domain.model.ProgressSeries(id, v.first, v.second) }
+    }
+
     override suspend fun getWorkoutDetail(sessionId: Long): WorkoutDetail {
         val session = sessionDao.getById(sessionId) ?: throw EntityNotFoundException(sessionId)
         return WorkoutDetail(

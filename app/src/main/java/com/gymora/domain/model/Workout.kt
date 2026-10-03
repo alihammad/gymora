@@ -97,3 +97,18 @@ data class PreviousPerformance(
     val date: Instant,
     val sets: List<SetValue>,
 )
+
+/** One completed session of a routine, for the routine progress chart. */
+data class RoutineSessionPoint(
+    val sessionId: Long,
+    val date: Instant,
+    val volumeKg: Double,
+    val completedSets: Int,
+)
+
+/** Per-session values for one exercise or routine, oldest first (progress overview). */
+data class ProgressSeries(
+    val id: Long,
+    val name: String,
+    val values: List<Double>,
+)

@@ -1,18 +1,18 @@
 package com.gymora.ui.history
 
+import com.gymora.ui.components.GymoraLoading
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.gymora.ui.components.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -55,7 +55,7 @@ fun HistoryScreen(
         topBar = { TopAppBar(title = { Text("History") }) },
     ) { innerPadding ->
         if (uiState.isLoading) {
-            CircularProgressIndicator(modifier = Modifier.padding(innerPadding).padding(16.dp))
+            GymoraLoading(modifier = Modifier.padding(innerPadding).padding(16.dp))
         } else if (uiState.entries.isEmpty()) {
             EmptyState(
                 message = EmptyStateCopy.NO_HISTORY,
@@ -88,7 +88,7 @@ fun HistoryScreen(
                 }
                 if (uiState.isLoadingMore) {
                     item {
-                        CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+                        GymoraLoading(modifier = Modifier.padding(16.dp))
                     }
                 }
             }

@@ -30,6 +30,10 @@ import kotlinx.coroutines.launch
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private const val SINGLE_ACTIVE_INDEX_SQL =
+        "CREATE UNIQUE INDEX IF NOT EXISTS index_workout_sessions_single_active " +
+            "ON workout_sessions(status) WHERE status = 'ACTIVE'"
+
     @Provides
     @Singleton
     fun provideDatabase(
@@ -43,17 +47,22 @@ object DatabaseModule {
             GymoraDatabase::class.java,
             GymoraDatabase.NAME,
         )
+            .addMigrations(GymoraDatabase.MIGRATION_1_2)
             .addCallback(object : RoomDatabase.Callback() {
+                override fun onOpen(db: SupportSQLiteDatabase) {
+                    super.onOpen(db)
+                    // Runs after Room's schema validation, so the partial index
+                    // (unknown to Room) cannot trip it. Recreates it after a
+                    // migration dropped it; no-op otherwise.
+                    db.execSQL(SINGLE_ACTIVE_INDEX_SQL)
+                }
+
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
                     // BR-14 / Constitution V: at most one active session, enforced
                     // at the persistence layer. Room's @Index cannot express a
                     // partial index, so it is created here (data-model.md).
-                    db.execSQL(
-                        "CREATE UNIQUE INDEX IF NOT EXISTS " +
-                            "index_workout_sessions_single_active " +
-                            "ON workout_sessions(status) WHERE status = 'ACTIVE'",
-                    )
+                    db.execSQL(SINGLE_ACTIVE_INDEX_SQL)
                     // R-08: seed the built-in exercise library on first database
                     // creation. Runs after the database object is fully built.
                     CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {

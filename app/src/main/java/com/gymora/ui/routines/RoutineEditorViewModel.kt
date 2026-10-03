@@ -8,6 +8,7 @@ import com.gymora.domain.model.MeasurementType
 import com.gymora.domain.model.SetTemplateInput
 import com.gymora.domain.model.ValidationException
 import com.gymora.domain.repository.ExerciseRepository
+import com.gymora.domain.repository.HistoryRepository
 import com.gymora.domain.repository.RoutineRepository
 import com.gymora.domain.usecase.DeleteRoutineUseCase
 import com.gymora.domain.usecase.DuplicateRoutineUseCase
@@ -26,6 +27,7 @@ class RoutineEditorViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val routineRepository: RoutineRepository,
     private val exerciseRepository: ExerciseRepository,
+    private val historyRepository: HistoryRepository,
     private val deleteRoutineUseCase: DeleteRoutineUseCase,
     private val duplicateRoutineUseCase: DuplicateRoutineUseCase,
 ) : ViewModel() {
@@ -65,12 +67,20 @@ class RoutineEditorViewModel @Inject constructor(
             runCatching { routineRepository.getById(routineId) }
                 .onSuccess { detail ->
                     _uiState.update { it.copy(routine = detail, isLoading = false) }
+                    loadProgress()
                 }
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(isLoading = false, errorMessage = friendlyMessage(error))
                     }
                 }
+        }
+    }
+
+    private fun loadProgress() {
+        viewModelScope.launch {
+            runCatching { historyRepository.getRoutineProgress(routineId, PROGRESS_SESSIONS) }
+                .onSuccess { points -> _uiState.update { it.copy(progress = points) } }
         }
     }
 
@@ -124,13 +134,6 @@ class RoutineEditorViewModel @Inject constructor(
         ids.add(toIndex, moved)
         viewModelScope.launch {
             routineRepository.reorderExercises(routineId, ids)
-            loadRoutine()
-        }
-    }
-
-    fun onExerciseNotesChanged(routineExerciseId: Long, notes: String?) {
-        viewModelScope.launch {
-            routineRepository.updateExerciseNotes(routineExerciseId, notes?.ifBlank { null })
             loadRoutine()
         }
     }
@@ -210,5 +213,6 @@ class RoutineEditorViewModel @Inject constructor(
 
     companion object {
         const val NEW_ROUTINE_ID = 0L
+        const val PROGRESS_SESSIONS = 20
     }
 }

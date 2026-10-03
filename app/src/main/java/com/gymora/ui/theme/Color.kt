@@ -2,53 +2,57 @@ package com.gymora.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Light palette
-val PrimaryLight = Color(0xFF1B6B4F)
-val OnPrimaryLight = Color(0xFFFFFFFF)
-val PrimaryContainerLight = Color(0xFFA5F2CF)
-val OnPrimaryContainerLight = Color(0xFF002115)
-val SecondaryLight = Color(0xFF4D6357)
-val OnSecondaryLight = Color(0xFFFFFFFF)
-val SecondaryContainerLight = Color(0xFFCFE8D9)
-val OnSecondaryContainerLight = Color(0xFF0A1F16)
-val TertiaryLight = Color(0xFF3D6373)
-val OnTertiaryLight = Color(0xFFFFFFFF)
-val TertiaryContainerLight = Color(0xFFC1E8FB)
-val OnTertiaryContainerLight = Color(0xFF001F29)
-val ErrorLight = Color(0xFFBA1A1A)
-val OnErrorLight = Color(0xFFFFFFFF)
-val ErrorContainerLight = Color(0xFFFFDAD6)
-val OnErrorContainerLight = Color(0xFF410002)
-val BackgroundLight = Color(0xFFFBFDFA)
-val OnBackgroundLight = Color(0xFF191C1A)
-val SurfaceLight = Color(0xFFFBFDFA)
-val OnSurfaceLight = Color(0xFF191C1A)
-val SurfaceVariantLight = Color(0xFFDBE5DD)
-val OnSurfaceVariantLight = Color(0xFF404943)
-val OutlineLight = Color(0xFF707973)
+// "Night volt" design tokens. Screens must read colors from MaterialTheme.colorScheme
+// or GymoraTheme.extraColors; never hardcode hex values.
 
-// Dark palette — gym-comfortable: low-luminance surfaces with readable contrast
-// (FR-051, PRD-§40).
-val PrimaryDark = Color(0xFF8AD6B4)
-val OnPrimaryDark = Color(0xFF003826)
-val PrimaryContainerDark = Color(0xFF005139)
-val OnPrimaryContainerDark = Color(0xFFA5F2CF)
-val SecondaryDark = Color(0xFFB4CCBD)
-val OnSecondaryDark = Color(0xFF20352A)
-val SecondaryContainerDark = Color(0xFF364B40)
-val OnSecondaryContainerDark = Color(0xFFCFE8D9)
-val TertiaryDark = Color(0xFFA5CCDE)
-val OnTertiaryDark = Color(0xFF073543)
-val TertiaryContainerDark = Color(0xFF244C5B)
-val OnTertiaryContainerDark = Color(0xFFC1E8FB)
-val ErrorDark = Color(0xFFFFB4AB)
-val OnErrorDark = Color(0xFF690005)
-val ErrorContainerDark = Color(0xFF93000A)
-val OnErrorContainerDark = Color(0xFFFFDAD6)
-val BackgroundDark = Color(0xFF111412)
-val OnBackgroundDark = Color(0xFFE1E3DF)
-val SurfaceDark = Color(0xFF111412)
-val OnSurfaceDark = Color(0xFFE1E3DF)
-val SurfaceVariantDark = Color(0xFF404943)
-val OnSurfaceVariantDark = Color(0xFFBFC9C1)
-val OutlineDark = Color(0xFF8A938C)
+val Background = Color(0xFF0E0F12)
+val Surface = Color(0xFF1A1C22)
+val SurfaceLow = Color(0xFF15171C)
+val SurfaceRaised = Color(0xFF23262E)
+val SurfaceHighest = Color(0xFF2A2D35)
+
+val Primary = Color(0xFFC6F432)
+val OnPrimary = Color(0xFF0E0F12)
+val PrimaryContainer = Color(0xFF2B3A0A)
+val OnPrimaryContainer = Color(0xFFE3FA99)
+
+val Secondary = Color(0xFF7B61FF)
+val OnSecondary = Color(0xFFFFFFFF)
+val SecondaryText = Color(0xFF9D8BFF)
+
+val TextPrimary = Color(0xFFF5F5F7)
+val TextSecondary = Color(0xFF9A9CA5)
+val TextDisabled = Color(0xFF5C5F68)
+
+val Outline = Color(0xFF3A3D46)
+val Divider = Color(0xFF2A2D35)
+
+val Error = Color(0xFFFF5C5C)
+val OnError = Color(0xFF0E0F12)
+val Warning = Color(0xFFFFB020)
+
+/** Primary pressed fill (slightly darker lime). */
+val PrimaryPressed = Color(0xFFB0DB2B)
+
+/** Colors that have no Material 3 ColorScheme slot. */
+data class ExtraColors(
+    val secondaryText: Color = SecondaryText,
+    val textDisabled: Color = TextDisabled,
+    val warning: Color = Warning,
+    val success: Color = Primary,
+    val divider: Color = Divider,
+    val track: Color = SurfaceHighest,
+    val primaryPressed: Color = PrimaryPressed,
+    val glow: Color = Primary.copy(alpha = 0.06f),
+)
+
+/**
+ * Accents cycled per routine tile. Night volt limits accents to lime and violet.
+ */
+val TileAccents = listOf(Primary, Secondary)
+
+/** Foreground for icons drawn on a [TileAccents] fill. */
+val OnTileAccents = listOf(OnPrimary, OnSecondary)
+
+/** Accent colors safe to use as small text on dark surfaces (violet uses its lighter variant). */
+val TileAccentTexts = listOf(Primary, SecondaryText)

@@ -4,10 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import com.gymora.ui.components.TextButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.gymora.ui.components.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -39,15 +39,16 @@ fun RestTimerBar(
         Text(
             text = "Rest: ${formatElapsed(state.remainingSeconds)}",
             style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f),
         )
-        OutlinedButton(onClick = onSkip) {
+        TextButton(onClick = onSkip) {
             Text("Skip")
         }
         OutlinedButton(onClick = onAdd30s) {
             Text("+30s")
         }
-        Button(onClick = onRestart) {
+        OutlinedButton(onClick = onRestart) {
             Text("Restart")
         }
     }

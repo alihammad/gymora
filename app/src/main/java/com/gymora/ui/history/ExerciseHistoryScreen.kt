@@ -1,23 +1,23 @@
 package com.gymora.ui.history
 
+import com.gymora.ui.components.GymoraLoading
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import com.gymora.ui.components.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.gymora.ui.components.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -27,6 +27,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import com.gymora.ui.components.FilterChip
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.gymora.domain.calculator.WorkoutCalculators
+import com.gymora.domain.model.WeightUnit
+import com.gymora.ui.components.ChartPoint
+import com.gymora.ui.components.ProgressChartCard
 import com.gymora.domain.model.ActiveSet
 import com.gymora.domain.model.ExercisePerformance
 import java.time.ZoneId
@@ -59,7 +68,7 @@ fun ExerciseHistoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Exercise History") },
+                title = { Text("Progress & History") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -69,7 +78,7 @@ fun ExerciseHistoryScreen(
         },
     ) { innerPadding ->
         if (uiState.isLoading) {
-            CircularProgressIndicator(modifier = Modifier.padding(innerPadding).padding(16.dp))
+            GymoraLoading(modifier = Modifier.padding(innerPadding).padding(16.dp))
         } else if (uiState.performances.isEmpty()) {
             Text(
                 text = "No history for this exercise yet.",
@@ -84,16 +93,73 @@ fun ExerciseHistoryScreen(
                     .padding(horizontal = 16.dp),
                 state = listState,
             ) {
-                items(uiState.performances, key = { it.sessionId }) { performance ->
+                item(key = "progress-chart") {
+                    ExerciseProgress(uiState.performances)
+                }
+                // The same exercise can appear more than once in a session, so sessionId alone isn't unique.
+                itemsIndexed(
+                    uiState.performances,
+                    key = { index, it -> "${it.sessionId}-$index" },
+                ) { _, performance ->
                     PerformanceCard(performance)
                 }
                 if (uiState.isLoadingMore) {
                     item {
-                        CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+                        GymoraLoading(modifier = Modifier.padding(16.dp))
                     }
                 }
             }
         }
+    }
+}
+
+private enum class ProgressMetric(val label: String, val unit: String) {
+    ONE_RM("Est. 1RM", "kg"),
+    TOP_WEIGHT("Top weight", "kg"),
+    VOLUME("Volume", "kg"),
+}
+
+/** Progress chart over time for one exercise, switchable between metrics (all in kg). */
+@Composable
+private fun ExerciseProgress(performances: List<ExercisePerformance>) {
+    var metric by remember { mutableStateOf(ProgressMetric.ONE_RM) }
+    val points = remember(performances, metric) {
+        val fmt = DateTimeFormatter.ofPattern("d MMM")
+        performances.reversed().mapNotNull { perf ->
+            val sets = perf.sets
+                .filter { it.isCompleted && it.weight != null && it.weight > 0 && (it.reps ?: 0) > 0 }
+                .map { set ->
+                    val kg = WorkoutCalculators.convertWeight(
+                        set.weight!!, set.weightUnit ?: WeightUnit.KG, WeightUnit.KG,
+                    )
+                    kg to set.reps!!
+                }
+            if (sets.isEmpty()) {
+                null
+            } else {
+                val value = when (metric) {
+                    ProgressMetric.ONE_RM -> sets.maxOf { (w, r) -> WorkoutCalculators.estimatedOneRepMax(w, r) }
+                    ProgressMetric.TOP_WEIGHT -> sets.maxOf { it.first }
+                    ProgressMetric.VOLUME -> sets.sumOf { (w, r) -> w * r }
+                }
+                ChartPoint(fmt.format(perf.date.atZone(ZoneId.systemDefault())), value)
+            }
+        }
+    }
+    Column(
+        modifier = Modifier.padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ProgressMetric.entries.forEach { m ->
+                FilterChip(
+                    selected = metric == m,
+                    onClick = { metric = m },
+                    label = { Text(m.label) },
+                )
+            }
+        }
+        ProgressChartCard(title = metric.label, unit = metric.unit, points = points)
     }
 }
 

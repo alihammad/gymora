@@ -1,6 +1,19 @@
 package com.gymora.ui.workout
 
+import com.gymora.ui.components.GymoraLoading
+import androidx.compose.foundation.background
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,22 +27,21 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import com.gymora.ui.components.Button
+import com.gymora.ui.components.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import com.gymora.ui.components.OutlinedButton
+import com.gymora.ui.components.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
+import com.gymora.ui.components.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import com.gymora.ui.components.TextButton
+import com.gymora.ui.components.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -86,6 +98,7 @@ fun ActiveWorkoutScreen(
                         Text(
                             text = formatElapsed(uiState.elapsedSeconds),
                             style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
                         )
                     }
                 },
@@ -99,7 +112,7 @@ fun ActiveWorkoutScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         if (uiState.isLoading) {
-            CircularProgressIndicator(modifier = Modifier.padding(innerPadding).padding(16.dp))
+            GymoraLoading(modifier = Modifier.padding(innerPadding).padding(16.dp))
         } else {
             val workout = uiState.activeWorkout
             if (workout == null) {
@@ -108,7 +121,7 @@ fun ActiveWorkoutScreen(
                     modifier = Modifier.padding(innerPadding).padding(16.dp),
                 )
             } else {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                     // FR-031/032: rest timer bar shown during active workout
                     RestTimerBar(
                         state = uiState.restTimer,
@@ -136,7 +149,7 @@ fun ActiveWorkoutScreen(
                         )
                     }
                     item {
-                        Button(
+                        OutlinedButton(
                             onClick = viewModel::onAddExerciseClicked,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -301,7 +314,16 @@ private fun SetRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 4.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                if (set.isCompleted) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                } else {
+                    Color.Transparent
+                },
+            )
+            .padding(horizontal = 4.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -310,20 +332,37 @@ private fun SetRow(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(end = 4.dp),
         )
+        // The fields own their text while typing; values are saved in the background.
+        // Binding straight to the database round-trip dropped keystrokes.
+        var weightText by remember(set.id) { mutableStateOf(formatNumber(set.weight)) }
+        var repsText by remember(set.id) { mutableStateOf(set.reps?.toString().orEmpty()) }
         OutlinedTextField(
-            value = set.weight?.toString().orEmpty(),
-            onValueChange = onWeightChanged,
+            value = weightText,
+            onValueChange = { input ->
+                val cleaned = input.replace(',', '.')
+                if (cleaned.isDecimalInput()) {
+                    weightText = cleaned
+                    onWeightChanged(cleaned)
+                }
+            },
             label = { Text("Weight") },
-            placeholder = preFillWeight?.let { { Text(it.toString()) } },
+            placeholder = preFillWeight?.let { { Text(formatNumber(it)) } },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.weight(1f),
         )
         OutlinedTextField(
-            value = set.reps?.toString().orEmpty(),
-            onValueChange = onRepsChanged,
+            value = repsText,
+            onValueChange = { input ->
+                if (input.length <= 4 && input.all { it.isDigit() }) {
+                    repsText = input
+                    onRepsChanged(input)
+                }
+            },
             label = { Text("Reps") },
             placeholder = preFillReps?.let { { Text(it.toString()) } },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.weight(1f),
         )
         // FR-045: show previous performance value beside today's set
@@ -346,12 +385,31 @@ private fun SetRow(
             }
         }
         // FR-025 / FR-061: completion marked with a check icon, not color alone.
-        IconButton(onClick = { onToggleComplete(!set.isCompleted) }) {
+        // Rounded checkbox: filled accent + check when done, muted outline otherwise.
+        val done = set.isCompleted
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(
+                    if (done) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                )
+                .toggleable(
+                    value = done,
+                    role = Role.Checkbox,
+                    onValueChange = { onToggleComplete(it) },
+                ),
+        ) {
             Icon(
                 Icons.Filled.Check,
-                contentDescription = if (set.isCompleted) "Mark set incomplete" else "Complete set",
-                tint = if (set.isCompleted) {
-                    MaterialTheme.colorScheme.primary
+                contentDescription = if (done) "Mark set incomplete" else "Complete set",
+                tint = if (done) {
+                    MaterialTheme.colorScheme.onPrimary
                 } else {
                     MaterialTheme.colorScheme.outline
                 },
@@ -361,6 +419,17 @@ private fun SetRow(
 }
 
 /** 00:00:00 format (FR-021). */
+/** "40.0" -> "40", "42.5" -> "42.5", null -> "". */
+private fun formatNumber(value: Double?): String = when {
+    value == null -> ""
+    value % 1.0 == 0.0 -> value.toLong().toString()
+    else -> value.toString()
+}
+
+/** Digits with at most one decimal point and at most 6 characters. */
+private fun String.isDecimalInput(): Boolean =
+    length <= 6 && all { it.isDigit() || it == '.' } && count { it == '.' } <= 1
+
 internal fun formatElapsed(seconds: Long): String {
     val h = seconds / 3600
     val m = (seconds % 3600) / 60

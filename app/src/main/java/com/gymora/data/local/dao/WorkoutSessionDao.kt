@@ -43,6 +43,34 @@ interface WorkoutSessionDao {
     )
     suspend fun listCompleted(limit: Int, offset: Int): List<WorkoutSessionEntity>
 
+    /** Completed sessions started at or after [since], oldest first. */
+    @Query(
+        "SELECT * FROM workout_sessions WHERE status = 'COMPLETED' AND started_at >= :since " +
+            "ORDER BY started_at ASC",
+    )
+    suspend fun listCompletedSince(since: Long): List<WorkoutSessionEntity>
+
+    /** Most recent completed sessions started from a routine (progress chart). */
+    @Query(
+        "SELECT * FROM workout_sessions WHERE status = 'COMPLETED' AND routine_id = :routineId " +
+            "ORDER BY started_at DESC LIMIT :limit",
+    )
+    suspend fun listCompletedForRoutine(routineId: Long, limit: Int): List<WorkoutSessionEntity>
+
+    /** Start timestamps of completed sessions in [fromMillis, toMillis) — calendar markers. */
+    @Query(
+        "SELECT started_at FROM workout_sessions WHERE status = 'COMPLETED' " +
+            "AND started_at >= :fromMillis AND started_at < :toMillis",
+    )
+    suspend fun completedStartTimesBetween(fromMillis: Long, toMillis: Long): List<Long>
+
+    /** Completed sessions started in [fromMillis, toMillis), oldest first. */
+    @Query(
+        "SELECT * FROM workout_sessions WHERE status = 'COMPLETED' " +
+            "AND started_at >= :fromMillis AND started_at < :toMillis ORDER BY started_at ASC",
+    )
+    suspend fun listCompletedBetween(fromMillis: Long, toMillis: Long): List<WorkoutSessionEntity>
+
     /** Most recent completed session that contains the given exercise (FR-045). */
     @Query(
         """

@@ -12,5 +12,6 @@ data class RoutineEditorUiState(
     val libraryExercises: List<Exercise> = emptyList(),
     val showDeleteConfirm: Boolean = false,
     val isDeleted: Boolean = false,
+    val progress: List<com.gymora.domain.model.RoutineSessionPoint> = emptyList(),
     val errorMessage: String? = null,
 )

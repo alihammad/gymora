@@ -1,5 +1,6 @@
 package com.gymora.ui.history
 
+import com.gymora.ui.components.GymoraLoading
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,18 +17,17 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import com.gymora.ui.components.Button
+import com.gymora.ui.components.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import com.gymora.ui.components.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import com.gymora.ui.components.TextButton
+import com.gymora.ui.components.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -128,7 +128,7 @@ private fun WorkoutDetailContent(
     viewModel: WorkoutDetailViewModel,
 ) {
     if (uiState.isLoading) {
-        CircularProgressIndicator(modifier = Modifier.padding(innerPadding).padding(16.dp))
+        GymoraLoading(modifier = Modifier.padding(innerPadding).padding(16.dp))
         return
     }
     val detail = uiState.detail
@@ -167,17 +167,6 @@ private fun WorkoutDetailContent(
                 }
             }
         }
-        // Workout-level notes: read-only in view mode, editable in edit mode.
-        if (uiState.isEditing || detail.session.notes != null) {
-            item {
-                WorkoutNotesSection(
-                    notes = detail.session.notes,
-                    isEditing = uiState.isEditing,
-                    editableNotes = uiState.editableNotes,
-                    onNotesChanged = viewModel::onWorkoutNotesChanged,
-                )
-            }
-        }
         items(detail.exercises, key = { it.workoutExerciseId }) { exercise ->
             if (uiState.isEditing) {
                 EditableExerciseCard(
@@ -185,7 +174,6 @@ private fun WorkoutDetailContent(
                     editableSets = uiState.editableSets,
                     onWeightChanged = viewModel::onWeightChanged,
                     onRepsChanged = viewModel::onRepsChanged,
-                    onSetNotesChanged = viewModel::onSetNotesChanged,
                     onToggleComplete = viewModel::onToggleComplete,
                     onRemove = { viewModel.onRemoveExerciseClicked(exercise.workoutExerciseId) },
                 )
@@ -257,34 +245,6 @@ private fun RemoveExerciseDialog(
 }
 
 @Composable
-private fun WorkoutNotesSection(
-    notes: String?,
-    isEditing: Boolean,
-    editableNotes: String,
-    onNotesChanged: (String) -> Unit,
-) {
-    if (isEditing) {
-        OutlinedTextField(
-            value = editableNotes,
-            onValueChange = onNotesChanged,
-            label = { Text("Workout notes") },
-            modifier = Modifier.fillMaxWidth(),
-        )
-    } else if (!notes.isNullOrBlank()) {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = "Notes",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(text = notes, style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-    }
-}
-
-@Composable
 private fun HistoricalExerciseCard(
     exercise: ActiveExercise,
     onExerciseHistory: () -> Unit = {},
@@ -347,7 +307,6 @@ private fun EditableExerciseCard(
     editableSets: Map<Long, EditableSet>,
     onWeightChanged: (Long, String) -> Unit,
     onRepsChanged: (Long, String) -> Unit,
-    onSetNotesChanged: (Long, String) -> Unit,
     onToggleComplete: (Long) -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -388,6 +347,9 @@ private fun EditableExerciseCard(
                             onValueChange = { onWeightChanged(set.id, it) },
                             label = { Text("Weight") },
                             singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+                            ),
                             modifier = Modifier.weight(1f),
                         )
                         OutlinedTextField(
@@ -395,6 +357,9 @@ private fun EditableExerciseCard(
                             onValueChange = { onRepsChanged(set.id, it) },
                             label = { Text("Reps") },
                             singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                            ),
                             modifier = Modifier.weight(1f),
                         )
                         IconButton(onClick = { onToggleComplete(set.id) }) {
@@ -413,15 +378,6 @@ private fun EditableExerciseCard(
                             )
                         }
                     }
-                    OutlinedTextField(
-                        value = editable.notes,
-                        onValueChange = { onSetNotesChanged(set.id, it) },
-                        label = { Text("Set notes") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                    )
                 }
             }
         }

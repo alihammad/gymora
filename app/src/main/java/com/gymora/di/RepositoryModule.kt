@@ -46,5 +46,11 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
+    abstract fun bindBodyMeasurementRepository(
+        impl: com.gymora.data.repository.BodyMeasurementRepositoryImpl,
+    ): com.gymora.domain.repository.BodyMeasurementRepository
+
+    @Binds
+    @Singleton
     abstract fun bindRecordsRepository(impl: RecordsRepositoryImpl): RecordsRepository
 }
