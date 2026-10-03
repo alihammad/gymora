@@ -49,7 +49,7 @@ class RoutineEditorViewModel @Inject constructor(
 
     private fun createBlankRoutine() {
         viewModelScope.launch {
-            runCatching { routineRepository.create("New Routine", null) }
+            runCatching { routineRepository.create("New Workout", null) }
                 .onSuccess { id ->
                     routineId = id
                     loadRoutine()
@@ -207,7 +207,7 @@ class RoutineEditorViewModel @Inject constructor(
 
     private fun friendlyMessage(error: Throwable): String = when (error) {
         is ValidationException -> error.message ?: "Please check your input."
-        is EntityNotFoundException -> "This routine no longer exists."
+        is EntityNotFoundException -> "This workout no longer exists."
         else -> "Something went wrong. Please try again." // FR-060: no stack traces
     }
 

@@ -74,7 +74,7 @@ fun RoutineListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Routines") },
+                title = { Text("My Workouts") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -87,7 +87,7 @@ fun RoutineListScreen(
                 onClick = onCreateRoutine,
                 elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Create routine")
+                Icon(Icons.Filled.Add, contentDescription = "Create workout")
             }
         },
     ) { innerPadding ->
@@ -141,7 +141,7 @@ fun RoutineListScreen(
 
     uiState.pendingDelete?.let { routine ->
         ConfirmDialog(
-            title = "Delete routine",
+            title = "Delete workout",
             message = "Delete \"${routine.name}\"? Workouts already performed from it stay in history.",
             confirmLabel = "Delete",
             dismissLabel = "Cancel",
@@ -173,12 +173,12 @@ private fun RoutineTile(
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = { menuOpen = true },
-                onLongClickLabel = "Routine options",
+                onLongClickLabel = "Workout options",
             ),
     ) {
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             DropdownMenuItem(
-                text = { Text("Delete routine") },
+                text = { Text("Delete workout") },
                 leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
                 onClick = {
                     menuOpen = false

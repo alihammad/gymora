@@ -59,8 +59,8 @@ fun EmptyState(
 
 /** Spec-mandated copy for the empty states (FR-059). */
 object EmptyStateCopy {
-    const val NO_ROUTINES = "No workout routines yet."
-    const val CREATE_ROUTINE_ACTION = "Create Routine"
+    const val NO_ROUTINES = "No workouts yet."
+    const val CREATE_ROUTINE_ACTION = "Create Workout"
     const val NO_HISTORY = "Your completed workouts will appear here."
     const val NO_SEARCH_RESULTS = "No exercises found."
 }

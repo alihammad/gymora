@@ -51,7 +51,7 @@ fun WorkoutSummaryScreen(
         if (summary == null) {
             Text("Summary unavailable.")
         } else {
-            SummaryRow("Routine", summary.routineNameSnapshot)
+            SummaryRow("Workout", summary.routineNameSnapshot)
             SummaryRow(
                 "Date",
                 DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")

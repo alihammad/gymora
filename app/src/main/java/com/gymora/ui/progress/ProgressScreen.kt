@@ -96,7 +96,7 @@ fun ProgressScreen(
                     item { RowsCard(state.exercises, onExerciseClick) }
                 }
                 if (state.routines.isNotEmpty()) {
-                    item { SectionTitle("Routines · volume") }
+                    item { SectionTitle("Workouts · volume") }
                     item { RowsCard(state.routines, onRoutineClick) }
                 }
             }
