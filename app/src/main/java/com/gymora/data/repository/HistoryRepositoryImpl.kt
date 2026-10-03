@@ -136,6 +136,31 @@ class HistoryRepositoryImpl @Inject constructor(
         return byRoutine.map { (id, v) -> com.gymora.domain.model.ProgressSeries(id, v.first, v.second) }
     }
 
+    override suspend fun getWorkoutStats(): List<com.gymora.domain.model.WorkoutStat> =
+        sessionDao.listCompletedSince(0L).map { session ->
+            val sets = exerciseDao.getForSession(session.id).flatMap { setDao.getForExercise(it.id) }
+            com.gymora.domain.model.WorkoutStat(
+                sessionId = session.id,
+                routineName = session.routineNameSnapshot,
+                startedAt = Instant.ofEpochMilli(session.startedAt),
+                duration = Duration.ofMillis(
+                    ((session.endedAt ?: session.startedAt) - session.startedAt).coerceAtLeast(0),
+                ),
+                volumeKg = WorkoutCalculators.totalVolume(
+                    sets.map {
+                        com.gymora.domain.model.CompletedSet(
+                            weight = it.weight,
+                            reps = it.reps,
+                            weightUnit = it.weightUnit?.let { u -> WeightUnit.valueOf(u) },
+                            isCompleted = it.isCompleted,
+                        )
+                    },
+                    WeightUnit.KG,
+                ),
+                totalReps = sets.filter { it.isCompleted }.sumOf { it.reps ?: 0 },
+            )
+        }
+
     override suspend fun getWorkoutDetail(sessionId: Long): WorkoutDetail {
         val session = sessionDao.getById(sessionId) ?: throw EntityNotFoundException(sessionId)
         return WorkoutDetail(

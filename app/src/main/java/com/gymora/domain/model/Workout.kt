@@ -112,3 +112,13 @@ data class ProgressSeries(
     val name: String,
     val values: List<Double>,
 )
+
+/** One completed workout's headline numbers, for the profile charts and calendar. */
+data class WorkoutStat(
+    val sessionId: Long,
+    val routineName: String,
+    val startedAt: Instant,
+    val duration: java.time.Duration,
+    val volumeKg: Double,
+    val totalReps: Int,
+)
