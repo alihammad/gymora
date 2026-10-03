@@ -20,6 +20,7 @@ import com.gymora.ui.theme.GymoraTheme
 import com.gymora.ui.theme.ThemeMode
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.launch // DEMO_SEED (temporary)
 
 /**
  * Single-activity host for the Compose navigation graph (FR-004).
@@ -31,8 +32,18 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var settingsRepository: SettingsRepository
 
+    // DEMO_SEED (temporary): remove with DemoDataSeeder.kt
+    @Inject
+    lateinit var demoDataSeeder: com.gymora.data.local.seed.DemoDataSeeder
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // DEMO_SEED (temporary)
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            // Wait for first-launch library/routine seeding before inserting demo history.
+            kotlinx.coroutines.delay(3000)
+            demoDataSeeder.seed()
+        }
         // Edge-to-edge with transparent bars and light icons (dark-only design).
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
