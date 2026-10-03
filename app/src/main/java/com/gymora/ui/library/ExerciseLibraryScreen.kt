@@ -1,6 +1,13 @@
 package com.gymora.ui.library
 
-import androidx.compose.foundation.clickable
+import com.gymora.ui.components.GymoraLoading
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,19 +19,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import com.gymora.ui.components.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
+import com.gymora.ui.components.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.gymora.ui.components.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -66,7 +72,10 @@ fun ExerciseLibraryScreen(
             TopAppBar(title = { Text("Exercises") })
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onCreateExercise) {
+            FloatingActionButton(
+                onClick = onCreateExercise,
+                elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+            ) {
                 Icon(Icons.Filled.Add, contentDescription = "Create exercise")
             }
         },
@@ -89,7 +98,7 @@ fun ExerciseLibraryScreen(
 
             when {
                 uiState.isLoading -> {
-                    CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+                    GymoraLoading(modifier = Modifier.padding(16.dp))
                 }
 
                 uiState.searchResults != null -> {
@@ -129,6 +138,7 @@ fun ExerciseLibraryScreen(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun ExerciseList(
     exercises: List<Exercise>,
@@ -150,11 +160,26 @@ private fun ExerciseList(
                     )
                 }
                 items(groupExercises, key = { it.id }) { exercise ->
+                    var menuOpen by remember { mutableStateOf(false) }
                     Row(modifier = Modifier.fillMaxWidth()) {
+                        Box(modifier = Modifier.weight(1f)) {
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Delete exercise") },
+                                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    onDelete(exercise)
+                                },
+                            )
+                        }
                         ListItem(
                             modifier = Modifier
-                                .weight(1f)
-                                .clickable { onExerciseClick(exercise.id) },
+                                .combinedClickable(
+                                    onClick = { onExerciseClick(exercise.id) },
+                                    onLongClick = { menuOpen = true },
+                                    onLongClickLabel = "Exercise options",
+                                ),
                             headlineContent = { Text(exercise.name) },
                             supportingContent = {
                                 val tags = buildList {
@@ -168,16 +193,11 @@ private fun ExerciseList(
                                 }
                             },
                         )
+                        }
                         IconButton(onClick = { onExerciseHistory(exercise.id) }) {
                             Icon(
                                 Icons.Filled.History,
-                                contentDescription = "View history for ${exercise.name}",
-                            )
-                        }
-                        IconButton(onClick = { onDelete(exercise) }) {
-                            Icon(
-                                Icons.Filled.Delete,
-                                contentDescription = "Delete ${exercise.name}",
+                                contentDescription = "View history and progress for ${exercise.name}",
                             )
                         }
                     }

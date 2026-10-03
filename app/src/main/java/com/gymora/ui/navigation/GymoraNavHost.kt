@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -15,13 +16,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.gymora.ui.components.gymoraNavigationBarItemColors
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.gymora.ui.body.BodyMeasurementsScreen
+import com.gymora.ui.progress.ProgressScreen
 import com.gymora.ui.history.ExerciseHistoryScreen
 import com.gymora.ui.history.HistoryScreen
 import com.gymora.ui.history.WorkoutDetailScreen
@@ -57,6 +63,21 @@ const val NEW_EXERCISE_ID = 0L
 /** Sentinel id for creating a new routine (no existing id). */
 const val NEW_ROUTINE_ID = 0L
 
+/** Switch bottom-nav tab; Home always lands on the Home screen itself. */
+private fun NavHostController.navigateToTab(destination: Destinations) {
+    if (destination == Destinations.Home) {
+        if (!popBackStack(Destinations.Home.route, inclusive = false)) {
+            navigate(Destinations.Home.route) { launchSingleTop = true }
+        }
+        return
+    }
+    navigate(destination.route) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
 /**
  * Root navigation host (FR-004). Bottom nav for Home/History/Exercises/Settings;
  * dedicated destinations for routines, exercises, workouts, and records.
@@ -75,21 +96,18 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
         modifier = modifier,
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tonalElevation = 0.dp,
+                ) {
                     bottomTabs.forEach { tab ->
                         NavigationBarItem(
                             selected = currentRoute == tab.destination.route,
-                            onClick = {
-                                navController.navigate(tab.destination.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
+                            onClick = { navController.navigateToTab(tab.destination) },
                             icon = { Icon(tab.icon, contentDescription = tab.label) },
                             label = { Text(tab.label) },
+                            colors = gymoraNavigationBarItemColors(),
                         )
                     }
                 }
@@ -109,10 +127,15 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
                     onCreateRoutine = {
                         navController.navigate(Destinations.RoutineEditor.create(NEW_ROUTINE_ID))
                     },
-                    onMyRoutines = { navController.navigate(Destinations.RoutineList.route) },
-                    onRecentWorkouts = { navController.navigate(Destinations.History.route) },
-                    onHistory = { navController.navigate(Destinations.History.route) },
+                    onCreateExercise = {
+                        navController.navigate(Destinations.ExerciseEditor.create(NEW_EXERCISE_ID))
+                    },
+                    onMyRoutines ={ navController.navigate(Destinations.RoutineList.route) },
+                    onRecentWorkouts = { navController.navigateToTab(Destinations.History) },
+                    onHistory = { navController.navigateToTab(Destinations.History) },
                     onRecords = { navController.navigate(Destinations.Records.route) },
+                    onBody = { navController.navigate(Destinations.Body.route) },
+                    onProgress = { navController.navigate(Destinations.Progress.route) },
                     onStartWorkout = { routineId ->
                         navController.navigate(Destinations.StartWorkout.create(routineId))
                     },
@@ -147,6 +170,9 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
                     onBack = { navController.popBackStack() },
                     onRoutineClick = { routineId ->
                         navController.navigate(Destinations.RoutineEditor.create(routineId))
+                    },
+                    onCreateRoutine = {
+                        navController.navigate(Destinations.RoutineEditor.create(NEW_ROUTINE_ID))
                     },
                 )
             }
@@ -205,6 +231,20 @@ fun GymoraNavHost(modifier: Modifier = Modifier) {
             }
             composable(Destinations.ExerciseHistory.route) {
                 ExerciseHistoryScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Destinations.Progress.route) {
+                ProgressScreen(
+                    onBack = { navController.popBackStack() },
+                    onExerciseClick = { exerciseId ->
+                        navController.navigate(Destinations.ExerciseHistory.create(exerciseId))
+                    },
+                    onRoutineClick = { routineId ->
+                        navController.navigate(Destinations.RoutineEditor.create(routineId))
+                    },
+                )
+            }
+            composable(Destinations.Body.route) {
+                BodyMeasurementsScreen(onBack = { navController.popBackStack() })
             }
             composable(Destinations.Records.route) {
                 RecordsScreen(onBack = { navController.popBackStack() })

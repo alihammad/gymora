@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!--
-      Night volt base theme. UI is Compose Material 3; this only styles the window
-      (background shown before first frame, system bars, splash). Dark only.
-    -->
     <style name="Theme.Gymora" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/night_background</item>
         <item name="android:colorBackground">@color/night_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:enforceStatusBarContrast">false</item>
         <item name="android:textColorPrimary">@color/night_text_primary</item>
         <item name="android:textColorSecondary">@color/night_text_secondary</item>
         <item name="android:colorPrimary">@color/night_primary</item>
         <item name="android:colorAccent">@color/night_primary</item>
+        <item name="android:windowSplashScreenBackground">@color/night_background</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/night_background</item>
     </style>
 </resources>

@@ -1,5 +1,7 @@
 package com.gymora.ui.exercisedetail
 
+import com.gymora.ui.components.GymoraLoading
+import com.gymora.ui.theme.GymoraShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,9 +23,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material3.Card
+import com.gymora.ui.components.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,7 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.gymora.ui.components.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -94,7 +95,7 @@ fun ExerciseDetailScreen(
                         .padding(innerPadding),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    GymoraLoading()
                 }
             }
 
@@ -114,16 +115,16 @@ fun ExerciseDetailScreen(
             }
 
             else -> uiState.exercise?.let { exercise ->
-                ExerciseDetailContent(exercise)
+                ExerciseDetailContent(exercise, Modifier.padding(innerPadding))
             }
         }
     }
 }
 
 @Composable
-private fun ExerciseDetailContent(exercise: Exercise) {
+private fun ExerciseDetailContent(exercise: Exercise, modifier: Modifier = Modifier) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
@@ -135,7 +136,6 @@ private fun ExerciseDetailContent(exercise: Exercise) {
             Text(
                 text = exercise.name,
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
             )
             val primaryName = exercise.muscleGroups
                 .firstOrNull { it.type == MuscleGroupType.PRIMARY }
@@ -253,7 +253,7 @@ private fun AttributeChips(exercise: Exercise) {
     ) {
         chips.forEach { (label, value) ->
             Surface(
-                shape = RoundedCornerShape(50),
+                shape = GymoraShapes.chip,
                 color = MaterialTheme.colorScheme.primaryContainer,
             ) {
                 Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
@@ -261,7 +261,6 @@ private fun AttributeChips(exercise: Exercise) {
                         text = value,
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        fontWeight = FontWeight.SemiBold,
                     )
                     Text(
                         text = label,
@@ -285,13 +284,11 @@ private fun SectionCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
             )
             if (subtitle != null) {
                 Text(
@@ -319,7 +316,7 @@ private fun MuscleGroupRow(label: String, groups: List<MuscleGroupRef>) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             groups.forEach { ref ->
                 Surface(
-                    shape = RoundedCornerShape(50),
+                    shape = GymoraShapes.chip,
                     color = MaterialTheme.colorScheme.secondaryContainer,
                 ) {
                     Text(
@@ -347,7 +344,6 @@ private fun StepBadge(number: Int) {
             text = number.toString(),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onPrimary,
-            fontWeight = FontWeight.Bold,
         )
     }
 }

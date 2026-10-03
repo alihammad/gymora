@@ -16,6 +16,21 @@ interface HistoryRepository {
     /** Completed sessions, newest first, paged (FR-040, FR-058, R-07). */
     suspend fun listCompleted(limit: Int, offset: Int): List<HistoryEntry>
 
+    /** Local dates in [from, toExclusive) on which at least one workout was completed. */
+    suspend fun completedDays(from: java.time.LocalDate, toExclusive: java.time.LocalDate): Set<java.time.LocalDate>
+
+    /** Full details of every workout completed on the given local [day], oldest first. */
+    suspend fun getWorkoutsOn(day: java.time.LocalDate): List<WorkoutDetail>
+
+    /** Completed sessions of a routine, oldest first (max [limit] most recent), with volume in kg. */
+    suspend fun getRoutineProgress(routineId: Long, limit: Int): List<com.gymora.domain.model.RoutineSessionPoint>
+
+    /** Estimated 1RM (kg) per session for every exercise performed since [sinceMillis]. */
+    suspend fun getExerciseProgress(sinceMillis: Long): List<com.gymora.domain.model.ProgressSeries>
+
+    /** Training volume (kg) per session for every routine performed since [sinceMillis]. */
+    suspend fun getRoutineProgressSince(sinceMillis: Long): List<com.gymora.domain.model.ProgressSeries>
+
     /** Full read-only workout graph from snapshot rows (FR-041). */
     suspend fun getWorkoutDetail(sessionId: Long): WorkoutDetail
 

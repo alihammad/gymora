@@ -35,7 +35,34 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val recent = historyRepository.listCompleted(limit = RECENT_COUNT, offset = 0)
             _uiState.update { it.copy(recentWorkouts = recent) }
+            loadWorkoutDays()
         }
+    }
+
+    /** Move the calendar strip by [weeks] (negative = earlier). */
+    fun onShiftWeek(weeks: Long) {
+        _uiState.update { it.copy(weekStart = it.weekStart.plusWeeks(weeks), workoutDays = emptySet()) }
+        viewModelScope.launch { loadWorkoutDays() }
+    }
+
+    /** Show the exercises performed on [day] (tapped in the calendar strip). */
+    fun onDaySelected(day: java.time.LocalDate) {
+        _uiState.update { it.copy(selectedDay = day, selectedDayWorkouts = emptyList()) }
+        viewModelScope.launch {
+            val workouts = historyRepository.getWorkoutsOn(day)
+            _uiState.update { if (it.selectedDay == day) it.copy(selectedDayWorkouts = workouts) else it }
+        }
+    }
+
+    fun onDayDismissed() {
+        _uiState.update { it.copy(selectedDay = null, selectedDayWorkouts = emptyList()) }
+    }
+
+    private suspend fun loadWorkoutDays() {
+        val start = _uiState.value.weekStart
+        val days = historyRepository.completedDays(start, start.plusDays(7))
+        // Ignore the result if the user already moved to another week.
+        _uiState.update { if (it.weekStart == start) it.copy(workoutDays = days) else it }
     }
 
     /** Persist the new home-screen order (FR-015). */

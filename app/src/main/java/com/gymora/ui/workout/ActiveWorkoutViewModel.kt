@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gymora.domain.calculator.WorkoutCalculators
+import com.gymora.domain.model.ActiveSet
 import com.gymora.domain.model.ActiveWorkout
 import com.gymora.domain.model.ActiveWorkoutConflictException
 import com.gymora.domain.model.EntityNotFoundException
@@ -30,6 +31,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @HiltViewModel
 class ActiveWorkoutViewModel @Inject constructor(
@@ -221,29 +224,50 @@ class ActiveWorkoutViewModel @Inject constructor(
         }
     }
 
+    /** Keeps edits in order: a later keystroke's write never lands before an earlier one. */
+    private val editMutex = Mutex()
+
     fun onWeightChanged(setId: Long, text: String) {
+        val weight = text.replace(',', '.').toDoubleOrNull()
         val set = findSet(setId) ?: return
-        val weight = text.toDoubleOrNull()
-        viewModelScope.launch {
-            runCatching {
-                logSetUseCase.updateValues(setId, weight, set.weightUnit ?: WeightUnit.KG, set.reps)
-            }.onSuccess { loadSession() }
-                .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = friendlyMessage(error)) }
-                }
-        }
+        applyLocally(setId) { it.copy(weight = weight) }
+        persistSet(setId, weight, set.weightUnit ?: WeightUnit.KG, set.reps)
     }
 
     fun onRepsChanged(setId: Long, text: String) {
-        val set = findSet(setId) ?: return
         val reps = text.toIntOrNull()
+        val set = findSet(setId) ?: return
+        applyLocally(setId) { it.copy(reps = reps) }
+        persistSet(setId, set.weight, set.weightUnit, reps)
+    }
+
+    /**
+     * Updates the in-memory set without reloading from the database, so the
+     * text fields keep the cursor and the other field's latest value is not lost.
+     */
+    private fun applyLocally(setId: Long, change: (ActiveSet) -> ActiveSet) {
+        _uiState.update { state ->
+            val workout = state.activeWorkout ?: return@update state
+            state.copy(
+                activeWorkout = workout.copy(
+                    exercises = workout.exercises.map { exercise ->
+                        exercise.copy(
+                            sets = exercise.sets.map { if (it.id == setId) change(it) else it },
+                        )
+                    },
+                ),
+            )
+        }
+    }
+
+    private fun persistSet(setId: Long, weight: Double?, unit: WeightUnit?, reps: Int?) {
         viewModelScope.launch {
-            runCatching {
-                logSetUseCase.updateValues(setId, set.weight, set.weightUnit, reps)
-            }.onSuccess { loadSession() }
-                .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = friendlyMessage(error)) }
-                }
+            editMutex.withLock {
+                runCatching { logSetUseCase.updateValues(setId, weight, unit, reps) }
+                    .onFailure { error ->
+                        _uiState.update { it.copy(errorMessage = friendlyMessage(error)) }
+                    }
+            }
         }
     }
 

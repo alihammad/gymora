@@ -38,11 +38,14 @@ import com.gymora.data.local.entity.WorkoutSetEntity
         WorkoutSessionEntity::class, // registered by T035 (US3)
         WorkoutExerciseEntity::class, // registered by T035 (US3)
         WorkoutSetEntity::class, // registered by T035 (US3)
+        com.gymora.data.local.entity.BodyMeasurementEntity::class, // v2
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class GymoraDatabase : RoomDatabase() {
+
+    abstract fun bodyMeasurementDao(): com.gymora.data.local.dao.BodyMeasurementDao
 
     abstract fun settingsDao(): SettingsDao
 
@@ -62,5 +65,24 @@ abstract class GymoraDatabase : RoomDatabase() {
 
     companion object {
         const val NAME = "gymora.db"
+
+        /** v1 → v2: adds body measurements; existing workout data is untouched. */
+        val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Room validates every table's indices right after a migration and
+                // would reject the hand-made partial index (it is not in the entity).
+                // Drop it here; DatabaseModule's onOpen callback recreates it.
+                // Any future migration must do the same.
+                db.execSQL("DROP INDEX IF EXISTS index_workout_sessions_single_active")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `body_measurements` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`measured_at` INTEGER NOT NULL, " +
+                        "`weight_kg` REAL, `shoulders_cm` REAL, `chest_cm` REAL, " +
+                        "`above_navel_cm` REAL, `navel_cm` REAL, `below_navel_cm` REAL, " +
+                        "`thigh_cm` REAL)",
+                )
+            }
+        }
     }
 }

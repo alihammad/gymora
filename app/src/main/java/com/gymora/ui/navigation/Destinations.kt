@@ -46,4 +46,6 @@ sealed class Destinations(val route: String) {
         const val ARG = "exerciseId"
     }
     data object Records : Destinations("records")
+    data object Body : Destinations("body")
+    data object Progress : Destinations("progress")
 }

@@ -1,5 +1,7 @@
 package com.gymora.ui.workout
 
+import com.gymora.ui.components.Card
+import com.gymora.ui.components.GymoraLoading
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,8 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import com.gymora.ui.components.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,7 +34,7 @@ fun WorkoutSummaryScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     if (uiState.isLoading) {
-        CircularProgressIndicator(modifier = Modifier.padding(24.dp))
+        GymoraLoading(modifier = Modifier.padding(24.dp))
         return
     }
 
@@ -56,11 +57,11 @@ fun WorkoutSummaryScreen(
                 DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
                     .format(summary.date.atZone(java.time.ZoneId.systemDefault())),
             )
-            SummaryRow("Duration", formatElapsed(summary.duration.seconds))
+            SummaryRow("Duration", formatElapsed(summary.duration.seconds), emphasize = true)
             SummaryRow("Exercises", summary.exerciseCount.toString())
-            SummaryRow("Completed sets", summary.completedSetCount.toString())
-            SummaryRow("Total reps", summary.totalReps.toString())
-            SummaryRow("Total volume", "%.1f %s".format(summary.totalVolume, uiState.displayUnit.name.lowercase()))
+            SummaryRow("Completed sets", summary.completedSetCount.toString(), emphasize = true)
+            SummaryRow("Total reps", summary.totalReps.toString(), emphasize = true)
+            SummaryRow("Total volume", "%.1f %s".format(summary.totalVolume, uiState.displayUnit.name.lowercase()), emphasize = true)
 
             Text("Per-exercise breakdown", style = MaterialTheme.typography.titleMedium)
             summary.perExerciseBreakdown.forEach { exercise ->
@@ -78,13 +79,19 @@ fun WorkoutSummaryScreen(
 }
 
 @Composable
-private fun SummaryRow(label: String, value: String) {
-    Column {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(text = value, style = MaterialTheme.typography.bodyLarge)
+private fun SummaryRow(label: String, value: String, emphasize: Boolean = false) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = value,
+                style = if (emphasize) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.titleMedium,
+                color = if (emphasize) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
