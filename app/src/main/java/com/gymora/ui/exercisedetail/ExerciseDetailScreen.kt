@@ -46,6 +46,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gymora.domain.model.Exercise
 import com.gymora.domain.model.MuscleGroupRef
 import com.gymora.domain.model.MuscleGroupType
+import com.gymora.ui.exercisefilter.ExerciseFilterKind
 
 /**
  * Exercise detail screen: renders the full descriptive metadata
@@ -57,6 +58,7 @@ import com.gymora.domain.model.MuscleGroupType
 fun ExerciseDetailScreen(
     onBack: () -> Unit,
     onExerciseHistory: (Long) -> Unit = {},
+    onFilterClick: (kind: String, value: String) -> Unit = { _, _ -> },
     viewModel: ExerciseDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -115,14 +117,18 @@ fun ExerciseDetailScreen(
             }
 
             else -> uiState.exercise?.let { exercise ->
-                ExerciseDetailContent(exercise, Modifier.padding(innerPadding))
+                ExerciseDetailContent(exercise, onFilterClick, Modifier.padding(innerPadding))
             }
         }
     }
 }
 
 @Composable
-private fun ExerciseDetailContent(exercise: Exercise, modifier: Modifier = Modifier) {
+private fun ExerciseDetailContent(
+    exercise: Exercise,
+    onFilterClick: (kind: String, value: String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -153,7 +159,7 @@ private fun ExerciseDetailContent(exercise: Exercise, modifier: Modifier = Modif
         }
 
         // Attribute chips
-        AttributeChips(exercise)
+        AttributeChips(exercise, onFilterClick)
 
         // Muscle groups (primary & secondary)
         if (exercise.muscleGroups.isNotEmpty()) {
@@ -234,15 +240,19 @@ private fun ExerciseDetailContent(exercise: Exercise, modifier: Modifier = Modif
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-private fun AttributeChips(exercise: Exercise) {
+private fun AttributeChips(
+    exercise: Exercise,
+    onFilterClick: (kind: String, value: String) -> Unit,
+) {
+    // Triple(filter kind, display label, enum name used as the filter value)
     val chips = buildList {
-        exercise.category?.displayName?.let { add("Category" to it) }
-        exercise.difficultyLevel?.displayName?.let { add("Level" to it) }
-        exercise.forceType?.displayName?.let { add("Force" to it) }
-        exercise.mechanics?.displayName?.let { add("Mechanics" to it) }
-        exercise.type?.name?.let { add("Type" to it.lowercase()) }
+        exercise.category?.let { add(Triple(ExerciseFilterKind.CATEGORY, it.displayName, it.name)) }
+        exercise.difficultyLevel?.let { add(Triple(ExerciseFilterKind.LEVEL, it.displayName, it.name)) }
+        exercise.forceType?.let { add(Triple(ExerciseFilterKind.FORCE, it.displayName, it.name)) }
+        exercise.mechanics?.let { add(Triple(ExerciseFilterKind.MECHANICS, it.displayName, it.name)) }
+        exercise.type?.let { add(Triple(ExerciseFilterKind.TYPE, it.name.lowercase(), it.name)) }
     }
     if (chips.isEmpty()) return
 
@@ -251,8 +261,9 @@ private fun AttributeChips(exercise: Exercise) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        chips.forEach { (label, value) ->
+        chips.forEach { (kind, value, filterValue) ->
             Surface(
+                onClick = { onFilterClick(kind.name, filterValue) },
                 shape = GymoraShapes.chip,
                 color = MaterialTheme.colorScheme.primaryContainer,
             ) {
@@ -263,7 +274,7 @@ private fun AttributeChips(exercise: Exercise) {
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                     Text(
-                        text = label,
+                        text = kind.label,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                     )
