@@ -53,7 +53,7 @@ class SharedComponentUiTest {
         var dismissed = false
         composeRule.setContent {
             ConfirmDialog(
-                title = "Delete routine",
+                title = "Delete workout",
                 message = "This cannot be undone.",
                 confirmLabel = "Delete",
                 dismissLabel = "Cancel",
@@ -62,7 +62,7 @@ class SharedComponentUiTest {
             )
         }
 
-        composeRule.onNodeWithText("Delete routine").assertIsDisplayed()
+        composeRule.onNodeWithText("Delete workout").assertIsDisplayed()
         composeRule.onNodeWithText("This cannot be undone.").assertIsDisplayed()
 
         composeRule.onNodeWithText("Delete").performClick()

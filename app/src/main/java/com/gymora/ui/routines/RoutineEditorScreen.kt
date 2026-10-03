@@ -101,7 +101,7 @@ fun RoutineEditorScreen(
             TopAppBar(
                 title = {
                     Text(
-                        uiState.routine?.header?.name ?: "Routine",
+                        uiState.routine?.header?.name ?: "Workout",
                     )
                 },
                 navigationIcon = {
@@ -114,10 +114,10 @@ fun RoutineEditorScreen(
                         Icon(Icons.Filled.Edit, contentDescription = "Edit name and description")
                     }
                     IconButton(onClick = viewModel::onDuplicate) {
-                        Icon(Icons.Filled.ContentCopy, contentDescription = "Duplicate routine")
+                        Icon(Icons.Filled.ContentCopy, contentDescription = "Duplicate workout")
                     }
                     IconButton(onClick = viewModel::onDeleteRequested) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete routine")
+                        Icon(Icons.Filled.Delete, contentDescription = "Delete workout")
                     }
                 },
             )
@@ -130,7 +130,7 @@ fun RoutineEditorScreen(
             val routine = uiState.routine
             if (routine == null) {
                 Text(
-                    text = "Routine not found.",
+                    text = "Workout not found.",
                     modifier = Modifier.padding(innerPadding).padding(16.dp),
                 )
             } else {
@@ -268,7 +268,7 @@ fun RoutineEditorScreen(
 
     if (uiState.showDeleteConfirm) {
         ConfirmDialog(
-            title = "Delete routine",
+            title = "Delete workout",
             message = "Delete \"${uiState.routine?.header?.name}\"? " +
                 "Workouts already performed from it stay in history.",
             confirmLabel = "Delete",
@@ -323,7 +323,7 @@ private fun EditDetailsDialog(
     var description by remember { mutableStateOf(initialDescription) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit routine") },
+        title = { Text("Edit workout") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
@@ -333,7 +333,7 @@ private fun EditDetailsDialog(
                     singleLine = true,
                     isError = name.isBlank(),
                     supportingText = {
-                        if (name.isBlank()) Text("Routine name must not be blank")
+                        if (name.isBlank()) Text("Workout name must not be blank")
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )

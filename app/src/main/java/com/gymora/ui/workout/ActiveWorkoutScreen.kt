@@ -201,16 +201,16 @@ fun ActiveWorkoutScreen(
     if (uiState.pendingAddExerciseId != null) {
         AlertDialog(
             onDismissRequest = { viewModel.onAddToRoutineDecision(false) },
-            title = { Text("Add to routine?") },
-            text = { Text("Also add this exercise to the routine for future workouts?") },
+            title = { Text("Add to workout?") },
+            text = { Text("Also add this exercise to the workout for future sessions?") },
             confirmButton = {
                 TextButton(onClick = { viewModel.onAddToRoutineDecision(true) }) {
-                    Text("Add to routine")
+                    Text("Add to workout")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.onAddToRoutineDecision(false) }) {
-                    Text("This workout only")
+                    Text("This session only")
                 }
             },
         )

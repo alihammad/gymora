@@ -56,7 +56,7 @@ object RoutineRules {
 
     fun validateName(name: String) {
         if (name.isBlank()) {
-            throw ValidationException("name", "Routine name must not be blank")
+            throw ValidationException("name", "Workout name must not be blank")
         }
     }
 

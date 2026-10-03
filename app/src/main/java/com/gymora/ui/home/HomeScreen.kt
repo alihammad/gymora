@@ -99,7 +99,7 @@ fun HomeScreen(
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(
-                        text = { Text("New routine") },
+                        text = { Text("New workout") },
                         onClick = {
                             menuOpen = false
                             onCreateRoutine()
@@ -145,7 +145,7 @@ fun HomeScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                QuickLinkChip("My Routines", Icons.Filled.FormatListBulleted, onMyRoutines)
+                QuickLinkChip("My Workouts", Icons.Filled.FormatListBulleted, onMyRoutines)
                 QuickLinkChip("Recent", Icons.Filled.Schedule, onRecentWorkouts)
                 QuickLinkChip("History", Icons.Filled.History, onHistory)
                 QuickLinkChip("Progress", Icons.AutoMirrored.Filled.ShowChart, onProgress)
