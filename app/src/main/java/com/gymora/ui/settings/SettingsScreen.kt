@@ -1,5 +1,8 @@
 package com.gymora.ui.settings
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,17 +20,22 @@ import com.gymora.ui.components.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import com.gymora.ui.components.OutlinedButton
 import com.gymora.ui.components.TextButton
 import com.gymora.ui.components.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gymora.domain.model.Theme
 import com.gymora.domain.model.WeightUnit
+
+private val IMPORT_MIME_TYPES = arrayOf("text/*", "application/csv", "application/vnd.ms-excel")
 
 /**
  * Settings screen (FR-048, FR-050, FR-051, PRD-§39): weight unit selector,
@@ -40,6 +48,21 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val settings = uiState.settings
+    val context = LocalContext.current
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv"),
+    ) { uri -> uri?.let(viewModel::onExportCsv) }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let(viewModel::onImportCsv) }
+
+    LaunchedEffect(uiState.transferMessage) {
+        uiState.transferMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            viewModel.onTransferMessageShown()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -100,6 +123,27 @@ fun SettingsScreen(
                         selected = settings.theme == theme,
                         onClick = { viewModel.onThemeSelected(theme) },
                     )
+                }
+            }
+
+            // Import / export workouts as CSV
+            SettingsSection(title = "Data") {
+                Text(
+                    text = "Export completed workouts to a CSV file, or import workouts from one " +
+                        "(one row per set; columns: Start, End, Workout, Workout Notes, Exercise, " +
+                        "Set, Weight, Unit, Reps, Set Notes).",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { exportLauncher.launch("gymora-workouts.csv") },
+                        enabled = !uiState.transferInProgress,
+                    ) { Text("Export CSV") }
+                    OutlinedButton(
+                        onClick = { importLauncher.launch(IMPORT_MIME_TYPES) },
+                        enabled = !uiState.transferInProgress,
+                    ) { Text("Import CSV") }
                 }
             }
         }
