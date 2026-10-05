@@ -6,18 +6,19 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.gymora.domain.model.Settings
-import com.gymora.domain.model.Theme
 import com.gymora.domain.repository.SettingsRepository
 import com.gymora.ui.navigation.GymoraNavHost
 import com.gymora.ui.theme.GymoraTheme
-import com.gymora.ui.theme.ThemeMode
+import com.gymora.ui.theme.palette
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.launch // DEMO_SEED (temporary)
@@ -44,16 +45,23 @@ class MainActivity : ComponentActivity() {
             kotlinx.coroutines.delay(3000)
             demoDataSeeder.seed()
         }
-        // Edge-to-edge with transparent bars and light icons (dark-only design).
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-        )
         setContent {
             val settings by settingsRepository.observeSettings()
                 .collectAsState(initial = Settings.DEFAULTS)
+            val palette = settings.theme.palette(systemDark = isSystemInDarkTheme())
 
-            GymoraTheme(themeMode = settings.theme.toMode()) {
+            // Edge-to-edge with transparent bars; icon tint follows the palette's brightness.
+            DisposableEffect(palette.isDark) {
+                val barStyle = if (palette.isDark) {
+                    SystemBarStyle.dark(Color.TRANSPARENT)
+                } else {
+                    SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                }
+                enableEdgeToEdge(statusBarStyle = barStyle, navigationBarStyle = barStyle)
+                onDispose {}
+            }
+
+            GymoraTheme(palette = palette) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
@@ -63,10 +71,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
-
-private fun Theme.toMode(): ThemeMode = when (this) {
-    Theme.SYSTEM -> ThemeMode.SYSTEM
-    Theme.LIGHT -> ThemeMode.LIGHT
-    Theme.DARK -> ThemeMode.DARK
 }

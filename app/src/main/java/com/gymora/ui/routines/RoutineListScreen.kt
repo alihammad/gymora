@@ -2,6 +2,7 @@ package com.gymora.ui.routines
 
 import com.gymora.ui.components.GymoraLoading
 import com.gymora.ui.theme.GymoraShapes
+import com.gymora.ui.theme.GymoraThemeTokens
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -47,15 +48,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gymora.ui.components.EmptyState
 import com.gymora.ui.components.EmptyStateCopy
-import com.gymora.ui.theme.OnTileAccents
-import com.gymora.ui.theme.TileAccentTexts
-import com.gymora.ui.theme.TileAccents
 
 /**
  * My Routines destination (FR-002, T031a): routines as accent-coloured tiles
@@ -129,7 +126,7 @@ fun RoutineListScreen(
                         RoutineTile(
                             name = routine.name,
                             exerciseCount = routine.exerciseCount,
-                            accent = TileAccents[index % TileAccents.size],
+                            accentIndex = index,
                             onClick = { onRoutineClick(routine.id) },
                             onDelete = { viewModel.onDeleteRequested(routine) },
                         )
@@ -156,10 +153,13 @@ fun RoutineListScreen(
 private fun RoutineTile(
     name: String,
     exerciseCount: Int,
-    accent: Color,
+    accentIndex: Int,
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val extra = GymoraThemeTokens.extraColors
+    val slot = accentIndex % extra.tileAccents.size
+    val accent = extra.tileAccents[slot]
     var menuOpen by remember { mutableStateOf(false) }
     Card(
         shape = GymoraShapes.card,
@@ -202,7 +202,7 @@ private fun RoutineTile(
                 Icon(
                     routineIcon(name),
                     contentDescription = null,
-                    tint = OnTileAccents[TileAccents.indexOf(accent).coerceAtLeast(0)],
+                    tint = extra.onTileAccents[slot],
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -210,7 +210,7 @@ private fun RoutineTile(
                 Text(
                     text = name,
                     style = MaterialTheme.typography.titleLarge,
-                    color = TileAccentTexts[TileAccents.indexOf(accent).coerceAtLeast(0)],
+                    color = extra.tileAccentTexts[slot],
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )

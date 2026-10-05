@@ -64,8 +64,7 @@ import com.gymora.domain.model.SetTemplate
 import com.gymora.ui.components.ChartPoint
 import com.gymora.ui.components.ConfirmDialog
 import com.gymora.ui.components.ProgressChartCard
-import com.gymora.ui.theme.OnTileAccents
-import com.gymora.ui.theme.TileAccents
+import com.gymora.ui.theme.GymoraThemeTokens
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -281,8 +280,9 @@ fun RoutineEditorScreen(
 
 @Composable
 private fun RoutineHeader(routine: RoutineDetail) {
-    val accentIndex = (routine.header.id % TileAccents.size).toInt()
-    val accent = TileAccents[accentIndex]
+    val extra = GymoraThemeTokens.extraColors
+    val accentIndex = (routine.header.id % extra.tileAccents.size).toInt()
+    val accent = extra.tileAccents[accentIndex]
     val sets = routine.exercises.sumOf { it.setTemplates.size }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Box(
@@ -292,7 +292,7 @@ private fun RoutineHeader(routine: RoutineDetail) {
             Icon(
                 routineIcon(routine.header.name),
                 contentDescription = null,
-                tint = OnTileAccents[accentIndex],
+                tint = extra.onTileAccents[accentIndex],
                 modifier = Modifier.size(28.dp),
             )
         }

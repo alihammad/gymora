@@ -115,11 +115,7 @@ fun SettingsScreen(
             SettingsSection(title = "Theme") {
                 Theme.entries.forEach { theme ->
                     SettingsRadioRow(
-                        label = when (theme) {
-                            Theme.SYSTEM -> "System default"
-                            Theme.LIGHT -> "Light"
-                            Theme.DARK -> "Dark"
-                        },
+                        label = theme.displayName,
                         selected = settings.theme == theme,
                         onClick = { viewModel.onThemeSelected(theme) },
                     )
