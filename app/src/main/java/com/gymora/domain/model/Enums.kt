@@ -6,11 +6,20 @@ enum class WeightUnit {
     LB,
 }
 
-/** Theme preference (FR-051). */
-enum class Theme {
-    SYSTEM,
-    LIGHT,
-    DARK,
+/**
+ * Theme preference (FR-051). Persisted by [name], so existing entries must keep their names.
+ * [LIGHT] is the Light Minimal theme and [DARK] the original Night Volt theme.
+ */
+enum class Theme(val displayName: String) {
+    SYSTEM("System default"),
+    LIGHT("Light Minimal"),
+    DARK("Night Volt"),
+    OBSIDIAN("Obsidian"),
+    GRAPHITE_LIME("Graphite + Lime"),
+    MIDNIGHT_BLUE("Midnight Blue"),
+    BLACK_PURPLE("Black + Purple"),
+    CHARCOAL_ORANGE("Charcoal + Orange"),
+    DEEP_FOREST("Deep Forest"),
 }
 
 /**
