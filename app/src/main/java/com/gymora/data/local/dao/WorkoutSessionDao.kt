@@ -71,6 +71,13 @@ interface WorkoutSessionDao {
     )
     suspend fun listCompletedBetween(fromMillis: Long, toMillis: Long): List<WorkoutSessionEntity>
 
+    /** CSV-import duplicate check: same workout name starting in the same second. */
+    @Query(
+        "SELECT COUNT(*) FROM workout_sessions WHERE status = 'COMPLETED' " +
+            "AND started_at / 1000 = :epochSecond AND routine_name_snapshot = :name COLLATE NOCASE",
+    )
+    suspend fun countCompletedAt(epochSecond: Long, name: String): Int
+
     /** Most recent completed session that contains the given exercise (FR-045). */
     @Query(
         """
