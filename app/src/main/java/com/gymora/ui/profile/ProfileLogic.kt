@@ -44,21 +44,3 @@ fun niceAxis(maxValue: Double, maxIntervals: Int = 5): AxisScale {
         .first { ceil(maxValue / it) <= maxIntervals }
     return AxisScale(max = ceil(maxValue / step) * step, step = step)
 }
-
-/** Workouts grouped by local calendar day. */
-fun workoutsByDay(stats: List<WorkoutStat>, zone: ZoneId): Map<LocalDate, List<WorkoutStat>> =
-    stats.groupBy { it.startedAt.atZone(zone).toLocalDate() }
-
-/** Months to show in the calendar, newest first: from the first workout's month to [today]'s. */
-fun calendarMonths(stats: List<WorkoutStat>, today: LocalDate, zone: ZoneId): List<YearMonth> {
-    val current = YearMonth.from(today)
-    val first = stats.minOfOrNull { it.startedAt }
-        ?.let { YearMonth.from(it.atZone(zone).toLocalDate()) }
-        ?.takeIf { it <= current }
-        ?: current
-    return generateSequence(current) { it.minusMonths(1) }.takeWhile { it >= first }.toList()
-}
-
-/** Calendar label for a day: the first routine name, plus "+n" when more workouts were done. */
-fun dayLabel(workouts: List<WorkoutStat>): String =
-    workouts.first().routineName + if (workouts.size > 1) " +${workouts.size - 1}" else ""

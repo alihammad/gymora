@@ -21,3 +21,20 @@ data class PersonalRecords(
     val bestEstimatedOneRepMax: PersonalRecord?,
     val largestWorkoutVolume: PersonalRecord?,
 )
+
+/** Which kind of personal best a [SessionRecord] beat. */
+enum class SessionRecordKind(val label: String) {
+    HEAVIEST_WEIGHT("Heaviest weight"),
+    BEST_ESTIMATED_ONE_REP_MAX("Best est. 1RM"),
+    MOST_REPS("Most reps"),
+}
+
+/**
+ * A personal best set in one workout, beating every earlier completed workout
+ * of the same exercise. [value] is kg for weight kinds, a rep count for [SessionRecordKind.MOST_REPS].
+ */
+data class SessionRecord(
+    val exerciseName: String,
+    val kind: SessionRecordKind,
+    val value: Double,
+)

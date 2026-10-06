@@ -1,6 +1,8 @@
 package com.gymora.ui.profile
 
 import com.gymora.domain.model.WorkoutStat
+import com.gymora.ui.calendar.calendarMonths
+import com.gymora.ui.calendar.dayLabel
 import java.time.Duration
 import java.time.LocalDate
 import java.time.YearMonth

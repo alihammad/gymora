@@ -13,6 +13,8 @@ import com.gymora.domain.model.WeightUnit
 import com.gymora.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.DayOfWeek
+import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +30,7 @@ data class SettingsUiState(
     val customRestSeconds: String = "",
     val transferInProgress: Boolean = false,
     val transferMessage: String? = null,
+    val showReminderTimePicker: Boolean = false,
 )
 
 @HiltViewModel
@@ -58,6 +61,31 @@ class SettingsViewModel @Inject constructor(
 
     fun onThemeSelected(theme: Theme) {
         viewModelScope.launch { settingsRepository.setTheme(theme) }
+    }
+
+    fun onWeeklyGoalChanged(goal: Int) {
+        viewModelScope.launch { settingsRepository.setWeeklyGoal(goal) }
+    }
+
+    /** Adds or removes [day] from the reminder schedule; the app reschedules the alarm on save. */
+    fun onReminderDayToggled(day: DayOfWeek) {
+        val settings = _uiState.value.settings
+        val days = if (day in settings.reminderDays) settings.reminderDays - day else settings.reminderDays + day
+        viewModelScope.launch { settingsRepository.setReminder(days, settings.reminderTime) }
+    }
+
+    fun onReminderTimeClicked() {
+        _uiState.update { it.copy(showReminderTimePicker = true) }
+    }
+
+    fun onReminderTimeDismissed() {
+        _uiState.update { it.copy(showReminderTimePicker = false) }
+    }
+
+    fun onReminderTimeSelected(time: LocalTime) {
+        _uiState.update { it.copy(showReminderTimePicker = false) }
+        val days = _uiState.value.settings.reminderDays
+        viewModelScope.launch { settingsRepository.setReminder(days, time) }
     }
 
     fun onCustomRestClicked() {

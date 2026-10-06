@@ -19,4 +19,10 @@ interface SettingsRepository {
     suspend fun setDefaultRestDuration(seconds: Int)
 
     suspend fun setTheme(theme: Theme)
+
+    /** Clamped to [Settings.MIN_WEEKLY_GOAL]..[Settings.MAX_WEEKLY_GOAL]. */
+    suspend fun setWeeklyGoal(goal: Int)
+
+    /** Empty [days] turns reminders off. */
+    suspend fun setReminder(days: Set<java.time.DayOfWeek>, time: java.time.LocalTime)
 }

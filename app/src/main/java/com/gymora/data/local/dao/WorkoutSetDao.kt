@@ -23,6 +23,18 @@ interface WorkoutSetDao {
     )
     suspend fun getForSession(sessionId: Long): List<WorkoutSetEntity>
 
+    /** Completed sets of an exercise from completed sessions started before [beforeMillis] (PR baseline). */
+    @Query(
+        """
+        SELECT ws.* FROM workout_sets ws
+        INNER JOIN workout_exercises we ON we.id = ws.workout_exercise_id
+        INNER JOIN workout_sessions s ON s.id = we.session_id
+        WHERE we.exercise_id = :exerciseId AND s.status = 'COMPLETED'
+            AND s.started_at < :beforeMillis AND ws.is_completed = 1
+        """,
+    )
+    suspend fun getCompletedForExerciseBefore(exerciseId: Long, beforeMillis: Long): List<WorkoutSetEntity>
+
     /** Immediate single-row writes (FR-025, FR-027). */
     @Insert
     suspend fun insert(entity: WorkoutSetEntity): Long

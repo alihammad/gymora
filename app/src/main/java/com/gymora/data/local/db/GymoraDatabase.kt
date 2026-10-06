@@ -40,7 +40,7 @@ import com.gymora.data.local.entity.WorkoutSetEntity
         WorkoutSetEntity::class, // registered by T035 (US3)
         com.gymora.data.local.entity.BodyMeasurementEntity::class, // v2
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class GymoraDatabase : RoomDatabase() {
@@ -92,6 +92,19 @@ abstract class GymoraDatabase : RoomDatabase() {
                 db.execSQL("DROP INDEX IF EXISTS index_workout_sessions_single_active")
                 db.execSQL("ALTER TABLE `routine_exercises` ADD COLUMN `superset_group` INTEGER")
                 db.execSQL("ALTER TABLE `workout_exercises` ADD COLUMN `superset_group` INTEGER")
+            }
+        }
+
+        /** v3 → v4: weekly goal and workout reminder schedule. */
+        val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // See MIGRATION_1_2: the partial index must be dropped before validation.
+                db.execSQL("DROP INDEX IF EXISTS index_workout_sessions_single_active")
+                db.execSQL("ALTER TABLE `settings` ADD COLUMN `weekly_goal` INTEGER NOT NULL DEFAULT 3")
+                db.execSQL("ALTER TABLE `settings` ADD COLUMN `reminder_days` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    "ALTER TABLE `settings` ADD COLUMN `reminder_minute_of_day` INTEGER NOT NULL DEFAULT 1080",
+                )
             }
         }
     }

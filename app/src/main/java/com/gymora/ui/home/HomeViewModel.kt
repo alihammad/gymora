@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gymora.domain.repository.HistoryRepository
 import com.gymora.domain.repository.RoutineRepository
+import com.gymora.domain.usecase.GetEngagementUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.launch
 class HomeViewModel @Inject constructor(
     private val routineRepository: RoutineRepository,
     private val historyRepository: HistoryRepository,
+    private val getEngagement: GetEngagementUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -30,12 +32,14 @@ class HomeViewModel @Inject constructor(
         loadRecentWorkouts()
     }
 
-    /** The 3 most recent completed workouts (spec Assumption, FR-002, T050a). */
+    /** The 3 most recent completed workouts, plus the weekly goal card (spec Assumption, FR-002, T050a). */
     fun loadRecentWorkouts() {
         viewModelScope.launch {
             val recent = historyRepository.listCompleted(limit = RECENT_COUNT, offset = 0)
             _uiState.update { it.copy(recentWorkouts = recent) }
             loadWorkoutDays()
+            val progress = getEngagement().progress
+            _uiState.update { it.copy(weeklyProgress = progress) }
         }
     }
 

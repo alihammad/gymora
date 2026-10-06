@@ -19,6 +19,9 @@ interface HistoryRepository {
     /** Local dates in [from, toExclusive) on which at least one workout was completed. */
     suspend fun completedDays(from: java.time.LocalDate, toExclusive: java.time.LocalDate): Set<java.time.LocalDate>
 
+    /** Local start date of every completed workout, one entry per workout (weekly goal and streak). */
+    suspend fun completedWorkoutDates(): List<java.time.LocalDate>
+
     /** Full details of every workout completed on the given local [day], oldest first. */
     suspend fun getWorkoutsOn(day: java.time.LocalDate): List<WorkoutDetail>
 

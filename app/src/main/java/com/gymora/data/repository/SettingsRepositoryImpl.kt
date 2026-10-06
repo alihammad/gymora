@@ -2,10 +2,13 @@ package com.gymora.data.repository
 
 import com.gymora.data.local.dao.SettingsDao
 import com.gymora.data.local.entity.SettingsEntity
+import com.gymora.domain.calculator.EngagementCalculators
 import com.gymora.domain.model.Settings
 import com.gymora.domain.model.Theme
 import com.gymora.domain.model.WeightUnit
 import com.gymora.domain.repository.SettingsRepository
+import java.time.DayOfWeek
+import java.time.LocalTime
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -34,6 +37,23 @@ class SettingsRepositoryImpl @Inject constructor(
         settingsDao.upsert(current.copy(theme = theme.name, updatedAt = now()))
     }
 
+    override suspend fun setWeeklyGoal(goal: Int) {
+        val current = current()
+        val clamped = goal.coerceIn(Settings.MIN_WEEKLY_GOAL, Settings.MAX_WEEKLY_GOAL)
+        settingsDao.upsert(current.copy(weeklyGoal = clamped, updatedAt = now()))
+    }
+
+    override suspend fun setReminder(days: Set<DayOfWeek>, time: LocalTime) {
+        val current = current()
+        settingsDao.upsert(
+            current.copy(
+                reminderDays = EngagementCalculators.daysToMask(days),
+                reminderMinuteOfDay = time.hour * MINUTES_PER_HOUR + time.minute,
+                updatedAt = now(),
+            ),
+        )
+    }
+
     private suspend fun current(): SettingsEntity =
         settingsDao.getOnce() ?: SettingsEntity.DEFAULTS
 
@@ -43,5 +63,12 @@ class SettingsRepositoryImpl @Inject constructor(
         weightUnit = WeightUnit.valueOf(weightUnit),
         defaultRestSeconds = defaultRestSeconds,
         theme = Theme.valueOf(theme),
+        weeklyGoal = weeklyGoal,
+        reminderDays = EngagementCalculators.maskToDays(reminderDays),
+        reminderTime = LocalTime.of(reminderMinuteOfDay / MINUTES_PER_HOUR, reminderMinuteOfDay % MINUTES_PER_HOUR),
     )
+
+    private companion object {
+        const val MINUTES_PER_HOUR = 60
+    }
 }

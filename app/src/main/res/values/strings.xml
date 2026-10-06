@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Gymora</string>
+    <string name="widget_description">Your weekly streak and a one-tap start for your next workout</string>
 </resources>

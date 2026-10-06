@@ -128,6 +128,13 @@ fun HomeScreen(
                 onDayClick = viewModel::onDaySelected,
             )
 
+            uiState.weeklyProgress?.let { progress ->
+                WeeklyGoalCard(
+                    progress = progress,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+
             uiState.selectedDay?.let { day ->
                 DayWorkoutsSheet(
                     day = day,
