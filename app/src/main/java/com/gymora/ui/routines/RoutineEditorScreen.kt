@@ -1,5 +1,6 @@
 package com.gymora.ui.routines
 
+import androidx.activity.compose.BackHandler
 import com.gymora.ui.components.GymoraLoading
 import com.gymora.ui.theme.GymoraShapes
 import androidx.compose.foundation.background
@@ -24,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
@@ -51,18 +51,23 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gymora.domain.model.RoutineDetail
 import com.gymora.domain.model.RoutineExerciseDetail
 import com.gymora.domain.model.SetTemplate
 import com.gymora.ui.components.ChartPoint
-import com.gymora.ui.components.ConfirmDialog
 import com.gymora.ui.components.ProgressChartCard
 import com.gymora.ui.theme.GymoraThemeTokens
 import java.time.ZoneId
@@ -71,8 +76,8 @@ import java.time.format.DateTimeFormatter
 /**
  * Routine detail/editor (FR-011..FR-018): shows the routine name, its
  * exercises with sets and reps and a volume progress chart. The name and
- * description are edited through the pencil action; sets and exercises are
- * edited inline. Duplicate and delete live in the top bar.
+ * description are edited inline and persisted with Save; sets and exercises
+ * are edited inline. Deleting a workout is done from the home list.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,16 +87,14 @@ fun RoutineEditorScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    var showEditDetails by remember { mutableStateOf(false) }
+    val exit = { viewModel.onExit(onBack) }
 
-    LaunchedEffect(uiState.isDeleted) {
-        if (uiState.isDeleted) onBack()
-    }
+    BackHandler(onBack = exit)
 
-    uiState.errorMessage?.let { message ->
+    uiState.message?.let { message ->
         LaunchedEffect(message) {
             snackbarHostState.showSnackbar(message)
-            viewModel.onErrorShown()
+            viewModel.onMessageShown()
         }
     }
 
@@ -104,19 +107,8 @@ fun RoutineEditorScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = exit) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showEditDetails = true }, enabled = uiState.routine != null) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Edit name and description")
-                    }
-                    IconButton(onClick = viewModel::onDuplicate) {
-                        Icon(Icons.Filled.ContentCopy, contentDescription = "Duplicate workout")
-                    }
-                    IconButton(onClick = viewModel::onDeleteRequested) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete workout")
                     }
                 },
             )
@@ -141,6 +133,12 @@ fun RoutineEditorScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
+                    WorkoutDetailsForm(
+                        routine = routine,
+                        isNewWorkout = uiState.isNewWorkout,
+                        onSave = viewModel::onSaveDetails,
+                    )
+
                     RoutineHeader(routine)
 
                     ProgressChartCard(
@@ -178,21 +176,6 @@ fun RoutineEditorScreen(
                     }
                 }
             }
-        }
-    }
-
-    if (showEditDetails) {
-        uiState.routine?.let { routine ->
-            EditDetailsDialog(
-                initialName = routine.header.name,
-                initialDescription = routine.header.description.orEmpty(),
-                onSave = { name, description ->
-                    viewModel.onRename(name)
-                    viewModel.onDescriptionChanged(description)
-                    showEditDetails = false
-                },
-                onDismiss = { showEditDetails = false },
-            )
         }
     }
 
@@ -264,18 +247,6 @@ fun RoutineEditorScreen(
             },
         )
     }
-
-    if (uiState.showDeleteConfirm) {
-        ConfirmDialog(
-            title = "Delete workout",
-            message = "Delete \"${uiState.routine?.header?.name}\"? " +
-                "Workouts already performed from it stay in history.",
-            confirmLabel = "Delete",
-            dismissLabel = "Cancel",
-            onConfirm = viewModel::onDeleteConfirmed,
-            onDismiss = viewModel::onDeleteDismissed,
-        )
-    }
 }
 
 @Composable
@@ -296,62 +267,72 @@ private fun RoutineHeader(routine: RoutineDetail) {
                 modifier = Modifier.size(28.dp),
             )
         }
-        Column {
-            Text(
-                "${routine.exercises.size} exercises · $sets sets",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            routine.header.description?.takeIf { it.isNotBlank() }?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        Text(
+            "${routine.exercises.size} exercises · $sets sets",
+            style = MaterialTheme.typography.titleMedium,
+        )
     }
 }
 
+/**
+ * Inline name/description fields. A freshly created workout starts with an
+ * empty, focused name field so the placeholder "New Workout" is not kept by
+ * accident.
+ */
 @Composable
-private fun EditDetailsDialog(
-    initialName: String,
-    initialDescription: String,
+private fun WorkoutDetailsForm(
+    routine: RoutineDetail,
+    isNewWorkout: Boolean,
     onSave: (name: String, description: String) -> Unit,
-    onDismiss: () -> Unit,
 ) {
-    var name by remember { mutableStateOf(initialName) }
-    var description by remember { mutableStateOf(initialDescription) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Edit workout") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name") },
-                    singleLine = true,
-                    isError = name.isBlank(),
-                    supportingText = {
-                        if (name.isBlank()) Text("Workout name must not be blank")
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Description (optional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(name.trim(), description) }, enabled = name.isNotBlank()) {
-                Text("Save")
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+    val savedName = routine.header.name
+    val savedDescription = routine.header.description.orEmpty()
+    var name by rememberSaveable(routine.header.id) {
+        mutableStateOf(if (isNewWorkout) "" else savedName)
+    }
+    var description by rememberSaveable(routine.header.id) { mutableStateOf(savedDescription) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(routine.header.id) {
+        if (isNewWorkout) focusRequester.requestFocus()
+    }
+
+    val hasChanges = isNewWorkout || name.trim() != savedName || description != savedDescription
+    val canSave = name.isNotBlank() && hasChanges
+    val save = {
+        focusManager.clearFocus()
+        onSave(name.trim(), description)
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Workout name") },
+            placeholder = { Text("e.g. Push Day") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Words,
+                imeAction = ImeAction.Next,
+            ),
+            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+        )
+        OutlinedTextField(
+            value = description,
+            onValueChange = { description = it },
+            label = { Text("Description (optional)") },
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Button(
+            onClick = save,
+            enabled = canSave,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+        ) {
+            Text("Save")
+        }
+    }
 }
 
 @Composable

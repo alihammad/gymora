@@ -10,8 +10,6 @@ import com.gymora.domain.model.ValidationException
 import com.gymora.domain.repository.ExerciseRepository
 import com.gymora.domain.repository.HistoryRepository
 import com.gymora.domain.repository.RoutineRepository
-import com.gymora.domain.usecase.DeleteRoutineUseCase
-import com.gymora.domain.usecase.DuplicateRoutineUseCase
 import com.gymora.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -28,15 +26,15 @@ class RoutineEditorViewModel @Inject constructor(
     private val routineRepository: RoutineRepository,
     private val exerciseRepository: ExerciseRepository,
     private val historyRepository: HistoryRepository,
-    private val deleteRoutineUseCase: DeleteRoutineUseCase,
-    private val duplicateRoutineUseCase: DuplicateRoutineUseCase,
 ) : ViewModel() {
 
     /** Mutable: a "new routine" navigation creates the row first, then edits it. */
     private var routineId: Long = savedStateHandle.get<String>(Destinations.RoutineEditor.ARG)
         ?.toLongOrNull() ?: NEW_ROUTINE_ID
 
-    private val _uiState = MutableStateFlow(RoutineEditorUiState())
+    private val _uiState = MutableStateFlow(
+        RoutineEditorUiState(isNewWorkout = routineId == NEW_ROUTINE_ID),
+    )
     val uiState: StateFlow<RoutineEditorUiState> = _uiState.asStateFlow()
 
     init {
@@ -56,7 +54,7 @@ class RoutineEditorViewModel @Inject constructor(
                 }
                 .onFailure { error ->
                     _uiState.update {
-                        it.copy(isLoading = false, errorMessage = friendlyMessage(error))
+                        it.copy(isLoading = false, message = friendlyMessage(error))
                     }
                 }
         }
@@ -71,7 +69,7 @@ class RoutineEditorViewModel @Inject constructor(
                 }
                 .onFailure { error ->
                     _uiState.update {
-                        it.copy(isLoading = false, errorMessage = friendlyMessage(error))
+                        it.copy(isLoading = false, message = friendlyMessage(error))
                     }
                 }
         }
@@ -84,20 +82,48 @@ class RoutineEditorViewModel @Inject constructor(
         }
     }
 
-    fun onRename(name: String) {
+    /**
+     * Name and description are written one after the other: both repository
+     * calls read-modify-write the whole routine row, so running them
+     * concurrently let the description write restore the old name.
+     */
+    fun onSaveDetails(name: String, description: String) {
         viewModelScope.launch {
-            runCatching { routineRepository.rename(routineId, name) }
-                .onSuccess { loadRoutine() }
+            runCatching {
+                routineRepository.rename(routineId, name)
+                routineRepository.updateDescription(routineId, description.ifBlank { null })
+            }
+                .onSuccess {
+                    _uiState.update { it.copy(message = "Workout saved", isNewWorkout = false) }
+                    loadRoutine()
+                }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = friendlyMessage(error)) }
+                    _uiState.update { it.copy(message = friendlyMessage(error)) }
                 }
         }
     }
 
-    fun onDescriptionChanged(description: String?) {
+    private var isExiting = false
+
+    /**
+     * Leaving a freshly created workout that was never saved and has no
+     * exercises deletes it, so backing out of "+" leaves no blank row on the
+     * home list. Anything with exercises is kept even if never renamed.
+     */
+    fun onExit(onDone: () -> Unit) {
+        if (isExiting) return
+        isExiting = true
+        val state = _uiState.value
+        val isBlank = state.isNewWorkout &&
+            routineId != NEW_ROUTINE_ID &&
+            state.routine?.exercises.isNullOrEmpty()
+        if (!isBlank) {
+            onDone()
+            return
+        }
         viewModelScope.launch {
-            routineRepository.updateDescription(routineId, description?.ifBlank { null })
-            loadRoutine()
+            runCatching { routineRepository.delete(routineId) }
+            onDone()
         }
     }
 
@@ -158,7 +184,7 @@ class RoutineEditorViewModel @Inject constructor(
             runCatching { routineRepository.updateSetTemplate(templateId, input) }
                 .onSuccess { loadRoutine() }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = friendlyMessage(error)) }
+                    _uiState.update { it.copy(message = friendlyMessage(error)) }
                 }
         }
     }
@@ -170,39 +196,8 @@ class RoutineEditorViewModel @Inject constructor(
         }
     }
 
-    fun onDuplicate() {
-        viewModelScope.launch {
-            runCatching { duplicateRoutineUseCase(routineId) }
-                .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = friendlyMessage(error)) }
-                }
-        }
-    }
-
-    fun onDeleteRequested() {
-        _uiState.update { it.copy(showDeleteConfirm = true) }
-    }
-
-    fun onDeleteConfirmed() {
-        viewModelScope.launch {
-            runCatching { deleteRoutineUseCase(routineId) }
-                .onSuccess {
-                    _uiState.update { it.copy(showDeleteConfirm = false, isDeleted = true) }
-                }
-                .onFailure { error ->
-                    _uiState.update {
-                        it.copy(showDeleteConfirm = false, errorMessage = friendlyMessage(error))
-                    }
-                }
-        }
-    }
-
-    fun onDeleteDismissed() {
-        _uiState.update { it.copy(showDeleteConfirm = false) }
-    }
-
-    fun onErrorShown() {
-        _uiState.update { it.copy(errorMessage = null) }
+    fun onMessageShown() {
+        _uiState.update { it.copy(message = null) }
     }
 
     private fun friendlyMessage(error: Throwable): String = when (error) {
