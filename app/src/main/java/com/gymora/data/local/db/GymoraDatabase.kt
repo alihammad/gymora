@@ -40,7 +40,7 @@ import com.gymora.data.local.entity.WorkoutSetEntity
         WorkoutSetEntity::class, // registered by T035 (US3)
         com.gymora.data.local.entity.BodyMeasurementEntity::class, // v2
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class GymoraDatabase : RoomDatabase() {
@@ -82,6 +82,16 @@ abstract class GymoraDatabase : RoomDatabase() {
                         "`above_navel_cm` REAL, `navel_cm` REAL, `below_navel_cm` REAL, " +
                         "`thigh_cm` REAL)",
                 )
+            }
+        }
+
+        /** v2 → v3: superset grouping on template and performed exercises. */
+        val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // See MIGRATION_1_2: the partial index must be dropped before validation.
+                db.execSQL("DROP INDEX IF EXISTS index_workout_sessions_single_active")
+                db.execSQL("ALTER TABLE `routine_exercises` ADD COLUMN `superset_group` INTEGER")
+                db.execSQL("ALTER TABLE `workout_exercises` ADD COLUMN `superset_group` INTEGER")
             }
         }
     }

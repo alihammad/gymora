@@ -13,6 +13,7 @@ data class RoutineEditorUiState(
     /** True until a freshly created workout is first saved. */
     val isNewWorkout: Boolean = false,
     val progress: List<com.gymora.domain.model.RoutineSessionPoint> = emptyList(),
+    val showDeleteConfirm: Boolean = false,
     /** One-shot snackbar text: errors and save confirmations. */
     val message: String? = null,
 )

@@ -48,6 +48,8 @@ data class RoutineExerciseEntity(
     @ColumnInfo(name = "exercise_id") val exerciseId: Long,
     @ColumnInfo(name = "position") val position: Int,
     @ColumnInfo(name = "notes") val notes: String?,
+    /** Adjacent rows sharing a non-null group form a superset (v3). */
+    @ColumnInfo(name = "superset_group") val supersetGroup: Long? = null,
 )
 
 /** Planned set within a routine exercise (FR-018, data-model.md). */

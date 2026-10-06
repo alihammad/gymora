@@ -67,6 +67,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gymora.domain.model.RoutineDetail
 import com.gymora.domain.model.RoutineExerciseDetail
 import com.gymora.domain.model.SetTemplate
+import com.gymora.domain.model.SupersetRules
+import com.gymora.ui.components.ConfirmDialog
+import com.gymora.ui.components.SupersetBlock
+import com.gymora.ui.components.SupersetLinkButton
 import com.gymora.ui.components.ChartPoint
 import com.gymora.ui.components.ProgressChartCard
 import com.gymora.ui.theme.GymoraThemeTokens
@@ -77,7 +81,8 @@ import java.time.format.DateTimeFormatter
  * Routine detail/editor (FR-011..FR-018): shows the routine name, its
  * exercises with sets and reps and a volume progress chart. The name and
  * description are edited inline and persisted with Save; sets and exercises
- * are edited inline. Deleting a workout is done from the home list.
+ * are edited inline. The top-bar delete action removes the workout after
+ * confirmation; history performed from it is kept.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,6 +114,13 @@ fun RoutineEditorScreen(
                 navigationIcon = {
                     IconButton(onClick = exit) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (uiState.routine != null) {
+                        IconButton(onClick = viewModel::onDeleteRequested) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete workout")
+                        }
                     }
                 },
             )
@@ -156,15 +168,10 @@ fun RoutineEditorScreen(
                     )
 
                     Text("Exercises", style = MaterialTheme.typography.titleMedium)
-                    routine.exercises.forEach { exercise ->
-                        ExerciseCard(
-                            exercise = exercise,
-                            onAddSet = { viewModel.onAddSetTemplate(exercise.routineExerciseId) },
-                            onRemove = { viewModel.onRemoveExercise(exercise.routineExerciseId) },
-                            onUpdateTemplate = viewModel::onUpdateSetTemplate,
-                            onDeleteTemplate = viewModel::onDeleteSetTemplate,
-                        )
-                    }
+                    ExerciseList(
+                        exercises = routine.exercises,
+                        viewModel = viewModel,
+                    )
 
                     OutlinedButton(
                         onClick = viewModel::onAddExerciseClicked,
@@ -177,6 +184,18 @@ fun RoutineEditorScreen(
                 }
             }
         }
+    }
+
+    if (uiState.showDeleteConfirm) {
+        ConfirmDialog(
+            title = "Delete workout",
+            message = "Delete \"${uiState.routine?.header?.name.orEmpty()}\"? " +
+                "Workouts already performed from it stay in history.",
+            confirmLabel = "Delete",
+            dismissLabel = "Cancel",
+            onConfirm = { viewModel.onDeleteConfirmed(onBack) },
+            onDismiss = viewModel::onDeleteDismissed,
+        )
     }
 
     if (uiState.showExercisePicker) {
@@ -331,6 +350,53 @@ private fun WorkoutDetailsForm(
             modifier = Modifier.fillMaxWidth().height(52.dp),
         ) {
             Text("Save")
+        }
+    }
+}
+
+/**
+ * Exercises grouped into supersets. Between every two adjacent exercises sits a
+ * toggle that links them into a superset or splits an existing one there.
+ */
+@Composable
+private fun ExerciseList(
+    exercises: List<RoutineExerciseDetail>,
+    viewModel: RoutineEditorViewModel,
+) {
+    val blocks = SupersetRules.blocks(exercises) { it.supersetGroup }
+    val card: @Composable (RoutineExerciseDetail) -> Unit = { exercise ->
+        ExerciseCard(
+            exercise = exercise,
+            onAddSet = { viewModel.onAddSetTemplate(exercise.routineExerciseId) },
+            onRemove = { viewModel.onRemoveExercise(exercise.routineExerciseId) },
+            onUpdateTemplate = viewModel::onUpdateSetTemplate,
+            onDeleteTemplate = viewModel::onDeleteSetTemplate,
+        )
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        blocks.forEachIndexed { blockIndex, block ->
+            if (block.size > 1) {
+                SupersetBlock {
+                    block.forEachIndexed { index, exercise ->
+                        card(exercise)
+                        if (index < block.lastIndex) {
+                            SupersetLinkButton(
+                                linked = true,
+                                onClick = { viewModel.onUnlinkSuperset(exercise.routineExerciseId) },
+                            )
+                        }
+                    }
+                }
+            } else {
+                card(block.single())
+            }
+            if (blockIndex < blocks.lastIndex) {
+                SupersetLinkButton(
+                    linked = false,
+                    onClick = { viewModel.onLinkSuperset(block.last().routineExerciseId) },
+                )
+            }
         }
     }
 }

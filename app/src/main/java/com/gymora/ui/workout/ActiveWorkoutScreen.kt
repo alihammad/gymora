@@ -55,7 +55,9 @@ import com.gymora.domain.model.ActiveExercise
 import com.gymora.domain.model.ActiveSet
 import com.gymora.domain.model.PreviousPerformance
 import com.gymora.domain.model.SetValue
+import com.gymora.domain.model.SupersetRules
 import com.gymora.ui.components.ConfirmDialog
+import com.gymora.ui.components.ExerciseBlock
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -135,18 +137,21 @@ fun ActiveWorkoutScreen(
                             .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                    items(workout.exercises, key = { it.workoutExerciseId }) { exercise ->
-                        ExerciseCard(
-                            exercise = exercise,
-                            previousPerformance = exercise.exerciseId?.let {
-                                uiState.previousPerformanceMap[it]
-                            },
-                            onWeightChanged = viewModel::onWeightChanged,
-                            onRepsChanged = viewModel::onRepsChanged,
-                            onToggleComplete = viewModel::onToggleComplete,
-                            onAddSet = viewModel::onAddSet,
-                            onRemove = { viewModel.onRemoveExercise(exercise.workoutExerciseId) },
-                        )
+                    val blocks = SupersetRules.blocks(workout.exercises) { it.supersetGroup }
+                    items(blocks, key = { it.first().workoutExerciseId }) { block ->
+                        ExerciseBlock(block) { exercise ->
+                            ExerciseCard(
+                                exercise = exercise,
+                                previousPerformance = exercise.exerciseId?.let {
+                                    uiState.previousPerformanceMap[it]
+                                },
+                                onWeightChanged = viewModel::onWeightChanged,
+                                onRepsChanged = viewModel::onRepsChanged,
+                                onToggleComplete = viewModel::onToggleComplete,
+                                onAddSet = viewModel::onAddSet,
+                                onRemove = { viewModel.onRemoveExercise(exercise.workoutExerciseId) },
+                            )
+                        }
                     }
                     item {
                         OutlinedButton(

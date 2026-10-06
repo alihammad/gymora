@@ -18,13 +18,15 @@ import com.gymora.domain.model.RoutineRules
 import com.gymora.domain.model.RoutineSummary
 import com.gymora.domain.model.SetTemplate
 import com.gymora.domain.model.SetTemplateInput
+import com.gymora.domain.model.SupersetEntry
+import com.gymora.domain.model.SupersetRules
 import com.gymora.domain.model.ValidationException
 import com.gymora.domain.model.WeightUnit
 import com.gymora.domain.repository.RoutineRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 
 @Singleton
 class RoutineRepositoryImpl @Inject constructor(
@@ -36,12 +38,18 @@ class RoutineRepositoryImpl @Inject constructor(
 ) : RoutineRepository {
 
     override fun observeAll(): Flow<List<RoutineSummary>> =
-        routineDao.observeAll().map { entities ->
+        // Combined so adding/removing exercises (which never touches the
+        // routines table) still refreshes the counts.
+        combine(
+            routineDao.observeAll(),
+            routineExerciseDao.observeRoutineIds(),
+        ) { entities, exerciseRoutineIds ->
+            val counts = exerciseRoutineIds.groupingBy { it }.eachCount()
             entities.map { entity ->
                 RoutineSummary(
                     id = entity.id,
                     name = entity.name,
-                    exerciseCount = routineExerciseDao.getForRoutine(entity.id).size,
+                    exerciseCount = counts[entity.id] ?: 0,
                     // Last-performed date requires workout_sessions (US3, T039).
                     lastPerformedAt = null,
                 )
@@ -61,6 +69,7 @@ class RoutineRepositoryImpl @Inject constructor(
                 notes = routineExercise.notes,
                 setTemplates = setTemplateDao.getForRoutineExercise(routineExercise.id)
                     .map { it.toDomain() },
+                supersetGroup = routineExercise.supersetGroup,
             )
         }
 
@@ -123,6 +132,7 @@ class RoutineRepositoryImpl @Inject constructor(
                     updatedAt = now,
                 ),
             )
+            val newIds = mutableMapOf<Long, Long>()
             source.exercises.forEach { exercise ->
                 val newRoutineExerciseId = routineExerciseDao.insert(
                     RoutineExerciseEntity(
@@ -132,6 +142,7 @@ class RoutineRepositoryImpl @Inject constructor(
                         notes = exercise.notes,
                     ),
                 )
+                newIds[exercise.routineExerciseId] = newRoutineExerciseId
                 exercise.setTemplates.forEach { template ->
                     setTemplateDao.insert(
                         SetTemplateEntity(
@@ -142,6 +153,15 @@ class RoutineRepositoryImpl @Inject constructor(
                             targetWeightUnit = template.weightUnit?.name,
                             measurementType = template.measurementType.name,
                         ),
+                    )
+                }
+            }
+            // Second pass: a group is its first member's id, known only once all rows exist.
+            source.exercises.forEach { exercise ->
+                exercise.supersetGroup?.let { group ->
+                    routineExerciseDao.updateSupersetGroup(
+                        newIds.getValue(exercise.routineExerciseId),
+                        newIds[group],
                     )
                 }
             }
@@ -187,6 +207,24 @@ class RoutineRepositoryImpl @Inject constructor(
             }
             orderedRoutineExerciseIds.forEachIndexed { index, routineExerciseId ->
                 routineExerciseDao.updatePosition(routineExerciseId, index)
+            }
+            // A move can split a superset or strand a single member.
+            applySupersetGroups(routineId) { SupersetRules.normalize(it) }
+        }
+    }
+
+    override suspend fun linkSupersetWithNext(routineId: Long, routineExerciseId: Long) {
+        database.withTransaction {
+            applySupersetGroups(routineId) { entries ->
+                SupersetRules.linkWithNext(entries, indexOf(entries, routineExerciseId))
+            }
+        }
+    }
+
+    override suspend fun unlinkSupersetFromNext(routineId: Long, routineExerciseId: Long) {
+        database.withTransaction {
+            applySupersetGroups(routineId) { entries ->
+                SupersetRules.unlinkFromNext(entries, indexOf(entries, routineExerciseId))
             }
         }
     }
@@ -244,8 +282,29 @@ class RoutineRepositoryImpl @Inject constructor(
             entities.forEachIndexed { index, entity ->
                 routineExerciseDao.updatePosition(entity.id, index)
             }
+            // Removing a superset member can leave a single exercise behind.
+            applySupersetGroups(routineId) { SupersetRules.normalize(it) }
         }
     }
+
+    /** Computes new superset groups from the routine's current order and writes changed rows. */
+    private suspend fun applySupersetGroups(
+        routineId: Long,
+        compute: (List<SupersetEntry>) -> Map<Long, Long?>,
+    ) {
+        val entities = routineExerciseDao.getForRoutine(routineId)
+        val groups = compute(entities.map { SupersetEntry(it.id, it.supersetGroup) })
+        entities.forEach { entity ->
+            val group = groups[entity.id]
+            if (group != entity.supersetGroup) {
+                routineExerciseDao.updateSupersetGroup(entity.id, group)
+            }
+        }
+    }
+
+    private fun indexOf(entries: List<SupersetEntry>, routineExerciseId: Long): Int =
+        entries.indexOfFirst { it.id == routineExerciseId }
+            .takeIf { it >= 0 } ?: throw EntityNotFoundException(routineExerciseId)
 
     private fun validateTemplate(template: SetTemplateInput) {
         if (template.targetReps < 0) {

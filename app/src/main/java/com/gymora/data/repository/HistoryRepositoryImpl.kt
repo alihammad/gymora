@@ -175,6 +175,7 @@ class HistoryRepositoryImpl @Inject constructor(
                     position = workoutExercise.position,
                     notes = workoutExercise.notes,
                     sets = setDao.getForExercise(workoutExercise.id).map { it.toDomain() },
+                    supersetGroup = workoutExercise.supersetGroup,
                 )
             },
         )

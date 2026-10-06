@@ -9,8 +9,13 @@ import com.gymora.domain.model.CreateExerciseInput
 import com.gymora.domain.model.MeasurementType
 import com.gymora.domain.model.SetTemplateInput
 import com.gymora.domain.model.WeightUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -186,5 +191,23 @@ class RoutineRepositoryTest {
         repository.deleteSetTemplate(templateId)
         detail = repository.getById(routineId)
         assertTrue(detail.exercises.first().setTemplates.isEmpty())
+    }
+
+    /** Regression: the home list kept showing "0 exercises" after exercises were added. */
+    @Test
+    fun observeAllRefreshesExerciseCountWhenExercisesChange() = runBlocking {
+        val exerciseId = createExercise("Bench Press")
+        val routineId = repository.create("Chest Workout", null)
+        val counts = MutableStateFlow<Int?>(null)
+
+        val collector = launch(Dispatchers.Default) {
+            repository.observeAll().collect { counts.value = it.single().exerciseCount }
+        }
+        withTimeout(5_000) { counts.first { it == 0 } }
+
+        repository.addExercise(routineId, exerciseId, notes = null)
+        withTimeout(5_000) { counts.first { it == 1 } }
+
+        collector.cancel()
     }
 }

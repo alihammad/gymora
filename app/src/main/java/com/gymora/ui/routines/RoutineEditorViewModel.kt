@@ -10,6 +10,7 @@ import com.gymora.domain.model.ValidationException
 import com.gymora.domain.repository.ExerciseRepository
 import com.gymora.domain.repository.HistoryRepository
 import com.gymora.domain.repository.RoutineRepository
+import com.gymora.domain.usecase.DeleteRoutineUseCase
 import com.gymora.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -26,6 +27,7 @@ class RoutineEditorViewModel @Inject constructor(
     private val routineRepository: RoutineRepository,
     private val exerciseRepository: ExerciseRepository,
     private val historyRepository: HistoryRepository,
+    private val deleteRoutineUseCase: DeleteRoutineUseCase,
 ) : ViewModel() {
 
     /** Mutable: a "new routine" navigation creates the row first, then edits it. */
@@ -127,6 +129,29 @@ class RoutineEditorViewModel @Inject constructor(
         }
     }
 
+    fun onDeleteRequested() {
+        _uiState.update { it.copy(showDeleteConfirm = true) }
+    }
+
+    fun onDeleteDismissed() {
+        _uiState.update { it.copy(showDeleteConfirm = false) }
+    }
+
+    /** Deletes the workout template (history is kept, BR-03) and leaves the screen. */
+    fun onDeleteConfirmed(onDone: () -> Unit) {
+        if (isExiting) return
+        isExiting = true
+        _uiState.update { it.copy(showDeleteConfirm = false) }
+        viewModelScope.launch {
+            runCatching { deleteRoutineUseCase(routineId) }
+                .onSuccess { onDone() }
+                .onFailure { error ->
+                    isExiting = false
+                    _uiState.update { it.copy(message = friendlyMessage(error)) }
+                }
+        }
+    }
+
     fun onAddExerciseClicked() {
         viewModelScope.launch {
             val exercises = exerciseRepository.observeLibrary().first()
@@ -164,15 +189,41 @@ class RoutineEditorViewModel @Inject constructor(
         }
     }
 
+    /** Makes this exercise and the next one a superset (merging existing supersets). */
+    fun onLinkSuperset(routineExerciseId: Long) {
+        viewModelScope.launch {
+            runCatching { routineRepository.linkSupersetWithNext(routineId, routineExerciseId) }
+                .onSuccess { loadRoutine() }
+                .onFailure { error ->
+                    _uiState.update { it.copy(message = friendlyMessage(error)) }
+                }
+        }
+    }
+
+    /** Splits the superset between this exercise and the next one. */
+    fun onUnlinkSuperset(routineExerciseId: Long) {
+        viewModelScope.launch {
+            runCatching { routineRepository.unlinkSupersetFromNext(routineId, routineExerciseId) }
+                .onSuccess { loadRoutine() }
+                .onFailure { error ->
+                    _uiState.update { it.copy(message = friendlyMessage(error)) }
+                }
+        }
+    }
+
     fun onAddSetTemplate(routineExerciseId: Long) {
+        // New sets copy the exercise's last set so edited targets carry forward.
+        val lastSet = _uiState.value.routine?.exercises
+            ?.firstOrNull { it.routineExerciseId == routineExerciseId }
+            ?.setTemplates?.maxByOrNull { it.setNumber }
         viewModelScope.launch {
             routineRepository.addSetTemplate(
                 routineExerciseId,
                 SetTemplateInput(
-                    targetReps = 10,
-                    targetWeight = null,
-                    weightUnit = null,
-                    measurementType = MeasurementType.WEIGHT_AND_REPS,
+                    targetReps = lastSet?.targetReps ?: 10,
+                    targetWeight = lastSet?.targetWeight,
+                    weightUnit = lastSet?.weightUnit,
+                    measurementType = lastSet?.measurementType ?: MeasurementType.WEIGHT_AND_REPS,
                 ),
             )
             loadRoutine()
