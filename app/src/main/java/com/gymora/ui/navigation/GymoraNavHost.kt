@@ -88,8 +88,21 @@ private fun NavHostController.navigateToTab(destination: Destinations) {
  * The active workout is a dedicated experience replacing the bottom nav.
  */
 @Composable
-fun GymoraNavHost(modifier: Modifier = Modifier) {
+fun GymoraNavHost(
+    modifier: Modifier = Modifier,
+    startRoutineRequest: Long? = null,
+    onStartRoutineHandled: () -> Unit = {},
+) {
     val navController = rememberNavController()
+
+    // "Start" from the home-screen widget or a reminder notification.
+    androidx.compose.runtime.LaunchedEffect(startRoutineRequest) {
+        val routineId = startRoutineRequest ?: return@LaunchedEffect
+        navController.navigate(Destinations.StartWorkout.create(routineId)) {
+            popUpTo(Destinations.Home.route)
+        }
+        onStartRoutineHandled()
+    }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 

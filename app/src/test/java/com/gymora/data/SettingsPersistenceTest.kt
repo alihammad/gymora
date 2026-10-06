@@ -150,4 +150,19 @@ class SettingsPersistenceTest {
         val updated = settingsRepository.observeSettings().first()
         assertEquals(WeightUnit.LB, updated.weightUnit)
     }
+
+    @Test
+    fun weeklyGoalAndReminderScheduleAreSavedAndGoalIsClamped() = runTest {
+        val days = setOf(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.FRIDAY)
+        settingsRepository.setWeeklyGoal(4)
+        settingsRepository.setReminder(days, java.time.LocalTime.of(7, 30))
+
+        val settings = settingsRepository.observeSettings().first()
+        assertEquals(4, settings.weeklyGoal)
+        assertEquals(days, settings.reminderDays)
+        assertEquals(java.time.LocalTime.of(7, 30), settings.reminderTime)
+
+        settingsRepository.setWeeklyGoal(12)
+        assertEquals(7, settingsRepository.observeSettings().first().weeklyGoal)
+    }
 }

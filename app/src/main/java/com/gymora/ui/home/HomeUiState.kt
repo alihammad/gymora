@@ -16,6 +16,8 @@ data class HomeUiState(
     val selectedDay: java.time.LocalDate? = null,
     /** Workouts completed on [selectedDay]. */
     val selectedDayWorkouts: List<com.gymora.domain.model.WorkoutDetail> = emptyList(),
+    /** Weekly goal progress and streak; null until loaded. */
+    val weeklyProgress: com.gymora.domain.calculator.WeeklyProgress? = null,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
 )

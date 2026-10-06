@@ -2,6 +2,8 @@ package com.gymora.domain.model
 
 import com.gymora.domain.model.Theme
 import com.gymora.domain.model.WeightUnit
+import java.time.DayOfWeek
+import java.time.LocalTime
 
 /**
  * User preferences (FR-048..FR-051). Pure-Kotlin mirror of the settings table
@@ -11,8 +13,19 @@ data class Settings(
     val weightUnit: WeightUnit,
     val defaultRestSeconds: Int,
     val theme: Theme,
+    /** Workouts per week (Monday–Sunday) the user aims for; drives the weekly streak. */
+    val weeklyGoal: Int = DEFAULT_WEEKLY_GOAL,
+    /** Weekdays a workout reminder is sent on; empty means reminders are off. */
+    val reminderDays: Set<DayOfWeek> = emptySet(),
+    /** Local time of day reminders are sent at. */
+    val reminderTime: LocalTime = DEFAULT_REMINDER_TIME,
 ) {
     companion object {
+        const val DEFAULT_WEEKLY_GOAL = 3
+        const val MIN_WEEKLY_GOAL = 1
+        const val MAX_WEEKLY_GOAL = 7
+        val DEFAULT_REMINDER_TIME: LocalTime = LocalTime.of(18, 0)
+
         val DEFAULTS = Settings(
             weightUnit = WeightUnit.KG,
             defaultRestSeconds = 90,

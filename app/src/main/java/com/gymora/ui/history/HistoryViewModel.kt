@@ -3,8 +3,11 @@ package com.gymora.ui.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gymora.domain.model.HistoryEntry
+import com.gymora.domain.model.WorkoutStat
 import com.gymora.domain.repository.HistoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,9 +15,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** UI state for the history list (FR-040, FR-058). */
+/** How the History tab shows completed workouts. */
+enum class HistoryView { LIST, CALENDAR }
+
+/** UI state for the history list (FR-040, FR-058) and calendar. */
 data class HistoryUiState(
+    val view: HistoryView = HistoryView.LIST,
     val entries: List<HistoryEntry> = emptyList(),
+    /** Every completed workout, oldest first; loaded when the calendar is opened. */
+    val calendarWorkouts: List<WorkoutStat> = emptyList(),
+    /** Day tapped in the calendar; its workouts are listed under it. */
+    val selectedDay: LocalDate? = null,
     val isLoading: Boolean = true,
     val isLoadingMore: Boolean = false,
     val hasMore: Boolean = true,
@@ -47,6 +58,28 @@ class HistoryViewModel @Inject constructor(
                     isLoading = false,
                     hasMore = entries.size == PAGE_SIZE,
                 )
+            }
+        }
+    }
+
+    fun onViewSelected(view: HistoryView) {
+        _uiState.update { it.copy(view = view) }
+        if (view == HistoryView.CALENDAR) loadCalendar()
+    }
+
+    fun onCalendarDaySelected(day: LocalDate) {
+        _uiState.update { it.copy(selectedDay = day) }
+    }
+
+    /** Reloaded on every open so newly finished workouts appear. */
+    private fun loadCalendar() {
+        viewModelScope.launch {
+            val all = runCatching { historyRepository.getWorkoutStats() }.getOrDefault(emptyList())
+            val zone = ZoneId.systemDefault()
+            _uiState.update { state ->
+                // Default to the most recent day trained so the list below is never empty.
+                val selected = state.selectedDay ?: all.lastOrNull()?.startedAt?.atZone(zone)?.toLocalDate()
+                state.copy(calendarWorkouts = all, selectedDay = selected)
             }
         }
     }

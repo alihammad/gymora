@@ -77,6 +77,22 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            SettingsSection(title = "Weekly Goal") {
+                WeeklyGoalSetting(goal = settings.weeklyGoal, onGoalChanged = viewModel::onWeeklyGoalChanged)
+            }
+
+            SettingsSection(title = "Workout Reminders") {
+                ReminderSetting(
+                    days = settings.reminderDays,
+                    time = settings.reminderTime,
+                    showTimePicker = uiState.showReminderTimePicker,
+                    onDayToggled = viewModel::onReminderDayToggled,
+                    onTimeClicked = viewModel::onReminderTimeClicked,
+                    onTimeSelected = viewModel::onReminderTimeSelected,
+                    onTimeDismissed = viewModel::onReminderTimeDismissed,
+                )
+            }
+
             // Weight unit (FR-048)
             SettingsSection(title = "Weight Unit") {
                 WeightUnit.entries.forEach { unit ->

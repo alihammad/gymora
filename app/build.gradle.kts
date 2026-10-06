@@ -44,6 +44,12 @@ android {
         compose = true
     }
 
+    sourceSets {
+        // Exported Room schemas for MigrationTestHelper. Robolectric tests read the
+        // variant's merged assets (not the test source set's), so they ride on debug only.
+        getByName("debug").assets.srcDirs(files("$projectDir/schemas"))
+    }
+
     testOptions {
         unitTests {
             // Robolectric runs Room/DAO/repository integration tests on the JVM.

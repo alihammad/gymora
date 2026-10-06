@@ -51,6 +51,12 @@ class HistoryRepositoryImpl @Inject constructor(
         ).map { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }.toSet()
     }
 
+    override suspend fun completedWorkoutDates(): List<java.time.LocalDate> {
+        val zone = java.time.ZoneId.systemDefault()
+        return sessionDao.completedStartTimesBetween(0L, Long.MAX_VALUE)
+            .map { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
+    }
+
     override suspend fun getWorkoutsOn(day: java.time.LocalDate): List<WorkoutDetail> {
         val zone = java.time.ZoneId.systemDefault()
         return sessionDao.listCompletedBetween(

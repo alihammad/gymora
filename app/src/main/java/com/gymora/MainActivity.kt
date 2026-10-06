@@ -1,5 +1,6 @@
 package com.gymora
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -14,11 +15,14 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.gymora.domain.model.Settings
 import com.gymora.domain.repository.SettingsRepository
 import com.gymora.ui.navigation.GymoraNavHost
 import com.gymora.ui.theme.GymoraTheme
 import com.gymora.ui.theme.palette
+import com.gymora.widget.GymoraWidgetProvider
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.launch // DEMO_SEED (temporary)
@@ -37,8 +41,13 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var demoDataSeeder: com.gymora.data.local.seed.DemoDataSeeder
 
+    /** Routine to start a workout from, requested by the widget or a reminder; null once handled. */
+    private var startRoutineRequest by mutableStateOf<Long?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Only a fresh launch: after a configuration change the request was already handled.
+        if (savedInstanceState == null) readStartRequest(intent)
         // DEMO_SEED (temporary)
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             // Wait for first-launch library/routine seeding before inserting demo history.
@@ -66,9 +75,28 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    GymoraNavHost()
+                    GymoraNavHost(
+                        startRoutineRequest = startRoutineRequest,
+                        onStartRoutineHandled = { startRoutineRequest = null },
+                    )
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        readStartRequest(intent)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Workouts, routines or the goal may have changed while the app was open.
+        GymoraWidgetProvider.refresh(this)
+    }
+
+    private fun readStartRequest(intent: Intent) {
+        val routineId = intent.getLongExtra(LaunchIntents.EXTRA_START_ROUTINE_ID, -1L)
+        if (routineId > 0) startRoutineRequest = routineId
     }
 }

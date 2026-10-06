@@ -6,6 +6,8 @@ import com.gymora.data.local.entity.WorkoutSetEntity
 import com.gymora.domain.calculator.WorkoutCalculators
 import com.gymora.domain.model.PersonalRecord
 import com.gymora.domain.model.PersonalRecords
+import com.gymora.domain.model.SessionRecord
+import com.gymora.domain.model.SessionRecordKind
 import com.gymora.domain.model.WeightUnit
 import com.gymora.domain.repository.RecordsRepository
 import java.time.Instant
@@ -36,6 +38,56 @@ class RecordsRepositoryImpl @Inject constructor(
             bestEstimatedOneRepMax = bestEstimatedOneRepMax(performedSets),
             largestWorkoutVolume = largestWorkoutVolume(sessions),
         )
+    }
+
+    override suspend fun getSessionRecords(sessionId: Long): List<SessionRecord> {
+        val session = database.workoutSessionDao().getById(sessionId) ?: return emptyList()
+        val setDao = database.workoutSetDao()
+        return database.workoutExerciseDao().getForSession(sessionId).mapNotNull { exercise ->
+            val exerciseId = exercise.exerciseId ?: return@mapNotNull null
+            val previous = setDao.getCompletedForExerciseBefore(exerciseId, session.startedAt)
+            if (previous.isEmpty()) return@mapNotNull null
+            val current = setDao.getForExercise(exercise.id).filter { it.isCompleted }
+            sessionRecord(exercise.exerciseNameSnapshot, current, previous)
+        }
+    }
+
+    /** The most significant record [current] sets beat [previous] by, or null. */
+    private fun sessionRecord(
+        exerciseName: String,
+        current: List<WorkoutSetEntity>,
+        previous: List<WorkoutSetEntity>,
+    ): SessionRecord? {
+        val weighted = current.any { weightKg(it) > 0 }
+        return beats(current, previous, ::weightKg)
+            ?.let { SessionRecord(exerciseName, SessionRecordKind.HEAVIEST_WEIGHT, it) }
+            ?: beats(current, previous, ::estimatedOneRepMax)
+                ?.let { SessionRecord(exerciseName, SessionRecordKind.BEST_ESTIMATED_ONE_REP_MAX, it) }
+            // Rep records only for unweighted work; with weight, 1RM already captures it.
+            ?: beats(current, previous) { (it.reps ?: 0).toDouble() }
+                ?.takeIf { !weighted }
+                ?.let { SessionRecord(exerciseName, SessionRecordKind.MOST_REPS, it) }
+    }
+
+    /** Best positive [metric] among [current] sets if it beats every [previous] set, else null. */
+    private fun beats(
+        current: List<WorkoutSetEntity>,
+        previous: List<WorkoutSetEntity>,
+        metric: (WorkoutSetEntity) -> Double,
+    ): Double? {
+        val best = current.maxOfOrNull(metric) ?: return null
+        return best.takeIf { it > 0 && it > (previous.maxOfOrNull(metric) ?: 0.0) }
+    }
+
+    private fun weightKg(set: WorkoutSetEntity): Double {
+        val weight = set.weight ?: return 0.0
+        return WorkoutCalculators.convertWeight(weight, parseWeightUnit(set.weightUnit), WeightUnit.KG)
+    }
+
+    private fun estimatedOneRepMax(set: WorkoutSetEntity): Double {
+        val weight = weightKg(set)
+        val reps = set.reps ?: 0
+        return if (weight > 0 && reps >= 1) WorkoutCalculators.estimatedOneRepMax(weight, reps) else 0.0
     }
 
     /** A performed set with exercise/date context; weight normalized to KG (R-04). */
