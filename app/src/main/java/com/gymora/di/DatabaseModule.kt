@@ -47,7 +47,7 @@ object DatabaseModule {
             GymoraDatabase::class.java,
             GymoraDatabase.NAME,
         )
-            .addMigrations(GymoraDatabase.MIGRATION_1_2)
+            .addMigrations(GymoraDatabase.MIGRATION_1_2, GymoraDatabase.MIGRATION_2_3)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
                     super.onOpen(db)

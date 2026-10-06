@@ -67,6 +67,8 @@ data class WorkoutExerciseEntity(
     @ColumnInfo(name = "exercise_name_snapshot") val exerciseNameSnapshot: String,
     @ColumnInfo(name = "position") val position: Int,
     @ColumnInfo(name = "notes") val notes: String?,
+    /** Adjacent rows sharing a non-null group form a superset (v3). */
+    @ColumnInfo(name = "superset_group") val supersetGroup: Long? = null,
 )
 
 /** Set as actually performed (FR-023..FR-025, data-model.md). */

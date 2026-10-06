@@ -37,6 +37,8 @@ data class ActiveExercise(
     val sets: List<ActiveSet>,
     /** Most recent performance for pre-fill (FR-045) — populated in US6. */
     val previousPerformance: List<SetValue>? = null,
+    /** Adjacent exercises sharing a non-null group form a superset. */
+    val supersetGroup: Long? = null,
 )
 
 data class ActiveWorkout(

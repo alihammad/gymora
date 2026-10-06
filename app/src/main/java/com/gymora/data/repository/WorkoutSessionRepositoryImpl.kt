@@ -77,6 +77,7 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
                     createdAt = now,
                 ),
             )
+            val workoutExerciseIds = mutableMapOf<Long, Long>()
             routineExercises.forEach { routineExercise ->
                 val exerciseEntity = database.exerciseDao().getById(routineExercise.exerciseId)
                 val workoutExerciseId = exerciseDao.insert(
@@ -88,6 +89,7 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
                         notes = routineExercise.notes,
                     ),
                 )
+                workoutExerciseIds[routineExercise.id] = workoutExerciseId
                 val templates = database.setTemplateDao()
                     .getForRoutineExercise(routineExercise.id)
                 templates.forEach { template ->
@@ -103,6 +105,15 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
                             completedAt = null,
                             notes = null,
                         ),
+                    )
+                }
+            }
+            // Second pass: a superset group is its first member's id, known only once all rows exist.
+            routineExercises.forEach { routineExercise ->
+                routineExercise.supersetGroup?.let { group ->
+                    exerciseDao.updateSupersetGroup(
+                        workoutExerciseIds.getValue(routineExercise.id),
+                        workoutExerciseIds[group],
                     )
                 }
             }
@@ -296,6 +307,7 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
                 position = workoutExercise.position,
                 notes = workoutExercise.notes,
                 sets = setDao.getForExercise(workoutExercise.id).map { it.toDomain() },
+                supersetGroup = workoutExercise.supersetGroup,
             )
         }
 

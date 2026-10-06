@@ -36,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gymora.domain.model.ActiveExercise
+import com.gymora.domain.model.SupersetRules
+import com.gymora.ui.components.ExerciseBlock
 import com.gymora.domain.model.Exercise
 import com.gymora.ui.workout.formatElapsed
 import java.time.format.DateTimeFormatter
@@ -167,21 +169,24 @@ private fun WorkoutDetailContent(
                 }
             }
         }
-        items(detail.exercises, key = { it.workoutExerciseId }) { exercise ->
-            if (uiState.isEditing) {
-                EditableExerciseCard(
-                    exercise = exercise,
-                    editableSets = uiState.editableSets,
-                    onWeightChanged = viewModel::onWeightChanged,
-                    onRepsChanged = viewModel::onRepsChanged,
-                    onToggleComplete = viewModel::onToggleComplete,
-                    onRemove = { viewModel.onRemoveExerciseClicked(exercise.workoutExerciseId) },
-                )
-            } else {
-                HistoricalExerciseCard(
-                    exercise = exercise,
-                    onExerciseHistory = { exercise.exerciseId?.let(onExerciseHistory) },
-                )
+        val blocks = SupersetRules.blocks(detail.exercises) { it.supersetGroup }
+        items(blocks, key = { it.first().workoutExerciseId }) { block ->
+            ExerciseBlock(block) { exercise ->
+                if (uiState.isEditing) {
+                    EditableExerciseCard(
+                        exercise = exercise,
+                        editableSets = uiState.editableSets,
+                        onWeightChanged = viewModel::onWeightChanged,
+                        onRepsChanged = viewModel::onRepsChanged,
+                        onToggleComplete = viewModel::onToggleComplete,
+                        onRemove = { viewModel.onRemoveExerciseClicked(exercise.workoutExerciseId) },
+                    )
+                } else {
+                    HistoricalExerciseCard(
+                        exercise = exercise,
+                        onExerciseHistory = { exercise.exerciseId?.let(onExerciseHistory) },
+                    )
+                }
             }
         }
         if (uiState.isEditing) {

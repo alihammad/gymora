@@ -44,6 +44,13 @@ interface RoutineRepository {
     suspend fun reorderExercises(routineId: Long, orderedRoutineExerciseIds: List<Long>)
     suspend fun updateExerciseNotes(routineExerciseId: Long, notes: String?)
 
+    // Supersets
+    /** Joins this exercise (and its superset) with the next exercise (and its superset). */
+    suspend fun linkSupersetWithNext(routineId: Long, routineExerciseId: Long)
+
+    /** Splits the superset between this exercise and the next one. */
+    suspend fun unlinkSupersetFromNext(routineId: Long, routineExerciseId: Long)
+
     // Planned sets (FR-018)
     suspend fun addSetTemplate(routineExerciseId: Long, template: SetTemplateInput): Long
     suspend fun updateSetTemplate(templateId: Long, template: SetTemplateInput)

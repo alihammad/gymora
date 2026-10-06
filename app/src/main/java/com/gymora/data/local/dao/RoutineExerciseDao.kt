@@ -19,6 +19,10 @@ interface RoutineExerciseDao {
     @Query("SELECT * FROM routine_exercises WHERE routine_id = :routineId ORDER BY position")
     fun observeForRoutine(routineId: Long): Flow<List<RoutineExerciseEntity>>
 
+    /** One routine id per exercise row; emits on any routine_exercises change. */
+    @Query("SELECT routine_id FROM routine_exercises")
+    fun observeRoutineIds(): Flow<List<Long>>
+
     @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM routine_exercises WHERE routine_id = :routineId")
     suspend fun nextPosition(routineId: Long): Int
 
@@ -40,4 +44,7 @@ interface RoutineExerciseDao {
 
     @Query("UPDATE routine_exercises SET position = :position WHERE id = :id")
     suspend fun updatePosition(id: Long, position: Int)
+
+    @Query("UPDATE routine_exercises SET superset_group = :group WHERE id = :id")
+    suspend fun updateSupersetGroup(id: Long, group: Long?)
 }
