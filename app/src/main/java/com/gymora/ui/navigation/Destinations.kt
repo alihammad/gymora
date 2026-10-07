@@ -27,7 +27,8 @@ sealed class Destinations(val route: String) {
         const val ARG = "exerciseId"
     }
     data object ExerciseFilter : Destinations("exercise/filter/{kind}/{value}") {
-        fun create(kind: String, value: String) = "exercise/filter/$kind/$value"
+        fun create(kind: String, value: String) =
+            "exercise/filter/$kind/${android.net.Uri.encode(value)}"
         const val KIND_ARG = "kind"
         const val VALUE_ARG = "value"
     }
