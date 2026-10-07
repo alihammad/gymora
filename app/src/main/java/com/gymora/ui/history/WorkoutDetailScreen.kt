@@ -17,6 +17,14 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.gymora.ui.components.Button
 import com.gymora.ui.components.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -155,7 +163,16 @@ private fun WorkoutDetailContent(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
+        if (uiState.isEditing && detail.session.endedAt != null && uiState.editableStart != null) {
+            item {
+                EditableTimes(
+                    start = uiState.editableStart,
+                    durationMinutes = uiState.editableDurationMinutes,
+                    onStartChanged = viewModel::onStartChanged,
+                    onDurationChanged = viewModel::onDurationMinutesChanged,
+                )
+            }
+        } else item {
             Column {
                 Text(
                     text = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
@@ -206,6 +223,84 @@ private fun WorkoutDetailContent(
                 }
             }
         }
+    }
+}
+
+/** Edit-mode header: start date, start time and duration (minutes). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditableTimes(
+    start: java.time.Instant,
+    durationMinutes: String,
+    onStartChanged: (java.time.Instant) -> Unit,
+    onDurationChanged: (String) -> Unit,
+) {
+    val zone = java.time.ZoneId.systemDefault()
+    val local = start.atZone(zone)
+    var showDate by remember { mutableStateOf(false) }
+    var showTime by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { showDate = true }, modifier = Modifier.weight(1f)) {
+                Text(DateTimeFormatter.ofPattern("d MMM yyyy").format(local))
+            }
+            Button(onClick = { showTime = true }, modifier = Modifier.weight(1f)) {
+                Text(DateTimeFormatter.ofPattern("HH:mm").format(local))
+            }
+        }
+        OutlinedTextField(
+            value = durationMinutes,
+            onValueChange = onDurationChanged,
+            label = { Text("Duration (minutes)") },
+            singleLine = true,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+
+    if (showDate) {
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = local.toLocalDate()
+                .atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDate = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let { millis ->
+                        val date = java.time.Instant.ofEpochMilli(millis)
+                            .atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                        onStartChanged(date.atTime(local.toLocalTime()).atZone(zone).toInstant())
+                    }
+                    showDate = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { showDate = false }) { Text("Cancel") } },
+        ) { DatePicker(state = state) }
+    }
+
+    if (showTime) {
+        val state = rememberTimePickerState(
+            initialHour = local.hour,
+            initialMinute = local.minute,
+            is24Hour = true,
+        )
+        AlertDialog(
+            onDismissRequest = { showTime = false },
+            text = { TimePicker(state = state) },
+            confirmButton = {
+                TextButton(onClick = {
+                    onStartChanged(
+                        local.toLocalDate().atTime(state.hour, state.minute).atZone(zone).toInstant(),
+                    )
+                    showTime = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { showTime = false }) { Text("Cancel") } },
+        )
     }
 }
 
