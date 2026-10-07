@@ -25,6 +25,8 @@ data class SetTemplate(
     val targetWeight: Double?,
     val weightUnit: WeightUnit?,
     val measurementType: MeasurementType,
+    val targetDurationSeconds: Int? = null,
+    val targetDistanceMeters: Double? = null,
 )
 
 data class SetTemplateInput(
@@ -32,6 +34,8 @@ data class SetTemplateInput(
     val targetWeight: Double?,
     val weightUnit: WeightUnit?,
     val measurementType: MeasurementType,
+    val targetDurationSeconds: Int? = null,
+    val targetDistanceMeters: Double? = null,
 )
 
 data class RoutineExerciseDetail(
@@ -43,6 +47,9 @@ data class RoutineExerciseDetail(
     val setTemplates: List<SetTemplate>,
     /** Adjacent exercises sharing a non-null group form a superset. */
     val supersetGroup: Long? = null,
+    /** The library exercise's current tracking type; drives which targets are shown. */
+    val measurementType: MeasurementType = MeasurementType.WEIGHT_AND_REPS,
+    val isUnilateral: Boolean = false,
 )
 
 data class RoutineDetail(

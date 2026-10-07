@@ -19,6 +19,14 @@ data class Settings(
     val reminderDays: Set<DayOfWeek> = emptySet(),
     /** Local time of day reminders are sent at. */
     val reminderTime: LocalTime = DEFAULT_REMINDER_TIME,
+    /** Days between automatic backups; 0 turns auto-backup off. */
+    val autoBackupIntervalDays: Int = 0,
+    /** Folder (a document-tree URI) automatic backups are written to. */
+    val autoBackupFolderUri: String? = null,
+    /** When the last automatic backup succeeded, epoch millis. */
+    val lastAutoBackupAt: Long? = null,
+    /** Sync workouts and body weight with Health Connect. */
+    val healthConnectEnabled: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_WEEKLY_GOAL = 3

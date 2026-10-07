@@ -21,9 +21,22 @@ data class SettingsEntity(
     /** Reminder weekdays as a bitmask, Monday = bit 0; 0 = reminders off. */
     @ColumnInfo(name = "reminder_days", defaultValue = "0") val reminderDays: Int = 0,
     @ColumnInfo(name = "reminder_minute_of_day", defaultValue = "1080") val reminderMinuteOfDay: Int = 1080,
+    /** Days between automatic backups; 0 = off. Device-local: kept when restoring a backup. */
+    @ColumnInfo(name = "auto_backup_interval_days", defaultValue = "0") val autoBackupIntervalDays: Int = 0,
+    @ColumnInfo(name = "auto_backup_folder_uri") val autoBackupFolderUri: String? = null,
+    @ColumnInfo(name = "last_auto_backup_at") val lastAutoBackupAt: Long? = null,
+    @ColumnInfo(name = "health_connect_enabled", defaultValue = "0") val healthConnectEnabled: Boolean = false,
 ) {
     companion object {
         const val SINGLE_ROW_ID = 1
+
+        /** Columns that describe this device, not the user's data; a restore keeps them. */
+        val DEVICE_LOCAL_COLUMNS = listOf(
+            "auto_backup_interval_days",
+            "auto_backup_folder_uri",
+            "last_auto_backup_at",
+            "health_connect_enabled",
+        )
 
         /** Defaults per data-model.md: KG / 90s / SYSTEM. */
         val DEFAULTS = SettingsEntity(

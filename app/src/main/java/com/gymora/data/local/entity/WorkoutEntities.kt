@@ -97,4 +97,8 @@ data class WorkoutSetEntity(
     @ColumnInfo(name = "is_completed") val isCompleted: Boolean,
     @ColumnInfo(name = "completed_at") val completedAt: Long?,
     @ColumnInfo(name = "notes") val notes: String?,
+    @ColumnInfo(name = "duration_seconds") val durationSeconds: Int? = null,
+    @ColumnInfo(name = "distance_m") val distanceMeters: Double? = null,
+    /** LEFT / RIGHT for unilateral exercises, else null (v5). */
+    @ColumnInfo(name = "side") val side: String? = null,
 )

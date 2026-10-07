@@ -5,7 +5,10 @@ import com.gymora.data.local.dao.SettingsDao
 import com.gymora.data.local.dao.WorkoutExerciseDao
 import com.gymora.data.local.dao.WorkoutSessionDao
 import com.gymora.data.local.dao.WorkoutSetDao
+import com.gymora.data.local.ExerciseMetadataCodec
 import com.gymora.data.local.db.GymoraDatabase
+import com.gymora.data.local.entity.ExerciseEntity
+import com.gymora.data.local.toDomain
 import com.gymora.data.local.entity.WorkoutExerciseEntity
 import com.gymora.data.local.entity.WorkoutSessionEntity
 import com.gymora.data.local.entity.WorkoutSetEntity
@@ -18,6 +21,7 @@ import com.gymora.domain.model.CompletedSet
 import com.gymora.domain.model.EntityNotFoundException
 import com.gymora.domain.model.MeasurementType
 import com.gymora.domain.model.PreviousPerformance
+import com.gymora.domain.model.Side
 import com.gymora.domain.model.SessionStatus
 import com.gymora.domain.model.WeightUnit
 import com.gymora.domain.model.WorkoutSession
@@ -92,20 +96,28 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
                 workoutExerciseIds[routineExercise.id] = workoutExerciseId
                 val templates = database.setTemplateDao()
                     .getForRoutineExercise(routineExercise.id)
+                // The library's current tracking wins over what the template was saved with.
+                val measurementType = exerciseEntity?.measurementType ?: MeasurementType.WEIGHT_AND_REPS.name
+                var setNumber = 1
                 templates.forEach { template ->
-                    setDao.insert(
-                        WorkoutSetEntity(
-                            workoutExerciseId = workoutExerciseId,
-                            setNumber = template.setNumber,
-                            reps = template.targetReps,
-                            weight = template.targetWeight,
-                            weightUnit = template.targetWeightUnit,
-                            measurementType = template.measurementType,
-                            isCompleted = false,
-                            completedAt = null,
-                            notes = null,
-                        ),
-                    )
+                    sidesFor(exerciseEntity).forEach { side ->
+                        setDao.insert(
+                            WorkoutSetEntity(
+                                workoutExerciseId = workoutExerciseId,
+                                setNumber = setNumber++,
+                                reps = template.targetReps,
+                                weight = template.targetWeight,
+                                weightUnit = template.targetWeightUnit,
+                                measurementType = measurementType,
+                                isCompleted = false,
+                                completedAt = null,
+                                notes = null,
+                                durationSeconds = template.targetDurationSeconds,
+                                distanceMeters = template.targetDistanceMeters,
+                                side = side?.name,
+                            ),
+                        )
+                    }
                 }
             }
             // Second pass: a superset group is its first member's id, known only once all rows exist.
@@ -145,6 +157,9 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
                     weight = set.weight,
                     weightUnit = set.weightUnit?.let { WeightUnit.valueOf(it) },
                     reps = set.reps,
+                    durationSeconds = set.durationSeconds,
+                    distanceMeters = set.distanceMeters,
+                    side = set.side?.let { raw -> Side.entries.firstOrNull { it.name == raw } },
                 )
             },
         )
@@ -155,14 +170,18 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
         weight: Double?,
         weightUnit: WeightUnit?,
         reps: Int?,
+        durationSeconds: Int?,
+        distanceMeters: Double?,
     ) {
-        WorkoutCalculators.validateSetInput(weight, reps) // BR-16
+        WorkoutCalculators.validateSetInput(weight, reps, durationSeconds, distanceMeters) // BR-16
         val entity = setDao.getById(setId) ?: throw EntityNotFoundException(setId)
         setDao.update(
             entity.copy(
                 weight = weight,
                 weightUnit = weightUnit?.name,
                 reps = reps,
+                durationSeconds = durationSeconds,
+                distanceMeters = distanceMeters,
             ),
         )
     }
@@ -178,21 +197,37 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun addSet(workoutExerciseId: Long): Long {
-        exerciseDao.getById(workoutExerciseId) ?: throw EntityNotFoundException(workoutExerciseId)
-        return setDao.insert(
-            WorkoutSetEntity(
-                workoutExerciseId = workoutExerciseId,
-                setNumber = setDao.nextSetNumber(workoutExerciseId),
-                reps = null,
-                weight = null,
-                weightUnit = null,
-                measurementType = MeasurementType.WEIGHT_AND_REPS.name,
-                isCompleted = false,
-                completedAt = null,
-                notes = null,
-            ),
-        )
+        val workoutExercise = exerciseDao.getById(workoutExerciseId)
+            ?: throw EntityNotFoundException(workoutExerciseId)
+        val library = workoutExercise.exerciseId?.let { database.exerciseDao().getById(it) }
+        // Follow the sets already logged here; fall back to the library's tracking.
+        val measurementType = setDao.getForExercise(workoutExerciseId).lastOrNull()?.measurementType
+            ?: library?.measurementType
+            ?: MeasurementType.WEIGHT_AND_REPS.name
+        // A unilateral exercise gets one set per side.
+        return database.withTransaction {
+            sidesFor(library).map { side ->
+                setDao.insert(
+                    WorkoutSetEntity(
+                        workoutExerciseId = workoutExerciseId,
+                        setNumber = setDao.nextSetNumber(workoutExerciseId),
+                        reps = null,
+                        weight = null,
+                        weightUnit = null,
+                        measurementType = measurementType,
+                        isCompleted = false,
+                        completedAt = null,
+                        notes = null,
+                        side = side?.name,
+                    ),
+                )
+            }.first()
+        }
     }
+
+    /** One entry per set to create: both sides for a unilateral exercise, else a single null. */
+    private fun sidesFor(exercise: ExerciseEntity?): List<Side?> =
+        if (exercise?.isUnilateral == true) listOf(Side.LEFT, Side.RIGHT) else listOf(null)
 
     override suspend fun deleteSet(setId: Long) {
         setDao.deleteById(setId)
@@ -280,6 +315,7 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
                         reps = set.reps,
                         weightUnit = set.weightUnit,
                         isCompleted = set.isCompleted,
+                        measurementType = set.measurementType,
                     )
                 },
                 displayUnit = displayUnit,
@@ -300,6 +336,7 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
 
     private suspend fun buildExerciseGraph(sessionId: Long): List<ActiveExercise> =
         exerciseDao.getForSession(sessionId).map { workoutExercise ->
+            val library = workoutExercise.exerciseId?.let { database.exerciseDao().getById(it) }
             ActiveExercise(
                 workoutExerciseId = workoutExercise.id,
                 exerciseId = workoutExercise.exerciseId,
@@ -308,6 +345,8 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
                 notes = workoutExercise.notes,
                 sets = setDao.getForExercise(workoutExercise.id).map { it.toDomain() },
                 supersetGroup = workoutExercise.supersetGroup,
+                formCues = ExerciseMetadataCodec.decodeFormCues(library?.formCuesJson),
+                mediaFile = library?.mediaFile,
             )
         }
 
@@ -321,15 +360,4 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
         notes = notes,
     )
 
-    private fun WorkoutSetEntity.toDomain(): ActiveSet = ActiveSet(
-        id = id,
-        setNumber = setNumber,
-        reps = reps,
-        weight = weight,
-        weightUnit = weightUnit?.let { WeightUnit.valueOf(it) },
-        measurementType = MeasurementType.valueOf(measurementType),
-        isCompleted = isCompleted,
-        completedAt = completedAt?.let { Instant.ofEpochMilli(it) },
-        notes = notes,
-    )
 }

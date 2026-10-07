@@ -26,6 +26,11 @@ data class ActiveSet(
     val isCompleted: Boolean,
     val completedAt: Instant?,
     val notes: String?,
+    val durationSeconds: Int? = null,
+    /** Stored in metres; shown in km or miles. */
+    val distanceMeters: Double? = null,
+    /** Set for unilateral exercises: which side this set was. */
+    val side: Side? = null,
 )
 
 data class ActiveExercise(
@@ -39,6 +44,9 @@ data class ActiveExercise(
     val previousPerformance: List<SetValue>? = null,
     /** Adjacent exercises sharing a non-null group form a superset. */
     val supersetGroup: Long? = null,
+    /** Form cues and demo media of the library exercise, shown while training. */
+    val formCues: List<String> = emptyList(),
+    val mediaFile: String? = null,
 )
 
 data class ActiveWorkout(
@@ -52,6 +60,9 @@ data class SetValue(
     val weight: Double?,
     val weightUnit: WeightUnit?,
     val reps: Int?,
+    val durationSeconds: Int? = null,
+    val distanceMeters: Double? = null,
+    val side: Side? = null,
 )
 
 /** Summary returned by finish (FR-035). */

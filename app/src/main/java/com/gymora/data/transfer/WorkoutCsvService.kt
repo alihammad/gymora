@@ -7,7 +7,9 @@ import com.gymora.data.local.entity.WorkoutExerciseEntity
 import com.gymora.data.local.entity.WorkoutSessionEntity
 import com.gymora.data.local.entity.WorkoutSetEntity
 import com.gymora.domain.model.MeasurementType
+import com.gymora.domain.calculator.SetFormat
 import com.gymora.domain.model.SessionStatus
+import com.gymora.domain.model.Side
 import com.gymora.domain.model.WeightUnit
 import java.io.InputStream
 import java.io.OutputStream
@@ -73,6 +75,9 @@ class WorkoutCsvService @Inject constructor(private val database: GymoraDatabase
                         if (set.weight != null) set.weightUnit.orEmpty() else "",
                         set.reps?.toString().orEmpty(),
                         set.notes.orEmpty(),
+                        set.durationSeconds?.toString().orEmpty(),
+                        set.distanceMeters?.let(::formatNumber).orEmpty(),
+                        set.side.orEmpty(),
                     )
                 }
         }
@@ -109,7 +114,9 @@ class WorkoutCsvService @Inject constructor(private val database: GymoraDatabase
         return CsvImportResult(counts.imported, counts.duplicates, rowsSkipped, counts.created, errors)
     }
 
-    private class Counts(var imported: Int = 0, var duplicates: Int = 0, var created: Int = 0)
+    private class Counts(var imported: Int = 0, var duplicates: Int = 0, var created: Int = 0) {
+        val createdExerciseIds = mutableSetOf<Long>()
+    }
 
     private suspend fun insertWorkouts(
         workouts: Map<Pair<Long, String>, List<ParsedRow>>,
@@ -167,15 +174,30 @@ class WorkoutCsvService @Inject constructor(private val database: GymoraDatabase
                         reps = set.reps,
                         weight = set.weight,
                         weightUnit = set.weight?.let { set.unit.name },
-                        measurementType = (if (set.weight != null) MeasurementType.WEIGHT_AND_REPS
-                        else MeasurementType.REPS_ONLY).name,
+                        // A library exercise keeps its tracking; a new one is inferred from the values.
+                        measurementType = if (exercise.id in counts.createdExerciseIds) {
+                            inferType(set).name
+                        } else {
+                            exercise.measurementType
+                        },
                         isCompleted = true,
                         completedAt = set.endedAt ?: startedAt,
                         notes = set.setNotes,
+                        durationSeconds = set.durationSeconds,
+                        distanceMeters = set.distanceMeters,
+                        side = set.side?.name,
                     ),
                 )
             }
         }
+    }
+
+    private fun inferType(set: ParsedRow): MeasurementType = when {
+        set.distanceMeters != null && set.weight != null -> MeasurementType.WEIGHT_AND_DISTANCE
+        set.distanceMeters != null -> MeasurementType.DISTANCE_AND_DURATION
+        set.durationSeconds != null && set.reps == null -> MeasurementType.DURATION
+        set.weight != null -> MeasurementType.WEIGHT_AND_REPS
+        else -> MeasurementType.REPS_ONLY
     }
 
     private suspend fun resolveExercise(
@@ -196,10 +218,11 @@ class WorkoutCsvService @Inject constructor(private val database: GymoraDatabase
                 updatedAt = now,
             )
             counts.created++
-            draft.copy(id = database.exerciseDao().insert(draft))
+            draft.copy(id = database.exerciseDao().insert(draft)).also { counts.createdExerciseIds += it.id }
         }
     }
 
+    @Suppress("LongParameterList") // One field per CSV column.
     private class ParsedRow(
         val startedAt: Long,
         val endedAt: Long?,
@@ -210,6 +233,9 @@ class WorkoutCsvService @Inject constructor(private val database: GymoraDatabase
         val unit: WeightUnit,
         val reps: Int?,
         val setNotes: String?,
+        val durationSeconds: Int?,
+        val distanceMeters: Double?,
+        val side: Side?,
     )
 
     private class ParseOutcome(val row: ParsedRow? = null, val error: String = "")
@@ -223,11 +249,17 @@ class WorkoutCsvService @Inject constructor(private val database: GymoraDatabase
         val weight = weightText.toDoubleOrNull()
         val repsText = cell("Reps")
         val reps = repsText.toIntOrNull()
-        val error = when {
-            weightText.isNotEmpty() && weight == null -> "invalid weight '$weightText'"
-            repsText.isNotEmpty() && reps == null -> "invalid reps '$repsText'"
-            else -> null
-        }
+        val secondsText = cell("Seconds")
+        val seconds = SetFormat.parseDuration(secondsText)
+        val distanceText = cell("Distance m")
+        val distance = distanceText.toDoubleOrNull()
+        val error = listOf(
+            Triple("weight", weightText, weight),
+            Triple("reps", repsText, reps),
+            Triple("time", secondsText, seconds),
+            Triple("distance", distanceText, distance),
+        ).firstOrNull { (_, text, value) -> text.isNotEmpty() && value == null }
+            ?.let { (field, text, _) -> "invalid $field '$text'" }
         if (error != null) return ParseOutcome(error = error)
 
         return ParseOutcome(
@@ -242,6 +274,9 @@ class WorkoutCsvService @Inject constructor(private val database: GymoraDatabase
                     ?: WeightUnit.KG,
                 reps = reps,
                 setNotes = cell("Set Notes").ifEmpty { null },
+                durationSeconds = seconds,
+                distanceMeters = distance,
+                side = Side.entries.firstOrNull { it.name.equals(cell("Side"), ignoreCase = true) },
             ),
         )
     }
@@ -280,7 +315,7 @@ class WorkoutCsvService @Inject constructor(private val database: GymoraDatabase
         const val DEFAULT_WORKOUT_NAME = "Imported workout"
         val HEADER = listOf(
             "Start", "End", "Workout", "Workout Notes", "Exercise", "Set", "Weight", "Unit", "Reps",
-            "Set Notes",
+            "Set Notes", "Seconds", "Distance m", "Side",
         )
         val REQUIRED = listOf("Start", "Exercise")
     }

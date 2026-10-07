@@ -11,6 +11,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -38,22 +39,22 @@ class ExerciseDetailViewModel @Inject constructor(
         exerciseId?.let(::loadExercise)
     }
 
+    /** Observed, so edits made in the editor show when the user comes back. */
     private fun loadExercise(id: Long) {
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            runCatching { exerciseRepository.getById(id) }
-                .onSuccess { exercise ->
-                    _uiState.update { it.copy(exercise = exercise, isLoading = false) }
+            exerciseRepository.observeById(id)
+                .catch {
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = "Something went wrong. Please try again.")
+                    }
                 }
-                .onFailure { error ->
+                .collect { exercise ->
                     _uiState.update {
                         it.copy(
+                            exercise = exercise,
                             isLoading = false,
-                            errorMessage = when (error) {
-                                is com.gymora.domain.model.EntityNotFoundException ->
-                                    "This exercise no longer exists."
-                                else -> "Something went wrong. Please try again."
-                            },
+                            errorMessage = if (exercise == null) "This exercise no longer exists." else null,
                         )
                     }
                 }

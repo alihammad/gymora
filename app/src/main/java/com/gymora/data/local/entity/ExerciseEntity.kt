@@ -34,4 +34,11 @@ data class ExerciseEntity(
     @ColumnInfo(name = "instructions_json") val instructionsJson: String? = null,
     @ColumnInfo(name = "muscle_groups_json") val muscleGroupsJson: String? = null,
     @ColumnInfo(name = "equipment_json") val equipmentJson: String? = null,
+    // Tracking and coaching (v5).
+    @ColumnInfo(name = "measurement_type", defaultValue = "'WEIGHT_AND_REPS'")
+    val measurementType: String = "WEIGHT_AND_REPS",
+    @ColumnInfo(name = "is_unilateral", defaultValue = "0") val isUnilateral: Boolean = false,
+    @ColumnInfo(name = "form_cues_json") val formCuesJson: String? = null,
+    /** File name inside filesDir/exercise_media; relative so backups restore anywhere. */
+    @ColumnInfo(name = "media_file") val mediaFile: String? = null,
 )

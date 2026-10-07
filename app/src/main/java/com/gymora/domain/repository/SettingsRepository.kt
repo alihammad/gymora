@@ -25,4 +25,11 @@ interface SettingsRepository {
 
     /** Empty [days] turns reminders off. */
     suspend fun setReminder(days: Set<java.time.DayOfWeek>, time: java.time.LocalTime)
+
+    /** [intervalDays] 0 turns automatic backups off. */
+    suspend fun setAutoBackup(intervalDays: Int, folderUri: String?)
+
+    suspend fun setLastAutoBackupAt(epochMillis: Long)
+
+    suspend fun setHealthConnectEnabled(enabled: Boolean)
 }

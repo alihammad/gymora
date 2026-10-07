@@ -6,22 +6,21 @@ import com.gymora.data.local.dao.RoutineDao
 import com.gymora.data.local.dao.RoutineExerciseDao
 import com.gymora.data.local.dao.SetTemplateDao
 import com.gymora.data.local.db.GymoraDatabase
+import com.gymora.data.local.parseMeasurementType
+import com.gymora.data.local.toDomain
 import com.gymora.data.local.entity.RoutineEntity
 import com.gymora.data.local.entity.RoutineExerciseEntity
 import com.gymora.data.local.entity.SetTemplateEntity
 import com.gymora.domain.model.EntityNotFoundException
-import com.gymora.domain.model.MeasurementType
 import com.gymora.domain.model.RoutineDetail
 import com.gymora.domain.model.RoutineExerciseDetail
 import com.gymora.domain.model.RoutineHeader
 import com.gymora.domain.model.RoutineRules
 import com.gymora.domain.model.RoutineSummary
-import com.gymora.domain.model.SetTemplate
 import com.gymora.domain.model.SetTemplateInput
 import com.gymora.domain.model.SupersetEntry
 import com.gymora.domain.model.SupersetRules
 import com.gymora.domain.model.ValidationException
-import com.gymora.domain.model.WeightUnit
 import com.gymora.domain.repository.RoutineRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -61,15 +60,18 @@ class RoutineRepositoryImpl @Inject constructor(
         val exerciseEntities = routineExerciseDao.getForRoutine(id)
 
         val exercises = exerciseEntities.map { routineExercise ->
+            val library = exerciseDao.getById(routineExercise.exerciseId)
             RoutineExerciseDetail(
                 routineExerciseId = routineExercise.id,
                 exerciseId = routineExercise.exerciseId,
-                exerciseName = exerciseName(routineExercise.exerciseId),
+                exerciseName = library?.name ?: "Unknown exercise",
                 position = routineExercise.position,
                 notes = routineExercise.notes,
                 setTemplates = setTemplateDao.getForRoutineExercise(routineExercise.id)
                     .map { it.toDomain() },
                 supersetGroup = routineExercise.supersetGroup,
+                measurementType = parseMeasurementType(library?.measurementType),
+                isUnilateral = library?.isUnilateral == true,
             )
         }
 
@@ -152,6 +154,8 @@ class RoutineRepositoryImpl @Inject constructor(
                             targetWeight = template.targetWeight,
                             targetWeightUnit = template.weightUnit?.name,
                             measurementType = template.measurementType.name,
+                            targetDurationSeconds = template.targetDurationSeconds,
+                            targetDistanceMeters = template.targetDistanceMeters,
                         ),
                     )
                 }
@@ -245,6 +249,8 @@ class RoutineRepositoryImpl @Inject constructor(
                 targetWeight = template.targetWeight,
                 targetWeightUnit = template.weightUnit?.name,
                 measurementType = template.measurementType.name,
+                targetDurationSeconds = template.targetDurationSeconds,
+                targetDistanceMeters = template.targetDistanceMeters,
             ),
         )
     }
@@ -258,6 +264,8 @@ class RoutineRepositoryImpl @Inject constructor(
                 targetWeight = template.targetWeight,
                 targetWeightUnit = template.weightUnit?.name,
                 measurementType = template.measurementType.name,
+                targetDurationSeconds = template.targetDurationSeconds,
+                targetDistanceMeters = template.targetDistanceMeters,
             ),
         )
     }
@@ -268,9 +276,6 @@ class RoutineRepositoryImpl @Inject constructor(
 
     private suspend fun requireRoutine(id: Long): RoutineEntity =
         routineDao.getById(id) ?: throw EntityNotFoundException(id)
-
-    private suspend fun exerciseName(exerciseId: Long): String =
-        exerciseDao.getById(exerciseId)?.name ?: "Unknown exercise"
 
     private suspend fun renumberPositions(routineId: Long) {
         database.withTransaction {
@@ -307,20 +312,13 @@ class RoutineRepositoryImpl @Inject constructor(
             .takeIf { it >= 0 } ?: throw EntityNotFoundException(routineExerciseId)
 
     private fun validateTemplate(template: SetTemplateInput) {
-        if (template.targetReps < 0) {
-            throw ValidationException("targetReps", "Target reps must not be negative")
+        val problem = when {
+            template.targetReps < 0 -> "targetReps" to "Target reps must not be negative"
+            (template.targetWeight ?: 0.0) < 0 -> "targetWeight" to "Target weight must not be negative"
+            (template.targetDurationSeconds ?: 0) < 0 || (template.targetDistanceMeters ?: 0.0) < 0 ->
+                "target" to "Targets must not be negative"
+            else -> null
         }
-        if (template.targetWeight != null && template.targetWeight < 0) {
-            throw ValidationException("targetWeight", "Target weight must not be negative")
-        }
+        problem?.let { (field, message) -> throw ValidationException(field, message) }
     }
-
-    private fun SetTemplateEntity.toDomain(): SetTemplate = SetTemplate(
-        id = id,
-        setNumber = setNumber,
-        targetReps = targetReps,
-        targetWeight = targetWeight,
-        weightUnit = targetWeightUnit?.let { WeightUnit.valueOf(it) },
-        measurementType = MeasurementType.valueOf(measurementType),
-    )
 }

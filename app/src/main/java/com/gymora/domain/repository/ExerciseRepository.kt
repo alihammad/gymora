@@ -21,6 +21,9 @@ interface ExerciseRepository {
     /** Throws EntityNotFoundException when missing. */
     suspend fun getById(id: Long): Exercise
 
+    /** Emits the exercise again after every edit; null when missing. */
+    fun observeById(id: Long): Flow<Exercise?>
+
     /** Creates a custom exercise. Throws ValidationException on blank name. */
     suspend fun createCustom(input: CreateExerciseInput): Exercise
 

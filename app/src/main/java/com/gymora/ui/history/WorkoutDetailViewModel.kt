@@ -9,6 +9,7 @@ import com.gymora.domain.model.WorkoutDetail
 import com.gymora.domain.repository.ExerciseRepository
 import com.gymora.domain.repository.HistoryRepository
 import com.gymora.domain.usecase.CorrectHistoricalWorkoutUseCase
+import com.gymora.ui.components.SetEntry
 import com.gymora.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -22,8 +23,7 @@ import kotlinx.coroutines.launch
 /** A set's editable fields during historical correction (FR-042). */
 data class EditableSet(
     val id: Long,
-    val weight: String,
-    val reps: String,
+    val values: SetEntry,
     val weightUnit: WeightUnit?,
     val isCompleted: Boolean,
     val notes: String,
@@ -40,6 +40,8 @@ data class WorkoutDetailUiState(
     val showAddExercise: Boolean = false,
     val libraryExercises: List<Exercise> = emptyList(),
     val pendingRemoveExerciseId: Long? = null,
+    /** Unit for weights entered on sets that had none. */
+    val weightUnit: WeightUnit = WeightUnit.KG,
 )
 
 @HiltViewModel
@@ -48,6 +50,7 @@ class WorkoutDetailViewModel @Inject constructor(
     private val historyRepository: HistoryRepository,
     private val correctWorkoutUseCase: CorrectHistoricalWorkoutUseCase,
     private val exerciseRepository: ExerciseRepository,
+    settingsRepository: com.gymora.domain.repository.SettingsRepository,
 ) : ViewModel() {
 
     private val sessionId: Long = savedStateHandle.get<String>(Destinations.WorkoutDetail.ARG)
@@ -58,6 +61,10 @@ class WorkoutDetailViewModel @Inject constructor(
 
     init {
         loadDetail()
+        viewModelScope.launch {
+            val unit = settingsRepository.observeSettings().first().weightUnit
+            _uiState.update { it.copy(weightUnit = unit) }
+        }
     }
 
     private fun loadDetail() {
@@ -86,8 +93,7 @@ class WorkoutDetailViewModel @Inject constructor(
         val editable = detail.exercises.flatMap { ex -> ex.sets }.associate { set ->
             set.id to EditableSet(
                 id = set.id,
-                weight = set.weight?.toString().orEmpty(),
-                reps = set.reps?.toString().orEmpty(),
+                values = SetEntry(set.weight, set.reps, set.durationSeconds, set.distanceMeters),
                 weightUnit = set.weightUnit,
                 isCompleted = set.isCompleted,
                 notes = set.notes.orEmpty(),
@@ -113,12 +119,8 @@ class WorkoutDetailViewModel @Inject constructor(
         }
     }
 
-    fun onWeightChanged(setId: Long, value: String) {
-        updateEditableSet(setId) { it.copy(weight = value) }
-    }
-
-    fun onRepsChanged(setId: Long, value: String) {
-        updateEditableSet(setId) { it.copy(reps = value) }
+    fun onSetValuesChanged(setId: Long, values: SetEntry) {
+        updateEditableSet(setId) { it.copy(values = values) }
     }
 
     fun onSetNotesChanged(setId: Long, value: String) {
@@ -151,11 +153,13 @@ class WorkoutDetailViewModel @Inject constructor(
                         .firstOrNull { it.id == setId }
                     correctWorkoutUseCase.correctSet(
                         setId = setId,
-                        weight = editable.weight.toDoubleOrNull(),
-                        weightUnit = editable.weightUnit ?: original?.weightUnit,
-                        reps = editable.reps.toIntOrNull(),
+                        weight = editable.values.weight,
+                        weightUnit = editable.weightUnit ?: original?.weightUnit ?: state.weightUnit,
+                        reps = editable.values.reps,
                         isCompleted = editable.isCompleted,
                         notes = editable.notes.ifBlank { null },
+                        durationSeconds = editable.values.durationSeconds,
+                        distanceMeters = editable.values.distanceMeters,
                     )
                 }
                 correctWorkoutUseCase.updateNotes(

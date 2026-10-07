@@ -22,7 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitnessCenter
+import com.gymora.ui.components.ExerciseMediaImage
+import com.gymora.ui.components.FormCuesList
 import com.gymora.ui.components.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,6 +62,7 @@ fun ExerciseDetailScreen(
     onBack: () -> Unit,
     onExerciseHistory: (Long) -> Unit = {},
     onFilterClick: (kind: String, value: String) -> Unit = { _, _ -> },
+    onEdit: (Long) -> Unit = {},
     viewModel: ExerciseDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -74,6 +78,9 @@ fun ExerciseDetailScreen(
                 },
                 actions = {
                     uiState.exercise?.let { exercise ->
+                        IconButton(onClick = { onEdit(exercise.id) }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Edit exercise")
+                        }
                         IconButton(onClick = { onExerciseHistory(exercise.id) }) {
                             Icon(
                                 Icons.Filled.FitnessCenter,
@@ -161,6 +168,8 @@ private fun ExerciseDetailContent(
         // Attribute chips
         AttributeChips(exercise, onFilterClick)
 
+        TrackingAndFormGuide(exercise)
+
         // Muscle groups (primary & secondary)
         if (exercise.muscleGroups.isNotEmpty()) {
             SectionCard(title = "Muscles Targeted") {
@@ -235,6 +244,26 @@ private fun ExerciseDetailContent(
         if (description != null) {
             SectionCard(title = "Description") {
                 Text(description)
+            }
+        }
+    }
+}
+
+/** How sets are logged, and the demo image and cues shown while training. */
+@Composable
+private fun TrackingAndFormGuide(exercise: Exercise) {
+    SectionCard(title = "Tracking") {
+        Text(
+            text = exercise.measurementType.displayName +
+                if (exercise.isUnilateral) " · each side logged separately" else "",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+    if (exercise.mediaFile != null || exercise.formCues.isNotEmpty()) {
+        SectionCard(title = "Form Guide") {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                exercise.mediaFile?.let { ExerciseMediaImage(it, "${exercise.name} demo") }
+                if (exercise.formCues.isNotEmpty()) FormCuesList(exercise.formCues)
             }
         }
     }

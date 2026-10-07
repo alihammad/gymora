@@ -18,6 +18,7 @@ import com.gymora.domain.usecase.LogSetUseCase
 import com.gymora.domain.usecase.ModifySessionStructureUseCase
 import com.gymora.domain.usecase.PreviousPerformanceUseCase
 import com.gymora.domain.usecase.StartWorkoutUseCase
+import com.gymora.ui.components.SetEntry
 import com.gymora.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
@@ -46,6 +47,7 @@ class ActiveWorkoutViewModel @Inject constructor(
     private val workoutSessionRepository: com.gymora.domain.repository.WorkoutSessionRepository,
     private val previousPerformanceUseCase: PreviousPerformanceUseCase,
     private val settingsRepository: SettingsRepository,
+    private val healthConnectSync: com.gymora.health.HealthConnectSync,
 ) : ViewModel() {
 
     private var sessionId: Long = savedStateHandle.get<String>(Destinations.ActiveWorkout.ARG)
@@ -127,7 +129,10 @@ class ActiveWorkoutViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.observeSettings().first().let { settings ->
                 _uiState.update {
-                    it.copy(restTimer = it.restTimer.copy(defaultSeconds = settings.defaultRestSeconds))
+                    it.copy(
+                        restTimer = it.restTimer.copy(defaultSeconds = settings.defaultRestSeconds),
+                        weightUnit = settings.weightUnit,
+                    )
                 }
             }
         }
@@ -227,18 +232,19 @@ class ActiveWorkoutViewModel @Inject constructor(
     /** Keeps edits in order: a later keystroke's write never lands before an earlier one. */
     private val editMutex = Mutex()
 
-    fun onWeightChanged(setId: Long, text: String) {
-        val weight = text.replace(',', '.').toDoubleOrNull()
+    /** Any value field of a set changed; saved immediately (FR-025, FR-027). */
+    fun onSetValuesChanged(setId: Long, entry: SetEntry) {
         val set = findSet(setId) ?: return
-        applyLocally(setId) { it.copy(weight = weight) }
-        persistSet(setId, weight, set.weightUnit ?: WeightUnit.KG, set.reps)
-    }
-
-    fun onRepsChanged(setId: Long, text: String) {
-        val reps = text.toIntOrNull()
-        val set = findSet(setId) ?: return
-        applyLocally(setId) { it.copy(reps = reps) }
-        persistSet(setId, set.weight, set.weightUnit, reps)
+        val unit = set.weightUnit ?: _uiState.value.weightUnit
+        val updated = set.copy(
+            weight = entry.weight,
+            weightUnit = if (entry.weight != null) unit else set.weightUnit,
+            reps = entry.reps,
+            durationSeconds = entry.durationSeconds,
+            distanceMeters = entry.distanceMeters,
+        )
+        applyLocally(setId) { updated }
+        persistSet(updated)
     }
 
     /**
@@ -260,10 +266,14 @@ class ActiveWorkoutViewModel @Inject constructor(
         }
     }
 
-    private fun persistSet(setId: Long, weight: Double?, unit: WeightUnit?, reps: Int?) {
+    private fun persistSet(set: ActiveSet) {
         viewModelScope.launch {
             editMutex.withLock {
-                runCatching { logSetUseCase.updateValues(setId, weight, unit, reps) }
+                runCatching {
+                    logSetUseCase.updateValues(
+                        set.id, set.weight, set.weightUnit, set.reps, set.durationSeconds, set.distanceMeters,
+                    )
+                }
                     .onFailure { error ->
                         _uiState.update { it.copy(errorMessage = friendlyMessage(error)) }
                     }
@@ -322,6 +332,7 @@ class ActiveWorkoutViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { finishWorkoutUseCase(sessionId) }
                 .onSuccess {
+                    healthConnectSync.onWorkoutFinished(sessionId)
                     tickerJob?.cancel()
                     _uiState.update {
                         it.copy(showFinishConfirm = false, finishedSessionId = sessionId)

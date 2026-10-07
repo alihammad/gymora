@@ -22,6 +22,7 @@ object WorkoutCalculators {
     fun totalVolume(sets: List<CompletedSet>, displayUnit: WeightUnit): Double {
         return sets
             .filter { it.isCompleted }
+            .filter { it.measurementType?.countsWeightAsLoad != false }
             .filter { it.weight != null && it.weight > 0 && it.reps != null }
             .sumOf { set ->
                 val normalized = convertWeight(set.weight!!, set.weightUnit ?: displayUnit, displayUnit)
@@ -57,16 +58,35 @@ object WorkoutCalculators {
         }
     }
 
+    /** Exact conversion factor for distances entered in miles. */
+    const val METERS_PER_MILE = 1609.344
+    const val METERS_PER_KM = 1000.0
+
+    /** Metres to the display unit: kilometres for [WeightUnit.KG] users, miles for [WeightUnit.LB]. */
+    fun metersToDisplay(meters: Double, unit: WeightUnit): Double =
+        meters / if (unit == WeightUnit.LB) METERS_PER_MILE else METERS_PER_KM
+
+    fun displayToMeters(value: Double, unit: WeightUnit): Double =
+        value * if (unit == WeightUnit.LB) METERS_PER_MILE else METERS_PER_KM
+
     /**
      * BR-16: weight ≥ 0 (decimals allowed), reps ≥ 0 whole numbers;
-     * negative values rejected; zero weight valid (bodyweight).
+     * negative values rejected; zero weight valid (bodyweight). Duration and
+     * distance follow the same rule.
      */
-    fun validateSetInput(weight: Double?, reps: Int?) {
-        if (weight != null && weight < 0) {
-            throw ValidationException("weight", "Weight must not be negative")
+    fun validateSetInput(
+        weight: Double?,
+        reps: Int?,
+        durationSeconds: Int? = null,
+        distanceMeters: Double? = null,
+    ) {
+        val problem = when {
+            (weight ?: 0.0) < 0 -> "weight" to "Weight must not be negative"
+            (reps ?: 0) < 0 -> "reps" to "Reps must not be negative"
+            (durationSeconds ?: 0) < 0 -> "duration" to "Time must not be negative"
+            (distanceMeters ?: 0.0) < 0 -> "distance" to "Distance must not be negative"
+            else -> null
         }
-        if (reps != null && reps < 0) {
-            throw ValidationException("reps", "Reps must not be negative")
-        }
+        problem?.let { (field, message) -> throw ValidationException(field, message) }
     }
 }

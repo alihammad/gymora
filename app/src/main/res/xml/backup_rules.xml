@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android Auto Backup (Android 11 and below): the database and exercise demo media. -->
+<full-backup-content>
+    <include domain="database" path="." />
+    <include domain="file" path="exercise_media/" />
+</full-backup-content>

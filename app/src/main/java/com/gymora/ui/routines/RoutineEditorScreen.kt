@@ -68,6 +68,13 @@ import com.gymora.domain.model.RoutineDetail
 import com.gymora.domain.model.RoutineExerciseDetail
 import com.gymora.domain.model.SetTemplate
 import com.gymora.domain.model.SupersetRules
+import com.gymora.domain.calculator.SetFormat
+import com.gymora.domain.calculator.SetSummary
+import com.gymora.domain.model.MeasurementType
+import com.gymora.domain.model.SetField
+import com.gymora.ui.components.LocalWeightUnit
+import com.gymora.ui.components.SetEntry
+import com.gymora.ui.components.SetInputRow
 import com.gymora.ui.components.ConfirmDialog
 import com.gymora.ui.components.SupersetBlock
 import com.gymora.ui.components.SupersetLinkButton
@@ -421,12 +428,20 @@ private fun ExerciseCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = exercise.exerciseName,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = exercise.exerciseName,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    if (exercise.isUnilateral) {
+                        Text(
+                            text = "Each set is done per side",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 IconButton(onClick = onRemove) {
                     Icon(Icons.Filled.Close, contentDescription = "Remove ${exercise.exerciseName}")
                 }
@@ -435,6 +450,7 @@ private fun ExerciseCard(
             exercise.setTemplates.forEach { template ->
                 SetTemplateRow(
                     template = template,
+                    type = exercise.measurementType,
                     onUpdate = { input -> onUpdateTemplate(template.id, input) },
                     onDelete = { onDeleteTemplate(template.id) },
                 )
@@ -456,6 +472,7 @@ private fun ExerciseCard(
 @Composable
 private fun SetTemplateRow(
     template: SetTemplate,
+    type: MeasurementType,
     onUpdate: (com.gymora.domain.model.SetTemplateInput) -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -473,8 +490,10 @@ private fun SetTemplateRow(
             modifier = Modifier.padding(end = 8.dp),
         )
         Text(
-            text = "${template.targetReps} reps" +
-                template.targetWeight?.let { " × $it ${template.weightUnit?.name?.lowercase().orEmpty()}" }.orEmpty(),
+            text = SetSummary.describe(
+                type, template.targetWeight, template.weightUnit, template.targetReps.takeIf { it > 0 },
+                template.targetDurationSeconds, template.targetDistanceMeters, LocalWeightUnit.current,
+            ),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f),
         )
@@ -489,6 +508,7 @@ private fun SetTemplateRow(
     if (showEditDialog) {
         SetTemplateEditDialog(
             template = template,
+            type = type,
             onSave = { input ->
                 onUpdate(input)
                 showEditDialog = false
@@ -501,35 +521,37 @@ private fun SetTemplateRow(
 @Composable
 private fun SetTemplateEditDialog(
     template: SetTemplate,
+    type: MeasurementType,
     onSave: (com.gymora.domain.model.SetTemplateInput) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var repsText by remember { mutableStateOf(template.targetReps.toString()) }
-    var weightText by remember { mutableStateOf(template.targetWeight?.toString().orEmpty()) }
+    var entry by remember {
+        mutableStateOf(
+            SetEntry(
+                weight = template.targetWeight,
+                reps = template.targetReps.takeIf { it > 0 || type.has(SetField.REPS) },
+                durationSeconds = template.targetDurationSeconds,
+                distanceMeters = template.targetDistanceMeters,
+            ),
+        )
+    }
+    val weightUnit = template.weightUnit ?: LocalWeightUnit.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit set ${template.setNumber}") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = repsText,
-                    onValueChange = { repsText = it },
-                    label = { Text("Target reps") },
-                    singleLine = true,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
+                Text(
+                    text = "Targets (${type.displayName.lowercase()})",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OutlinedTextField(
-                    value = weightText,
-                    onValueChange = { weightText = it },
-                    label = { Text("Target weight (optional)") },
-                    singleLine = true,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
-                    ),
+                SetInputRow(
+                    key = template.id,
+                    type = type,
+                    initial = entry,
+                    onChange = { entry = it },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -537,18 +559,16 @@ private fun SetTemplateEditDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    val reps = repsText.toIntOrNull()
-                    val weight = weightText.toDoubleOrNull()
-                    if (isValidTemplate(reps, weight)) {
-                        onSave(
-                            com.gymora.domain.model.SetTemplateInput(
-                                targetReps = reps!!,
-                                targetWeight = weight,
-                                weightUnit = template.weightUnit,
-                                measurementType = template.measurementType,
-                            ),
-                        )
-                    }
+                    onSave(
+                        com.gymora.domain.model.SetTemplateInput(
+                            targetReps = entry.reps ?: 0,
+                            targetWeight = entry.weight,
+                            weightUnit = entry.weight?.let { weightUnit },
+                            measurementType = type,
+                            targetDurationSeconds = entry.durationSeconds,
+                            targetDistanceMeters = entry.distanceMeters,
+                        ),
+                    )
                 },
             ) {
                 Text("Save")
@@ -559,6 +579,3 @@ private fun SetTemplateEditDialog(
         },
     )
 }
-
-private fun isValidTemplate(reps: Int?, weight: Double?): Boolean =
-    reps != null && reps >= 0 && (weight == null || weight >= 0)

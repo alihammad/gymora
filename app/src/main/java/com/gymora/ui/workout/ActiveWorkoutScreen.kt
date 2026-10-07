@@ -56,6 +56,17 @@ import com.gymora.domain.model.ActiveSet
 import com.gymora.domain.model.PreviousPerformance
 import com.gymora.domain.model.SetValue
 import com.gymora.domain.model.SupersetRules
+import com.gymora.domain.calculator.SetFormat
+import com.gymora.domain.calculator.SetSummary
+import com.gymora.domain.calculator.SetLabels
+import com.gymora.ui.components.ExerciseMediaImage
+import com.gymora.ui.components.FormCuesList
+import com.gymora.ui.components.LocalWeightUnit
+import com.gymora.ui.components.SetEntry
+import com.gymora.ui.components.SetInputRow
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.gymora.ui.components.ConfirmDialog
 import com.gymora.ui.components.ExerciseBlock
 import java.time.Instant
@@ -145,8 +156,7 @@ fun ActiveWorkoutScreen(
                                 previousPerformance = exercise.exerciseId?.let {
                                     uiState.previousPerformanceMap[it]
                                 },
-                                onWeightChanged = viewModel::onWeightChanged,
-                                onRepsChanged = viewModel::onRepsChanged,
+                                onSetValuesChanged = viewModel::onSetValuesChanged,
                                 onToggleComplete = viewModel::onToggleComplete,
                                 onAddSet = viewModel::onAddSet,
                                 onRemove = { viewModel.onRemoveExercise(exercise.workoutExerciseId) },
@@ -254,12 +264,13 @@ fun ActiveWorkoutScreen(
 private fun ExerciseCard(
     exercise: ActiveExercise,
     previousPerformance: PreviousPerformance?,
-    onWeightChanged: (Long, String) -> Unit,
-    onRepsChanged: (Long, String) -> Unit,
+    onSetValuesChanged: (Long, SetEntry) -> Unit,
     onToggleComplete: (Long, Boolean) -> Unit,
     onAddSet: (Long) -> Unit,
     onRemove: () -> Unit,
 ) {
+    var showGuide by rememberSaveable(exercise.workoutExerciseId) { mutableStateOf(false) }
+    val hasGuide = exercise.formCues.isNotEmpty() || exercise.mediaFile != null
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
@@ -272,10 +283,21 @@ private fun ExerciseCard(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                 )
+                if (hasGuide) {
+                    IconButton(onClick = { showGuide = !showGuide }) {
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = if (showGuide) "Hide form guide" else "Show form guide",
+                            tint = if (showGuide) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                        )
+                    }
+                }
                 IconButton(onClick = onRemove) {
                     Icon(Icons.Filled.Close, contentDescription = "Remove ${exercise.exerciseName} from this workout")
                 }
             }
+
+            if (showGuide) FormGuide(exercise)
 
             // FR-045: show previous performance header if available
             if (previousPerformance != null && previousPerformance.sets.isNotEmpty()) {
@@ -287,36 +309,47 @@ private fun ExerciseCard(
                 )
             }
 
+            val labels = SetLabels.of(exercise.sets)
             exercise.sets.forEachIndexed { index, set ->
-                // FR-046: pre-fill from previous performance if available
-                val prevSet = previousPerformance?.sets?.getOrNull(index)
                 SetRow(
                     set = set,
-                    preFillWeight = prevSet?.weight,
-                    preFillReps = prevSet?.reps,
-                    onWeightChanged = { onWeightChanged(set.id, it) },
-                    onRepsChanged = { onRepsChanged(set.id, it) },
+                    label = labels[index],
+                    // FR-046: pre-fill from previous performance if available
+                    previous = previousPerformance?.sets?.getOrNull(index),
+                    onValuesChanged = { onSetValuesChanged(set.id, it) },
                     onToggleComplete = { onToggleComplete(set.id, it) },
                 )
             }
 
             TextButton(onClick = { onAddSet(exercise.workoutExerciseId) }) {
-                Text("Add set")
+                Text(if (exercise.sets.any { it.side != null }) "Add set (both sides)" else "Add set")
             }
         }
+    }
+}
+
+/** Demo media and form cues of the exercise. */
+@Composable
+private fun FormGuide(exercise: ActiveExercise) {
+    Column(
+        modifier = Modifier.padding(bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        exercise.mediaFile?.let { ExerciseMediaImage(it, "${exercise.exerciseName} demo") }
+        if (exercise.formCues.isNotEmpty()) FormCuesList(exercise.formCues)
     }
 }
 
 @Composable
 private fun SetRow(
     set: ActiveSet,
-    preFillWeight: Double?,
-    preFillReps: Int?,
-    onWeightChanged: (String) -> Unit,
-    onRepsChanged: (String) -> Unit,
+    label: String,
+    previous: SetValue?,
+    onValuesChanged: (SetEntry) -> Unit,
     onToggleComplete: (Boolean) -> Unit,
 ) {
-    Row(
+    val displayUnit = LocalWeightUnit.current
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
@@ -329,112 +362,72 @@ private fun SetRow(
                 },
             )
             .padding(horizontal = 4.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = "${set.setNumber}",
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(end = 4.dp),
-        )
-        // The fields own their text while typing; values are saved in the background.
-        // Binding straight to the database round-trip dropped keystrokes.
-        var weightText by remember(set.id) { mutableStateOf(formatNumber(set.weight)) }
-        var repsText by remember(set.id) { mutableStateOf(set.reps?.toString().orEmpty()) }
-        OutlinedTextField(
-            value = weightText,
-            onValueChange = { input ->
-                val cleaned = input.replace(',', '.')
-                if (cleaned.isDecimalInput()) {
-                    weightText = cleaned
-                    onWeightChanged(cleaned)
-                }
-            },
-            label = { Text("Weight") },
-            placeholder = preFillWeight?.let { { Text(formatNumber(it)) } },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.weight(1f),
-        )
-        OutlinedTextField(
-            value = repsText,
-            onValueChange = { input ->
-                if (input.length <= 4 && input.all { it.isDigit() }) {
-                    repsText = input
-                    onRepsChanged(input)
-                }
-            },
-            label = { Text("Reps") },
-            placeholder = preFillReps?.let { { Text(it.toString()) } },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.weight(1f),
-        )
-        // FR-045: show previous performance value beside today's set
-        if (preFillWeight != null || preFillReps != null) {
-            Column(modifier = Modifier.padding(start = 4.dp)) {
-                if (preFillWeight != null) {
-                    Text(
-                        text = "${preFillWeight}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(end = 4.dp),
+            )
+            SetInputRow(
+                key = set.id,
+                type = set.measurementType,
+                initial = SetEntry(set.weight, set.reps, set.durationSeconds, set.distanceMeters),
+                hint = previous?.let { SetEntry(it.weight, it.reps, it.durationSeconds, it.distanceMeters) },
+                onChange = onValuesChanged,
+                modifier = Modifier.weight(1f),
+            )
+            // FR-025 / FR-061: completion marked with a check icon, not color alone.
+            // Rounded checkbox: filled accent + check when done, muted outline otherwise.
+            val done = set.isCompleted
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        if (done) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
                     )
-                }
-                if (preFillReps != null) {
-                    Text(
-                        text = "${preFillReps} reps",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-        // FR-025 / FR-061: completion marked with a check icon, not color alone.
-        // Rounded checkbox: filled accent + check when done, muted outline otherwise.
-        val done = set.isCompleted
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(
-                    if (done) {
-                        MaterialTheme.colorScheme.primary
+                    .toggleable(
+                        value = done,
+                        role = Role.Checkbox,
+                        onValueChange = { onToggleComplete(it) },
+                    ),
+            ) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = if (done) "Mark set incomplete" else "Complete set",
+                    tint = if (done) {
+                        MaterialTheme.colorScheme.onPrimary
                     } else {
-                        MaterialTheme.colorScheme.surfaceVariant
+                        MaterialTheme.colorScheme.outline
                     },
                 )
-                .toggleable(
-                    value = done,
-                    role = Role.Checkbox,
-                    onValueChange = { onToggleComplete(it) },
+            }
+        }
+        // FR-045: show previous performance value beside today's set
+        if (previous != null) {
+            Text(
+                text = "Last: " + SetSummary.describe(
+                    set.measurementType, previous.weight, previous.weightUnit, previous.reps,
+                    previous.durationSeconds, previous.distanceMeters, displayUnit,
                 ),
-        ) {
-            Icon(
-                Icons.Filled.Check,
-                contentDescription = if (done) "Mark set incomplete" else "Complete set",
-                tint = if (done) {
-                    MaterialTheme.colorScheme.onPrimary
-                } else {
-                    MaterialTheme.colorScheme.outline
-                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 28.dp),
             )
         }
     }
 }
 
 /** 00:00:00 format (FR-021). */
-/** "40.0" -> "40", "42.5" -> "42.5", null -> "". */
-private fun formatNumber(value: Double?): String = when {
-    value == null -> ""
-    value % 1.0 == 0.0 -> value.toLong().toString()
-    else -> value.toString()
-}
-
-/** Digits with at most one decimal point and at most 6 characters. */
-private fun String.isDecimalInput(): Boolean =
-    length <= 6 && all { it.isDigit() || it == '.' } && count { it == '.' } <= 1
-
 internal fun formatElapsed(seconds: Long): String {
     val h = seconds / 3600
     val m = (seconds % 3600) / 60

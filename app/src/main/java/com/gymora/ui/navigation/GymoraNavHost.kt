@@ -215,6 +215,9 @@ fun GymoraNavHost(
                     onFilterClick = { kind, value ->
                         navController.navigate(Destinations.ExerciseFilter.create(kind, value))
                     },
+                    onEdit = { exerciseId ->
+                        navController.navigate(Destinations.ExerciseEditor.create(exerciseId))
+                    },
                 )
             }
             composable(Destinations.ExerciseFilter.route) {

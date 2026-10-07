@@ -20,4 +20,6 @@ data class ActiveWorkoutUiState(
     val previousPerformanceMap: Map<Long, PreviousPerformance> = emptyMap(),
     /** Ephemeral rest-timer state (FR-031, FR-032, R-06). */
     val restTimer: RestTimerState = RestTimerState(),
+    /** Unit for new weights; sets keep the unit they were logged in. */
+    val weightUnit: com.gymora.domain.model.WeightUnit = com.gymora.domain.model.WeightUnit.KG,
 )

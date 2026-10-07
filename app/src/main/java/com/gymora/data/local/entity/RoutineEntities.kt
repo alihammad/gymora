@@ -75,4 +75,6 @@ data class SetTemplateEntity(
     @ColumnInfo(name = "target_weight") val targetWeight: Double?,
     @ColumnInfo(name = "target_weight_unit") val targetWeightUnit: String?,
     @ColumnInfo(name = "measurement_type") val measurementType: String,
+    @ColumnInfo(name = "target_duration_seconds") val targetDurationSeconds: Int? = null,
+    @ColumnInfo(name = "target_distance_m") val targetDistanceMeters: Double? = null,
 )
