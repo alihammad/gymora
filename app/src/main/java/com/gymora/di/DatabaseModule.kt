@@ -51,6 +51,7 @@ object DatabaseModule {
                 GymoraDatabase.MIGRATION_1_2,
                 GymoraDatabase.MIGRATION_2_3,
                 GymoraDatabase.MIGRATION_3_4,
+                GymoraDatabase.MIGRATION_4_5,
             )
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onOpen(db: SupportSQLiteDatabase) {

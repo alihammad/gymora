@@ -1,10 +1,13 @@
 package com.gymora.ui.library
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gymora.domain.model.CreateExerciseInput
+import com.gymora.data.media.ExerciseMediaStore
 import com.gymora.domain.model.EntityNotFoundException
+import com.gymora.domain.model.MeasurementType
 import com.gymora.domain.model.MuscleGroup
 import com.gymora.domain.model.UpdateExerciseInput
 import com.gymora.domain.model.ValidationException
@@ -25,6 +28,11 @@ data class ExerciseEditorUiState(
     val muscleGroup: MuscleGroup? = null,
     val description: String = "",
     val notes: String = "",
+    val measurementType: MeasurementType = MeasurementType.WEIGHT_AND_REPS,
+    val isUnilateral: Boolean = false,
+    /** One cue per line while editing. */
+    val formCues: String = "",
+    val mediaFile: String? = null,
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
     val errorMessage: String? = null,
@@ -34,7 +42,11 @@ data class ExerciseEditorUiState(
 class ExerciseEditorViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val exerciseRepository: ExerciseRepository,
+    private val mediaStore: ExerciseMediaStore,
 ) : ViewModel() {
+
+    /** Media as last saved; replaced files are deleted only once the edit is saved. */
+    private var savedMediaFile: String? = null
 
     private val exerciseId: Long? = savedStateHandle.get<String>(Destinations.ExerciseEditor.ARG)
         ?.toLongOrNull()
@@ -54,12 +66,17 @@ class ExerciseEditorViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { exerciseRepository.getById(id) }
                 .onSuccess { exercise ->
+                    savedMediaFile = exercise.mediaFile
                     _uiState.update {
                         it.copy(
                             name = exercise.name,
                             muscleGroup = exercise.muscleGroup,
                             description = exercise.description.orEmpty(),
                             notes = exercise.notes.orEmpty(),
+                            measurementType = exercise.measurementType,
+                            isUnilateral = exercise.isUnilateral,
+                            formCues = exercise.formCues.joinToString("\n"),
+                            mediaFile = exercise.mediaFile,
                             isLoading = false,
                         )
                     }
@@ -91,8 +108,47 @@ class ExerciseEditorViewModel @Inject constructor(
         _uiState.update { it.copy(notes = value) }
     }
 
+    fun onMeasurementTypeChanged(value: MeasurementType) {
+        _uiState.update { it.copy(measurementType = value) }
+    }
+
+    fun onUnilateralChanged(value: Boolean) {
+        _uiState.update { it.copy(isUnilateral = value) }
+    }
+
+    fun onFormCuesChanged(value: String) {
+        _uiState.update { it.copy(formCues = value) }
+    }
+
+    fun onMediaPicked(uri: Uri) {
+        viewModelScope.launch {
+            runCatching { mediaStore.import(uri) }
+                .onSuccess { name ->
+                    discardUnsavedMedia()
+                    _uiState.update { it.copy(mediaFile = name) }
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(errorMessage = error.message ?: "Could not add that image.") }
+                }
+        }
+    }
+
+    fun onMediaRemoved() {
+        viewModelScope.launch {
+            discardUnsavedMedia()
+            _uiState.update { it.copy(mediaFile = null) }
+        }
+    }
+
+    /** Deletes a picked-but-unsaved image; the saved one stays until the edit is saved. */
+    private suspend fun discardUnsavedMedia() {
+        val current = _uiState.value.mediaFile
+        if (current != null && current != savedMediaFile) mediaStore.delete(current)
+    }
+
     fun onSave() {
         val state = _uiState.value
+        val cues = state.formCues.lines().map(String::trim).filter(String::isNotEmpty)
         viewModelScope.launch {
             runCatching {
                 if (state.exerciseId == null) {
@@ -102,6 +158,10 @@ class ExerciseEditorViewModel @Inject constructor(
                             muscleGroup = state.muscleGroup,
                             description = state.description.ifBlank { null },
                             notes = state.notes.ifBlank { null },
+                            measurementType = state.measurementType,
+                            isUnilateral = state.isUnilateral,
+                            formCues = cues,
+                            mediaFile = state.mediaFile,
                         ),
                     )
                 } else {
@@ -112,10 +172,16 @@ class ExerciseEditorViewModel @Inject constructor(
                             muscleGroup = state.muscleGroup,
                             description = state.description.ifBlank { null },
                             notes = state.notes.ifBlank { null },
+                            measurementType = state.measurementType,
+                            isUnilateral = state.isUnilateral,
+                            formCues = cues,
+                            mediaFile = state.mediaFile,
                         ),
                     )
                 }
             }.onSuccess {
+                savedMediaFile?.takeIf { it != state.mediaFile }?.let { mediaStore.delete(it) }
+                savedMediaFile = state.mediaFile
                 _uiState.update { it.copy(isSaved = true) }
             }.onFailure { error ->
                 _uiState.update { it.copy(errorMessage = friendlyMessage(error)) }

@@ -36,6 +36,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gymora.domain.model.ActiveExercise
+import com.gymora.domain.model.ActiveSet
+import com.gymora.domain.calculator.SetFormat
+import com.gymora.domain.calculator.SetSummary
+import com.gymora.domain.calculator.SetLabels
+import com.gymora.ui.components.LocalWeightUnit
+import com.gymora.ui.components.SetEntry
+import com.gymora.ui.components.SetInputRow
 import com.gymora.domain.model.SupersetRules
 import com.gymora.ui.components.ExerciseBlock
 import com.gymora.domain.model.Exercise
@@ -176,8 +183,7 @@ private fun WorkoutDetailContent(
                     EditableExerciseCard(
                         exercise = exercise,
                         editableSets = uiState.editableSets,
-                        onWeightChanged = viewModel::onWeightChanged,
-                        onRepsChanged = viewModel::onRepsChanged,
+                        onSetValuesChanged = viewModel::onSetValuesChanged,
                         onToggleComplete = viewModel::onToggleComplete,
                         onRemove = { viewModel.onRemoveExerciseClicked(exercise.workoutExerciseId) },
                     )
@@ -275,7 +281,8 @@ private fun HistoricalExerciseCard(
                     }
                 }
             }
-            exercise.sets.forEach { set ->
+            val displayUnit = LocalWeightUnit.current
+            exercise.sets.zip(SetLabels.of(exercise.sets)).forEach { (set, label) ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -284,12 +291,15 @@ private fun HistoricalExerciseCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        text = "Set ${set.setNumber}",
+                        text = "Set $label",
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(0.3f),
                     )
                     Text(
-                        text = "${set.weight?.toString() ?: "—"} × ${set.reps?.toString() ?: "—"}",
+                        text = SetSummary.describe(
+                            set.measurementType, set.weight, set.weightUnit, set.reps,
+                            set.durationSeconds, set.distanceMeters, displayUnit,
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(0.5f),
                     )
@@ -310,8 +320,7 @@ private fun HistoricalExerciseCard(
 private fun EditableExerciseCard(
     exercise: ActiveExercise,
     editableSets: Map<Long, EditableSet>,
-    onWeightChanged: (Long, String) -> Unit,
-    onRepsChanged: (Long, String) -> Unit,
+    onSetValuesChanged: (Long, SetEntry) -> Unit,
     onToggleComplete: (Long) -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -334,7 +343,7 @@ private fun EditableExerciseCard(
                     )
                 }
             }
-            exercise.sets.forEach { set ->
+            exercise.sets.zip(SetLabels.of(exercise.sets)).forEach { (set, label) ->
                 val editable = editableSets[set.id] ?: return@forEach
                 Column(modifier = Modifier.padding(vertical = 4.dp)) {
                     Row(
@@ -343,28 +352,14 @@ private fun EditableExerciseCard(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            text = "Set ${set.setNumber}",
+                            text = label,
                             style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(0.25f),
                         )
-                        OutlinedTextField(
-                            value = editable.weight,
-                            onValueChange = { onWeightChanged(set.id, it) },
-                            label = { Text("Weight") },
-                            singleLine = true,
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
-                            ),
-                            modifier = Modifier.weight(1f),
-                        )
-                        OutlinedTextField(
-                            value = editable.reps,
-                            onValueChange = { onRepsChanged(set.id, it) },
-                            label = { Text("Reps") },
-                            singleLine = true,
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
-                            ),
+                        SetInputRow(
+                            key = set.id,
+                            type = set.measurementType,
+                            initial = editable.values,
+                            onChange = { onSetValuesChanged(set.id, it) },
                             modifier = Modifier.weight(1f),
                         )
                         IconButton(onClick = { onToggleComplete(set.id) }) {

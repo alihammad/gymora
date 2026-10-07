@@ -1,6 +1,7 @@
 package com.gymora
 
 import android.app.Application
+import com.gymora.data.backup.AutoBackupScheduler
 import com.gymora.domain.repository.SettingsRepository
 import com.gymora.reminders.ReminderReceiver
 import com.gymora.reminders.ReminderScheduler
@@ -30,6 +31,13 @@ class GymoraApplication : Application() {
                 .map { it.reminderDays to it.reminderTime }
                 .distinctUntilChanged()
                 .collect { (days, time) -> reminderScheduler.schedule(days, time) }
+        }
+        // Likewise for the automatic backup schedule.
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            settingsRepository.observeSettings()
+                .map { it.autoBackupIntervalDays to it.autoBackupFolderUri }
+                .distinctUntilChanged()
+                .collect { (days, folder) -> AutoBackupScheduler.schedule(this@GymoraApplication, days, folder) }
         }
     }
 }

@@ -54,6 +54,27 @@ class SettingsRepositoryImpl @Inject constructor(
         )
     }
 
+    override suspend fun setAutoBackup(intervalDays: Int, folderUri: String?) {
+        val current = current()
+        settingsDao.upsert(
+            current.copy(
+                autoBackupIntervalDays = intervalDays.coerceAtLeast(0),
+                autoBackupFolderUri = folderUri,
+                updatedAt = now(),
+            ),
+        )
+    }
+
+    override suspend fun setLastAutoBackupAt(epochMillis: Long) {
+        val current = current()
+        settingsDao.upsert(current.copy(lastAutoBackupAt = epochMillis))
+    }
+
+    override suspend fun setHealthConnectEnabled(enabled: Boolean) {
+        val current = current()
+        settingsDao.upsert(current.copy(healthConnectEnabled = enabled, updatedAt = now()))
+    }
+
     private suspend fun current(): SettingsEntity =
         settingsDao.getOnce() ?: SettingsEntity.DEFAULTS
 
@@ -66,6 +87,10 @@ class SettingsRepositoryImpl @Inject constructor(
         weeklyGoal = weeklyGoal,
         reminderDays = EngagementCalculators.maskToDays(reminderDays),
         reminderTime = LocalTime.of(reminderMinuteOfDay / MINUTES_PER_HOUR, reminderMinuteOfDay % MINUTES_PER_HOUR),
+        autoBackupIntervalDays = autoBackupIntervalDays,
+        autoBackupFolderUri = autoBackupFolderUri,
+        lastAutoBackupAt = lastAutoBackupAt,
+        healthConnectEnabled = healthConnectEnabled,
     )
 
     private companion object {

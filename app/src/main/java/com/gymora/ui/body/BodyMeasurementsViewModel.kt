@@ -42,6 +42,7 @@ data class BodyMeasurementsUiState(
 @HiltViewModel
 class BodyMeasurementsViewModel @Inject constructor(
     private val repository: BodyMeasurementRepository,
+    private val healthConnectSync: com.gymora.health.HealthConnectSync,
     settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
@@ -100,6 +101,7 @@ class BodyMeasurementsViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { repository.save(entry) }
                 .onSuccess {
+                    healthConnectSync.onBodyMeasurementSaved()
                     _uiState.update { it.copy(form = MeasurementForm(), message = "Measurements saved.") }
                 }
                 .onFailure {

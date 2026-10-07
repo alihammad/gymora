@@ -89,6 +89,12 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
+    // Scheduled auto-backup to a user-chosen folder
+    implementation(libs.work.runtime.ktx)
+
+    // Health Connect: write workouts and body weight, read weight from smart scales
+    implementation(libs.health.connect.client)
+
     // Hilt (dependency injection)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

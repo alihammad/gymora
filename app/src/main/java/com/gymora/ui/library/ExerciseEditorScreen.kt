@@ -126,6 +126,21 @@ fun ExerciseEditorScreen(
                 }
             }
 
+            TrackingFields(
+                measurementType = uiState.measurementType,
+                isUnilateral = uiState.isUnilateral,
+                onMeasurementTypeChanged = viewModel::onMeasurementTypeChanged,
+                onUnilateralChanged = viewModel::onUnilateralChanged,
+            )
+
+            FormGuideFields(
+                formCues = uiState.formCues,
+                mediaFile = uiState.mediaFile,
+                onFormCuesChanged = viewModel::onFormCuesChanged,
+                onMediaPicked = viewModel::onMediaPicked,
+                onMediaRemoved = viewModel::onMediaRemoved,
+            )
+
             OutlinedTextField(
                 value = uiState.description,
                 onValueChange = viewModel::onDescriptionChanged,

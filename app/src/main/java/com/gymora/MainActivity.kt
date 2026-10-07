@@ -11,6 +11,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -19,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.gymora.domain.model.Settings
 import com.gymora.domain.repository.SettingsRepository
+import com.gymora.ui.components.LocalWeightUnit
 import com.gymora.ui.navigation.GymoraNavHost
 import com.gymora.ui.theme.GymoraTheme
 import com.gymora.ui.theme.palette
@@ -75,10 +77,12 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    GymoraNavHost(
-                        startRoutineRequest = startRoutineRequest,
-                        onStartRoutineHandled = { startRoutineRequest = null },
-                    )
+                    CompositionLocalProvider(LocalWeightUnit provides settings.weightUnit) {
+                        GymoraNavHost(
+                            startRoutineRequest = startRoutineRequest,
+                            onStartRoutineHandled = { startRoutineRequest = null },
+                        )
+                    }
                 }
             }
         }

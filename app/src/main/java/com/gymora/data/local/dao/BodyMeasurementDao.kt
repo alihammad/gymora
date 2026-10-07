@@ -13,6 +13,9 @@ interface BodyMeasurementDao {
     @Query("SELECT * FROM body_measurements ORDER BY measured_at DESC, id DESC")
     fun observeAll(): Flow<List<BodyMeasurementEntity>>
 
+    @Query("SELECT * FROM body_measurements ORDER BY measured_at")
+    suspend fun getAllOnce(): List<BodyMeasurementEntity>
+
     @Insert
     suspend fun insert(entity: BodyMeasurementEntity): Long
 }

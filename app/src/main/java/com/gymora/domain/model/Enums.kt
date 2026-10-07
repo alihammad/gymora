@@ -22,13 +22,57 @@ enum class Theme(val displayName: String) {
     DEEP_FOREST("Deep Forest"),
 }
 
+/** A value a set can record; which ones apply depends on the [MeasurementType]. */
+enum class SetField {
+    WEIGHT,
+    REPS,
+    DURATION,
+    DISTANCE,
+}
+
 /**
- * Set measurement model (FR-030, BR-17). v1 supports WEIGHT_AND_REPS and REPS_ONLY;
- * DURATION and DISTANCE can be added later as new values without a data redesign (R-11).
+ * Set measurement model (FR-030, BR-17, R-11). Persisted by [name], so existing
+ * entries must keep their names. An exercise has a default type; each performed
+ * set stores the type it was logged with, so history renders as recorded.
  */
-enum class MeasurementType {
-    WEIGHT_AND_REPS,
-    REPS_ONLY,
+enum class MeasurementType(
+    val displayName: String,
+    val example: String,
+    val fields: List<SetField>,
+    /** Label for the weight field when it is not the lifted load. */
+    val weightLabel: String = "Weight",
+) {
+    WEIGHT_AND_REPS("Weight & reps", "Bench press, squat", listOf(SetField.WEIGHT, SetField.REPS)),
+    REPS_ONLY("Reps only", "Push-ups, crunches", listOf(SetField.REPS)),
+    WEIGHTED_BODYWEIGHT(
+        "Bodyweight + added weight", "Weighted dips, pull-ups",
+        listOf(SetField.WEIGHT, SetField.REPS), weightLabel = "Added",
+    ),
+    ASSISTED_BODYWEIGHT(
+        "Assisted bodyweight", "Assisted pull-ups, machine dips",
+        listOf(SetField.WEIGHT, SetField.REPS), weightLabel = "Assist",
+    ),
+    DURATION("Time", "Planks, holds, stretches", listOf(SetField.DURATION)),
+    DISTANCE_AND_DURATION(
+        "Distance & time", "Running, rowing, cycling",
+        listOf(SetField.DISTANCE, SetField.DURATION),
+    ),
+    WEIGHT_AND_DISTANCE("Weight & distance", "Farmer's carry, sled push", listOf(SetField.WEIGHT, SetField.DISTANCE)),
+    ;
+
+    /**
+     * Whether the weight field is load the lifter moved. Assistance is not: it is
+     * excluded from volume, heaviest-weight and estimated 1RM.
+     */
+    val countsWeightAsLoad: Boolean get() = this != ASSISTED_BODYWEIGHT
+
+    fun has(field: SetField): Boolean = field in fields
+}
+
+/** Side of the body a unilateral set was performed with. Persisted by [name]. */
+enum class Side(val shortLabel: String) {
+    LEFT("L"),
+    RIGHT("R"),
 }
 
 /**

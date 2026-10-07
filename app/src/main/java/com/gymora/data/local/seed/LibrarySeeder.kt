@@ -10,6 +10,7 @@ import com.gymora.domain.model.EquipmentItem
 import com.gymora.domain.model.EquipmentType
 import com.gymora.domain.model.EquipmentUsageType
 import com.gymora.domain.model.ExerciseCategory
+import com.gymora.domain.model.ExerciseTrackingDefaults
 import com.gymora.domain.model.ExerciseType
 import com.gymora.domain.model.ForceType
 import com.gymora.domain.model.Mechanics
@@ -85,6 +86,8 @@ class LibrarySeederImpl @Inject constructor(
         instructionsJson = ExerciseMetadataCodec.encodeInstructions(instructions),
         muscleGroupsJson = ExerciseMetadataCodec.encodeMuscleGroups(muscleGroups),
         equipmentJson = ExerciseMetadataCodec.encodeEquipment(equipment),
+        measurementType = ExerciseTrackingDefaults.measurementType(name, category, equipment.map { it.name }).name,
+        isUnilateral = ExerciseTrackingDefaults.isUnilateral(name),
     )
 
     private companion object {

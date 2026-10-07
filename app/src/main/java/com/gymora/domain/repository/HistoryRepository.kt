@@ -52,6 +52,8 @@ interface HistoryRepository {
         reps: Int?,
         isCompleted: Boolean,
         notes: String?,
+        durationSeconds: Int? = null,
+        distanceMeters: Double? = null,
     )
 
     suspend fun addExerciseToHistoricalWorkout(sessionId: Long, exerciseId: Long)
@@ -59,4 +61,11 @@ interface HistoryRepository {
     suspend fun removeExerciseFromHistoricalWorkout(workoutExerciseId: Long)
 
     suspend fun updateHistoricalWorkoutNotes(sessionId: Long, notes: String?)
+
+    /** Correct a completed workout's start time and end time. */
+    suspend fun updateHistoricalWorkoutTimes(
+        sessionId: Long,
+        startedAt: java.time.Instant,
+        endedAt: java.time.Instant,
+    )
 }

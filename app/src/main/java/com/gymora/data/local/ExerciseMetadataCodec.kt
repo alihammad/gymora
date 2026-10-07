@@ -29,6 +29,13 @@ object ExerciseMetadataCodec {
             (0 until array.length()).map { array.getString(it) }
         } ?: emptyList()
 
+    // --- Form cues (same shape as instructions) ---------------------------
+
+    fun encodeFormCues(cues: List<String>): String? =
+        encodeInstructions(cues.map(String::trim).filter(String::isNotEmpty))
+
+    fun decodeFormCues(json: String?): List<String> = decodeInstructions(json)
+
     // --- Muscle groups -----------------------------------------------------
 
     fun encodeMuscleGroups(groups: List<MuscleGroupRef>): String? =

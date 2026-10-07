@@ -17,8 +17,10 @@ class LogSetUseCase @Inject constructor(
         weight: Double?,
         weightUnit: WeightUnit?,
         reps: Int?,
+        durationSeconds: Int? = null,
+        distanceMeters: Double? = null,
     ) {
-        workoutSessionRepository.updateSetValues(setId, weight, weightUnit, reps)
+        workoutSessionRepository.updateSetValues(setId, weight, weightUnit, reps, durationSeconds, distanceMeters)
     }
 
     suspend fun complete(setId: Long) {

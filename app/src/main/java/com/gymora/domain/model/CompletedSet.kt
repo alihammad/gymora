@@ -6,4 +6,6 @@ data class CompletedSet(
     val reps: Int?,
     val weightUnit: WeightUnit?,
     val isCompleted: Boolean,
+    /** Null means a plain weighted set; assistance never counts as load. */
+    val measurementType: MeasurementType? = null,
 )

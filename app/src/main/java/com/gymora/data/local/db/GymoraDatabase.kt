@@ -40,7 +40,7 @@ import com.gymora.data.local.entity.WorkoutSetEntity
         WorkoutSetEntity::class, // registered by T035 (US3)
         com.gymora.data.local.entity.BodyMeasurementEntity::class, // v2
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class GymoraDatabase : RoomDatabase() {
@@ -104,6 +104,79 @@ abstract class GymoraDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE `settings` ADD COLUMN `reminder_days` INTEGER NOT NULL DEFAULT 0")
                 db.execSQL(
                     "ALTER TABLE `settings` ADD COLUMN `reminder_minute_of_day` INTEGER NOT NULL DEFAULT 1080",
+                )
+            }
+        }
+
+        /**
+         * v4 → v5: more set measurement types (time, distance, assisted/weighted
+         * bodyweight), unilateral sides, exercise form cues and media, auto-backup
+         * and Health Connect settings. Built-in exercises get tracking defaults.
+         */
+        val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // See MIGRATION_1_2: the partial index must be dropped before validation.
+                db.execSQL("DROP INDEX IF EXISTS index_workout_sessions_single_active")
+                db.execSQL(
+                    "ALTER TABLE `exercises` ADD COLUMN `measurement_type` TEXT NOT NULL " +
+                        "DEFAULT 'WEIGHT_AND_REPS'",
+                )
+                db.execSQL("ALTER TABLE `exercises` ADD COLUMN `is_unilateral` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `exercises` ADD COLUMN `form_cues_json` TEXT")
+                db.execSQL("ALTER TABLE `exercises` ADD COLUMN `media_file` TEXT")
+                db.execSQL("ALTER TABLE `workout_sets` ADD COLUMN `duration_seconds` INTEGER")
+                db.execSQL("ALTER TABLE `workout_sets` ADD COLUMN `distance_m` REAL")
+                db.execSQL("ALTER TABLE `workout_sets` ADD COLUMN `side` TEXT")
+                db.execSQL("ALTER TABLE `set_templates` ADD COLUMN `target_duration_seconds` INTEGER")
+                db.execSQL("ALTER TABLE `set_templates` ADD COLUMN `target_distance_m` REAL")
+                db.execSQL(
+                    "ALTER TABLE `settings` ADD COLUMN `auto_backup_interval_days` INTEGER NOT NULL DEFAULT 0",
+                )
+                db.execSQL("ALTER TABLE `settings` ADD COLUMN `auto_backup_folder_uri` TEXT")
+                db.execSQL("ALTER TABLE `settings` ADD COLUMN `last_auto_backup_at` INTEGER")
+                db.execSQL(
+                    "ALTER TABLE `settings` ADD COLUMN `health_connect_enabled` INTEGER NOT NULL DEFAULT 0",
+                )
+                db.execSQL("ALTER TABLE `body_measurements` ADD COLUMN `external_id` TEXT")
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_body_measurements_external_id` " +
+                        "ON `body_measurements` (`external_id`)",
+                )
+                applyTrackingDefaults(db)
+            }
+        }
+
+        /**
+         * Gives built-in exercises their best-guess tracking type and side mode, and
+         * points their routine targets at the same type. History keeps its recorded types.
+         */
+        private fun applyTrackingDefaults(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+            val updates = mutableListOf<Triple<Long, String, Boolean>>()
+            db.query("SELECT id, name, category, equipment_json FROM exercises WHERE is_custom = 0").use { c ->
+                while (c.moveToNext()) {
+                    val name = c.getString(1)
+                    val category = c.getString(2)?.let { raw ->
+                        com.gymora.domain.model.ExerciseCategory.entries.firstOrNull { it.name == raw }
+                    }
+                    val equipment = com.gymora.data.local.ExerciseMetadataCodec
+                        .decodeEquipment(c.getString(3)).map { it.name }
+                    val type = com.gymora.domain.model.ExerciseTrackingDefaults
+                        .measurementType(name, category, equipment)
+                    val unilateral = com.gymora.domain.model.ExerciseTrackingDefaults.isUnilateral(name)
+                    if (type != com.gymora.domain.model.MeasurementType.WEIGHT_AND_REPS || unilateral) {
+                        updates += Triple(c.getLong(0), type.name, unilateral)
+                    }
+                }
+            }
+            updates.forEach { (id, type, unilateral) ->
+                db.execSQL(
+                    "UPDATE exercises SET measurement_type = ?, is_unilateral = ? WHERE id = ?",
+                    arrayOf<Any>(type, if (unilateral) 1 else 0, id),
+                )
+                db.execSQL(
+                    "UPDATE set_templates SET measurement_type = ? WHERE routine_exercise_id IN " +
+                        "(SELECT id FROM routine_exercises WHERE exercise_id = ?)",
+                    arrayOf<Any>(type, id),
                 )
             }
         }

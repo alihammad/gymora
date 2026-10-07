@@ -1,6 +1,9 @@
 package com.gymora.data.repository
 
 import com.gymora.data.local.db.GymoraDatabase
+import com.gymora.data.local.toCompletedSet
+import com.gymora.data.local.toDomain
+import com.gymora.data.local.weightIsLoad
 import com.gymora.data.local.entity.WorkoutExerciseEntity
 import com.gymora.domain.calculator.WorkoutCalculators
 import com.gymora.domain.model.ActiveExercise
@@ -76,14 +79,7 @@ class HistoryRepositoryImpl @Inject constructor(
                 sessionId = session.id,
                 date = Instant.ofEpochMilli(session.startedAt),
                 volumeKg = WorkoutCalculators.totalVolume(
-                    sets.map {
-                        com.gymora.domain.model.CompletedSet(
-                            weight = it.weight,
-                            reps = it.reps,
-                            weightUnit = it.weightUnit?.let { u -> WeightUnit.valueOf(u) },
-                            isCompleted = it.isCompleted,
-                        )
-                    },
+                    sets.map { it.toCompletedSet() },
                     WeightUnit.KG,
                 ),
                 completedSets = sets.count { it.isCompleted },
@@ -99,7 +95,7 @@ class HistoryRepositoryImpl @Inject constructor(
             exerciseDao.getForSession(session.id).forEach { we ->
                 val exerciseId = we.exerciseId ?: return@forEach
                 val best = setDao.getForExercise(we.id)
-                    .filter { it.isCompleted && (it.weight ?: 0.0) > 0 && (it.reps ?: 0) > 0 }
+                    .filter { it.isCompleted && it.weightIsLoad && (it.weight ?: 0.0) > 0 && (it.reps ?: 0) > 0 }
                     .maxOfOrNull {
                         WorkoutCalculators.estimatedOneRepMax(
                             WorkoutCalculators.convertWeight(
@@ -125,14 +121,7 @@ class HistoryRepositoryImpl @Inject constructor(
             val routineId = session.routineId ?: return@forEach
             val sets = exerciseDao.getForSession(session.id).flatMap { setDao.getForExercise(it.id) }
             val volume = WorkoutCalculators.totalVolume(
-                sets.map {
-                    com.gymora.domain.model.CompletedSet(
-                        weight = it.weight,
-                        reps = it.reps,
-                        weightUnit = it.weightUnit?.let { u -> WeightUnit.valueOf(u) },
-                        isCompleted = it.isCompleted,
-                    )
-                },
+                sets.map { it.toCompletedSet() },
                 WeightUnit.KG,
             )
             // Latest snapshot name wins if the routine was renamed.
@@ -153,14 +142,7 @@ class HistoryRepositoryImpl @Inject constructor(
                     ((session.endedAt ?: session.startedAt) - session.startedAt).coerceAtLeast(0),
                 ),
                 volumeKg = WorkoutCalculators.totalVolume(
-                    sets.map {
-                        com.gymora.domain.model.CompletedSet(
-                            weight = it.weight,
-                            reps = it.reps,
-                            weightUnit = it.weightUnit?.let { u -> WeightUnit.valueOf(u) },
-                            isCompleted = it.isCompleted,
-                        )
-                    },
+                    sets.map { it.toCompletedSet() },
                     WeightUnit.KG,
                 ),
                 totalReps = sets.filter { it.isCompleted }.sumOf { it.reps ?: 0 },
@@ -214,15 +196,19 @@ class HistoryRepositoryImpl @Inject constructor(
         reps: Int?,
         isCompleted: Boolean,
         notes: String?,
+        durationSeconds: Int?,
+        distanceMeters: Double?,
     ) {
         // BR-16 validation at the correction boundary, mirroring live logging.
-        WorkoutCalculators.validateSetInput(weight, reps)
+        WorkoutCalculators.validateSetInput(weight, reps, durationSeconds, distanceMeters)
         val entity = setDao.getById(setId) ?: throw EntityNotFoundException(setId)
         setDao.update(
             entity.copy(
                 weight = weight,
                 weightUnit = weightUnit?.name,
                 reps = reps,
+                durationSeconds = durationSeconds,
+                distanceMeters = distanceMeters,
                 isCompleted = isCompleted,
                 completedAt = when {
                     isCompleted && entity.completedAt == null -> System.currentTimeMillis()
@@ -261,6 +247,17 @@ class HistoryRepositoryImpl @Inject constructor(
         sessionDao.update(entity.copy(notes = notes))
     }
 
+    override suspend fun updateHistoricalWorkoutTimes(
+        sessionId: Long,
+        startedAt: Instant,
+        endedAt: Instant,
+    ) {
+        val entity = sessionDao.getById(sessionId) ?: throw EntityNotFoundException(sessionId)
+        sessionDao.update(
+            entity.copy(startedAt = startedAt.toEpochMilli(), endedAt = endedAt.toEpochMilli()),
+        )
+    }
+
     private fun com.gymora.data.local.entity.WorkoutSessionEntity.toDomain(): WorkoutSession =
         WorkoutSession(
             id = id,
@@ -272,15 +269,4 @@ class HistoryRepositoryImpl @Inject constructor(
             notes = notes,
         )
 
-    private fun com.gymora.data.local.entity.WorkoutSetEntity.toDomain(): ActiveSet = ActiveSet(
-        id = id,
-        setNumber = setNumber,
-        reps = reps,
-        weight = weight,
-        weightUnit = weightUnit?.let { WeightUnit.valueOf(it) },
-        measurementType = MeasurementType.valueOf(measurementType),
-        isCompleted = isCompleted,
-        completedAt = completedAt?.let { Instant.ofEpochMilli(it) },
-        notes = notes,
-    )
 }

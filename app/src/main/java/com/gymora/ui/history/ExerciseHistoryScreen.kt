@@ -37,6 +37,9 @@ import com.gymora.domain.model.WeightUnit
 import com.gymora.ui.components.ChartPoint
 import com.gymora.ui.components.ProgressChartCard
 import com.gymora.domain.model.ActiveSet
+import com.gymora.domain.calculator.SetFormat
+import com.gymora.domain.calculator.SetSummary
+import com.gymora.ui.components.LocalWeightUnit
 import com.gymora.domain.model.ExercisePerformance
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -117,33 +120,32 @@ private enum class ProgressMetric(val label: String, val unit: String) {
     ONE_RM("Est. 1RM", "kg"),
     TOP_WEIGHT("Top weight", "kg"),
     VOLUME("Volume", "kg"),
+    LONGEST_TIME("Longest set", "min"),
+    TOTAL_DISTANCE("Distance", "km"),
 }
 
-/** Progress chart over time for one exercise, switchable between metrics (all in kg). */
+private const val SECONDS_PER_MINUTE = 60.0
+
+/** Progress chart over time for one exercise, switchable between metrics (weights in kg). */
 @Composable
 private fun ExerciseProgress(performances: List<ExercisePerformance>) {
-    var metric by remember { mutableStateOf(ProgressMetric.ONE_RM) }
+    // Offer only metrics this exercise has data for, e.g. time for planks.
+    val metrics = remember(performances) {
+        val done = performances.flatMap { it.sets }.filter { it.isCompleted }
+        buildList {
+            if (done.any { it.measurementType.countsWeightAsLoad && (it.weight ?: 0.0) > 0 && (it.reps ?: 0) > 0 }) {
+                addAll(listOf(ProgressMetric.ONE_RM, ProgressMetric.TOP_WEIGHT, ProgressMetric.VOLUME))
+            }
+            if (done.any { (it.durationSeconds ?: 0) > 0 }) add(ProgressMetric.LONGEST_TIME)
+            if (done.any { (it.distanceMeters ?: 0.0) > 0 }) add(ProgressMetric.TOTAL_DISTANCE)
+        }.ifEmpty { listOf(ProgressMetric.ONE_RM) }
+    }
+    var metric by remember(metrics) { mutableStateOf(metrics.first()) }
     val points = remember(performances, metric) {
         val fmt = DateTimeFormatter.ofPattern("d MMM")
         performances.reversed().mapNotNull { perf ->
-            val sets = perf.sets
-                .filter { it.isCompleted && it.weight != null && it.weight > 0 && (it.reps ?: 0) > 0 }
-                .map { set ->
-                    val kg = WorkoutCalculators.convertWeight(
-                        set.weight!!, set.weightUnit ?: WeightUnit.KG, WeightUnit.KG,
-                    )
-                    kg to set.reps!!
-                }
-            if (sets.isEmpty()) {
-                null
-            } else {
-                val value = when (metric) {
-                    ProgressMetric.ONE_RM -> sets.maxOf { (w, r) -> WorkoutCalculators.estimatedOneRepMax(w, r) }
-                    ProgressMetric.TOP_WEIGHT -> sets.maxOf { it.first }
-                    ProgressMetric.VOLUME -> sets.sumOf { (w, r) -> w * r }
-                }
-                ChartPoint(fmt.format(perf.date.atZone(ZoneId.systemDefault())), value)
-            }
+            metricValue(perf.sets.filter { it.isCompleted }, metric)
+                ?.let { ChartPoint(fmt.format(perf.date.atZone(ZoneId.systemDefault())), it) }
         }
     }
     Column(
@@ -151,7 +153,7 @@ private fun ExerciseProgress(performances: List<ExercisePerformance>) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ProgressMetric.entries.forEach { m ->
+            metrics.forEach { m ->
                 FilterChip(
                     selected = metric == m,
                     onClick = { metric = m },
@@ -181,15 +183,32 @@ private fun PerformanceCard(performance: ExercisePerformance) {
     }
 }
 
+/** One session's value for [metric], or null when it has no matching sets. */
+private fun metricValue(sets: List<ActiveSet>, metric: ProgressMetric): Double? {
+    val lifts = sets
+        .filter { it.measurementType.countsWeightAsLoad && (it.weight ?: 0.0) > 0 && (it.reps ?: 0) > 0 }
+        .map { set ->
+            WorkoutCalculators.convertWeight(set.weight!!, set.weightUnit ?: WeightUnit.KG, WeightUnit.KG) to set.reps!!
+        }
+    return when (metric) {
+        ProgressMetric.ONE_RM -> lifts.maxOfOrNull { (w, r) -> WorkoutCalculators.estimatedOneRepMax(w, r) }
+        ProgressMetric.TOP_WEIGHT -> lifts.maxOfOrNull { it.first }
+        ProgressMetric.VOLUME -> lifts.takeIf { it.isNotEmpty() }?.sumOf { (w, r) -> w * r }
+        ProgressMetric.LONGEST_TIME -> sets.mapNotNull { it.durationSeconds }.maxOrNull()?.div(SECONDS_PER_MINUTE)
+        ProgressMetric.TOTAL_DISTANCE -> sets.mapNotNull { it.distanceMeters }
+            .takeIf { it.isNotEmpty() }?.sum()?.div(WorkoutCalculators.METERS_PER_KM)
+    }
+}
+
 @Composable
 private fun SetSummaryRow(set: ActiveSet) {
-    val weightText = buildString {
-        if (set.weight != null) append("${set.weight}")
-        if (set.weightUnit != null) append(" ${set.weightUnit.name.lowercase()}")
-    }
-    val repsText = if (set.reps != null) "${set.reps} reps" else ""
+    val summary = SetSummary.describe(
+        set.measurementType, set.weight, set.weightUnit, set.reps,
+        set.durationSeconds, set.distanceMeters, LocalWeightUnit.current,
+    )
+    val label = set.side?.let { " (${it.shortLabel})" }.orEmpty()
     Text(
-        text = "Set ${set.setNumber}: $weightText × $repsText",
+        text = "Set ${set.setNumber}$label: $summary",
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.padding(start = 8.dp, top = 2.dp),
     )

@@ -1,6 +1,7 @@
 package com.gymora.data.repository
 
 import com.gymora.data.local.db.GymoraDatabase
+import com.gymora.data.local.weightIsLoad
 import com.gymora.data.local.entity.WorkoutSessionEntity
 import com.gymora.data.local.entity.WorkoutSetEntity
 import com.gymora.domain.calculator.WorkoutCalculators
@@ -80,6 +81,8 @@ class RecordsRepositoryImpl @Inject constructor(
     }
 
     private fun weightKg(set: WorkoutSetEntity): Double {
+        // Assistance is not load, so it never counts as a heavier lift.
+        if (!set.weightIsLoad) return 0.0
         val weight = set.weight ?: return 0.0
         return WorkoutCalculators.convertWeight(weight, parseWeightUnit(set.weightUnit), WeightUnit.KG)
     }
@@ -108,7 +111,7 @@ class RecordsRepositoryImpl @Inject constructor(
             exerciseDao.getForSession(session.id).flatMap { exercise ->
                 setDao.getForExercise(exercise.id).map { set ->
                     PerformedSet(
-                        weightKg = set.weight?.let { weight ->
+                        weightKg = set.weight?.takeIf { set.weightIsLoad }?.let { weight ->
                             WorkoutCalculators.convertWeight(
                                 weight,
                                 parseWeightUnit(set.weightUnit),
@@ -182,7 +185,7 @@ class RecordsRepositoryImpl @Inject constructor(
     private fun completedSetVolume(set: WorkoutSetEntity): Double {
         val weight = set.weight ?: return 0.0
         val reps = set.reps ?: return 0.0
-        if (!set.isCompleted || weight <= 0) return 0.0
+        if (!set.isCompleted || !set.weightIsLoad || weight <= 0) return 0.0
         return WorkoutCalculators.convertWeight(
             weight,
             parseWeightUnit(set.weightUnit),

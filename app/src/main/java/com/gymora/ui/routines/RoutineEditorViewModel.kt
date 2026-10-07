@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gymora.domain.model.EntityNotFoundException
 import com.gymora.domain.model.MeasurementType
+import com.gymora.domain.model.SetField
 import com.gymora.domain.model.SetTemplateInput
 import com.gymora.domain.model.ValidationException
 import com.gymora.domain.repository.ExerciseRepository
@@ -213,17 +214,20 @@ class RoutineEditorViewModel @Inject constructor(
 
     fun onAddSetTemplate(routineExerciseId: Long) {
         // New sets copy the exercise's last set so edited targets carry forward.
-        val lastSet = _uiState.value.routine?.exercises
+        val exercise = _uiState.value.routine?.exercises
             ?.firstOrNull { it.routineExerciseId == routineExerciseId }
-            ?.setTemplates?.maxByOrNull { it.setNumber }
+        val lastSet = exercise?.setTemplates?.maxByOrNull { it.setNumber }
+        val type = exercise?.measurementType ?: MeasurementType.WEIGHT_AND_REPS
         viewModelScope.launch {
             routineRepository.addSetTemplate(
                 routineExerciseId,
                 SetTemplateInput(
-                    targetReps = lastSet?.targetReps ?: 10,
+                    targetReps = lastSet?.targetReps ?: if (type.has(SetField.REPS)) DEFAULT_REPS else 0,
                     targetWeight = lastSet?.targetWeight,
                     weightUnit = lastSet?.weightUnit,
-                    measurementType = lastSet?.measurementType ?: MeasurementType.WEIGHT_AND_REPS,
+                    measurementType = type,
+                    targetDurationSeconds = lastSet?.targetDurationSeconds,
+                    targetDistanceMeters = lastSet?.targetDistanceMeters,
                 ),
             )
             loadRoutine()
@@ -260,5 +264,6 @@ class RoutineEditorViewModel @Inject constructor(
     companion object {
         const val NEW_ROUTINE_ID = 0L
         const val PROGRESS_SESSIONS = 20
+        const val DEFAULT_REPS = 10
     }
 }

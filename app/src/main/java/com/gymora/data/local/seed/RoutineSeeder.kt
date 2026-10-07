@@ -43,9 +43,10 @@ class RoutineSeederImpl @Inject constructor() : RoutineSeeder {
                     ),
                 )
                 routine.exercises.forEachIndexed { exerciseIndex, exercise ->
-                    val exerciseId = database.exerciseDao().getByName(exercise.name)?.id
+                    val libraryExercise = database.exerciseDao().getByName(exercise.name)
                     // Skip silently if a library name ever drifts; never seed a broken FK.
-                    if (exerciseId == null) return@forEachIndexed
+                    if (libraryExercise == null) return@forEachIndexed
+                    val exerciseId = libraryExercise.id
                     val routineExerciseId = database.routineExerciseDao().insert(
                         RoutineExerciseEntity(
                             routineId = routineId,
@@ -62,7 +63,8 @@ class RoutineSeederImpl @Inject constructor() : RoutineSeeder {
                                 targetReps = exercise.targetReps,
                                 targetWeight = null,
                                 targetWeightUnit = null,
-                                measurementType = exercise.measurementType.name,
+                                // The library's tracking type wins, e.g. a timed plank.
+                                measurementType = libraryExercise.measurementType,
                             ),
                         )
                     }

@@ -32,9 +32,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gymora.data.backup.BackupService
 import com.gymora.domain.model.Theme
+import com.gymora.health.HealthConnectSync
+import com.gymora.ui.components.ConfirmDialog
+import java.time.LocalDate
 import com.gymora.domain.model.WeightUnit
 
+private val RESTORE_MIME_TYPES = arrayOf(BackupService.MIME_TYPE, "application/octet-stream")
 private val IMPORT_MIME_TYPES = arrayOf("text/*", "application/csv", "application/vnd.ms-excel")
 
 /**
@@ -56,6 +61,26 @@ fun SettingsScreen(
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let(viewModel::onImportCsv) }
+    val backupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(BackupService.MIME_TYPE),
+    ) { uri -> uri?.let(viewModel::onExportBackup) }
+    val restoreLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let(viewModel::onRestoreFilePicked) }
+    val folderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri -> uri?.let(viewModel::onAutoBackupFolderPicked) }
+    val healthPermissionLauncher = rememberLauncherForActivityResult(
+        HealthConnectSync.permissionContract(),
+        viewModel::onHealthPermissionsResult,
+    )
+
+    LaunchedEffect(uiState.requestHealthPermissions) {
+        if (uiState.requestHealthPermissions) {
+            viewModel.onHealthPermissionRequestLaunched()
+            healthPermissionLauncher.launch(HealthConnectSync.PERMISSIONS)
+        }
+    }
 
     LaunchedEffect(uiState.transferMessage) {
         uiState.transferMessage?.let {
@@ -143,7 +168,7 @@ fun SettingsScreen(
                 Text(
                     text = "Export completed workouts to a CSV file, or import workouts from one " +
                         "(one row per set; columns: Start, End, Workout, Workout Notes, Exercise, " +
-                        "Set, Weight, Unit, Reps, Set Notes).",
+                        "Set, Weight, Unit, Reps, Set Notes, Seconds, Distance m, Side).",
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
@@ -158,7 +183,42 @@ fun SettingsScreen(
                     ) { Text("Import CSV") }
                 }
             }
+
+            SettingsSection(title = "Backup & Restore") {
+                BackupSetting(
+                    settings = settings,
+                    busy = uiState.transferInProgress,
+                    onExport = { backupLauncher.launch("gymora-backup-${LocalDate.now()}.zip") },
+                    onRestore = { restoreLauncher.launch(RESTORE_MIME_TYPES) },
+                    onPickFolder = { folderLauncher.launch(null) },
+                    onIntervalSelected = viewModel::onAutoBackupIntervalSelected,
+                    onBackupNow = viewModel::onBackupNow,
+                )
+            }
+
+            SettingsSection(title = "Health Connect") {
+                HealthConnectSetting(
+                    enabled = settings.healthConnectEnabled,
+                    availability = uiState.healthAvailability,
+                    permissionsGranted = uiState.healthPermissionsGranted,
+                    busy = uiState.transferInProgress,
+                    onToggle = viewModel::onHealthConnectToggled,
+                    onSyncNow = viewModel::onHealthSyncNow,
+                )
+            }
         }
+    }
+
+    uiState.pendingRestoreUri?.let {
+        ConfirmDialog(
+            title = "Replace all data?",
+            message = "Restoring replaces every workout, routine, exercise, measurement and setting " +
+                "on this phone with the backup's. This can't be undone; back up first if unsure.",
+            confirmLabel = "Restore",
+            dismissLabel = "Cancel",
+            onConfirm = { viewModel.onRestoreDecision(confirmed = true) },
+            onDismiss = { viewModel.onRestoreDecision(confirmed = false) },
+        )
     }
 
     // Custom rest duration dialog

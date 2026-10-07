@@ -20,8 +20,12 @@ class CorrectHistoricalWorkoutUseCase @Inject constructor(
         reps: Int?,
         isCompleted: Boolean,
         notes: String?,
+        durationSeconds: Int? = null,
+        distanceMeters: Double? = null,
     ) {
-        historyRepository.correctSet(setId, weight, weightUnit, reps, isCompleted, notes)
+        historyRepository.correctSet(
+            setId, weight, weightUnit, reps, isCompleted, notes, durationSeconds, distanceMeters,
+        )
     }
 
     suspend fun addExercise(sessionId: Long, exerciseId: Long) {
@@ -34,5 +38,13 @@ class CorrectHistoricalWorkoutUseCase @Inject constructor(
 
     suspend fun updateNotes(sessionId: Long, notes: String?) {
         historyRepository.updateHistoricalWorkoutNotes(sessionId, notes)
+    }
+
+    suspend fun updateTimes(
+        sessionId: Long,
+        startedAt: java.time.Instant,
+        endedAt: java.time.Instant,
+    ) {
+        historyRepository.updateHistoricalWorkoutTimes(sessionId, startedAt, endedAt)
     }
 }

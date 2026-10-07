@@ -30,10 +30,18 @@ interface WorkoutSessionRepository {
     suspend fun getPreviousPerformance(exerciseId: Long): PreviousPerformance?
 
     /** Set logging — every call persists immediately (FR-025, FR-027). */
-    suspend fun updateSetValues(setId: Long, weight: Double?, weightUnit: WeightUnit?, reps: Int?)
+    suspend fun updateSetValues(
+        setId: Long,
+        weight: Double?,
+        weightUnit: WeightUnit?,
+        reps: Int?,
+        durationSeconds: Int? = null,
+        distanceMeters: Double? = null,
+    )
     suspend fun completeSet(setId: Long)
     suspend fun uncompleteSet(setId: Long)
-    suspend fun addSet(workoutExerciseId: Long): Long // FR-026
+    /** FR-026. Adds a left and a right set for unilateral exercises; returns the first id. */
+    suspend fun addSet(workoutExerciseId: Long): Long
     suspend fun deleteSet(setId: Long)
 
     /** FR-028: add exercise to session; addToRoutine=true also appends it to the source routine. */

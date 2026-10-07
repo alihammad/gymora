@@ -2,6 +2,7 @@ package com.gymora.data.repository
 
 import com.gymora.data.local.ExerciseMetadataCodec
 import com.gymora.data.local.dao.ExerciseDao
+import com.gymora.data.local.parseMeasurementType
 import com.gymora.data.local.entity.ExerciseEntity
 import com.gymora.domain.model.CreateExerciseInput
 import com.gymora.domain.model.DifficultyLevel
@@ -38,6 +39,9 @@ class ExerciseRepositoryImpl @Inject constructor(
         return entity.toDomain()
     }
 
+    override fun observeById(id: Long): Flow<Exercise?> =
+        exerciseDao.observeById(id).map { it?.toDomain() }
+
     override suspend fun createCustom(input: CreateExerciseInput): Exercise {
         ExerciseValidation.validate(input)
         val now = System.currentTimeMillis()
@@ -51,6 +55,10 @@ class ExerciseRepositoryImpl @Inject constructor(
                 deletedAt = null,
                 createdAt = now,
                 updatedAt = now,
+                measurementType = input.measurementType.name,
+                isUnilateral = input.isUnilateral,
+                formCuesJson = ExerciseMetadataCodec.encodeFormCues(input.formCues),
+                mediaFile = input.mediaFile,
             ),
         )
         return getById(id)
@@ -65,6 +73,10 @@ class ExerciseRepositoryImpl @Inject constructor(
                 muscleGroup = input.muscleGroup?.name,
                 description = input.description,
                 notes = input.notes,
+                measurementType = input.measurementType.name,
+                isUnilateral = input.isUnilateral,
+                formCuesJson = ExerciseMetadataCodec.encodeFormCues(input.formCues),
+                mediaFile = input.mediaFile,
                 updatedAt = System.currentTimeMillis(),
             ),
         )
@@ -92,5 +104,9 @@ class ExerciseRepositoryImpl @Inject constructor(
         instructions = ExerciseMetadataCodec.decodeInstructions(instructionsJson),
         muscleGroups = ExerciseMetadataCodec.decodeMuscleGroups(muscleGroupsJson),
         equipment = ExerciseMetadataCodec.decodeEquipment(equipmentJson),
+        measurementType = parseMeasurementType(measurementType),
+        isUnilateral = isUnilateral,
+        formCues = ExerciseMetadataCodec.decodeFormCues(formCuesJson),
+        mediaFile = mediaFile,
     )
 }
