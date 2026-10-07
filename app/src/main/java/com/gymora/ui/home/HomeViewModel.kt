@@ -18,6 +18,7 @@ class HomeViewModel @Inject constructor(
     private val routineRepository: RoutineRepository,
     private val historyRepository: HistoryRepository,
     private val getEngagement: GetEngagementUseCase,
+    private val workoutSessionRepository: com.gymora.domain.repository.WorkoutSessionRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -27,6 +28,11 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             routineRepository.observeAll().collect { routines ->
                 _uiState.update { it.copy(routines = routines, isLoading = false) }
+            }
+        }
+        viewModelScope.launch {
+            workoutSessionRepository.observeActiveSession().collect { active ->
+                _uiState.update { it.copy(activeWorkout = active) }
             }
         }
         loadRecentWorkouts()

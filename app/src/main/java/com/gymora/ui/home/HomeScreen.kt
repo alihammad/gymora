@@ -76,6 +76,7 @@ fun HomeScreen(
     onBody: () -> Unit,
     onProgress: () -> Unit,
     onStartWorkout: ((Long) -> Unit)? = null,
+    onResumeWorkout: ((Long) -> Unit)? = null,
     onRecentWorkoutClick: ((Long) -> Unit)? = null,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -121,6 +122,14 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
+            uiState.activeWorkout?.let { active ->
+                InProgressBanner(
+                    workout = active,
+                    onResume = { onResumeWorkout?.invoke(active.session.id) },
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                )
+            }
+
             WeekStrip(
                 weekStart = uiState.weekStart,
                 workoutDays = uiState.workoutDays,
@@ -206,6 +215,52 @@ fun HomeScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/** Prominent resume card for the unfinished workout, with a live elapsed timer. */
+@Composable
+private fun InProgressBanner(
+    workout: com.gymora.domain.model.ActiveWorkout,
+    onResume: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var elapsed by remember { mutableStateOf(0L) }
+    androidx.compose.runtime.LaunchedEffect(workout.startedAt) {
+        while (true) {
+            elapsed = java.time.Duration.between(workout.startedAt, java.time.Instant.now()).seconds
+            kotlinx.coroutines.delay(1000)
+        }
+    }
+    Card(
+        onClick = onResume,
+        modifier = modifier.fillMaxWidth(),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Workout in progress", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = workout.session.routineNameSnapshot,
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Text(
+                    text = com.gymora.ui.workout.formatElapsed(elapsed),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            FilledIconButton(onClick = onResume) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = "Resume workout")
             }
         }
     }

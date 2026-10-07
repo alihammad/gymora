@@ -156,6 +156,9 @@ fun GymoraNavHost(
                     onStartWorkout = { routineId ->
                         navController.navigate(Destinations.StartWorkout.create(routineId))
                     },
+                    onResumeWorkout = { sessionId ->
+                        navController.navigate(Destinations.ActiveWorkout.create(sessionId))
+                    },
                     onRecentWorkoutClick = { sessionId ->
                         navController.navigate(Destinations.WorkoutDetail.create(sessionId))
                     },

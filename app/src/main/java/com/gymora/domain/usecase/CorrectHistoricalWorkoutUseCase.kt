@@ -36,6 +36,10 @@ class CorrectHistoricalWorkoutUseCase @Inject constructor(
         historyRepository.removeExerciseFromHistoricalWorkout(workoutExerciseId)
     }
 
+    suspend fun deleteWorkout(sessionId: Long) {
+        historyRepository.deleteWorkout(sessionId)
+    }
+
     suspend fun updateNotes(sessionId: Long, notes: String?) {
         historyRepository.updateHistoricalWorkoutNotes(sessionId, notes)
     }

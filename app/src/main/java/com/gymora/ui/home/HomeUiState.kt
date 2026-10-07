@@ -18,6 +18,8 @@ data class HomeUiState(
     val selectedDayWorkouts: List<com.gymora.domain.model.WorkoutDetail> = emptyList(),
     /** Weekly goal progress and streak; null until loaded. */
     val weeklyProgress: com.gymora.domain.calculator.WeeklyProgress? = null,
+    /** Unfinished workout, if any; shown as a resume banner. */
+    val activeWorkout: com.gymora.domain.model.ActiveWorkout? = null,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
 )

@@ -62,6 +62,9 @@ interface HistoryRepository {
 
     suspend fun updateHistoricalWorkoutNotes(sessionId: Long, notes: String?)
 
+    /** Permanently deletes a completed workout; CASCADE removes its exercises and sets. */
+    suspend fun deleteWorkout(sessionId: Long)
+
     /** Correct a completed workout's start time and end time. */
     suspend fun updateHistoricalWorkoutTimes(
         sessionId: Long,
