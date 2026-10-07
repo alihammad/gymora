@@ -64,11 +64,9 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** The 3 most recent completed workouts, plus the weekly goal card (spec Assumption, FR-002, T050a). */
+    /** Week strip and weekly goal card (spec Assumption, FR-002, T050a). */
     fun loadRecentWorkouts() {
         viewModelScope.launch {
-            val recent = historyRepository.listCompleted(limit = RECENT_COUNT, offset = 0)
-            _uiState.update { it.copy(recentWorkouts = recent) }
             loadWorkoutDays()
             val progress = getEngagement().progress
             _uiState.update { it.copy(weeklyProgress = progress) }
@@ -112,7 +110,4 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    companion object {
-        const val RECENT_COUNT = 3
-    }
 }

@@ -60,6 +60,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -287,7 +288,7 @@ private fun RoutineHeader(routine: RoutineDetail) {
             modifier = Modifier.size(56.dp).background(accent, CircleShape),
         ) {
             Icon(
-                routineIcon(routine.header.name),
+                painterResource(routineIcon(routine.header.name)),
                 contentDescription = null,
                 tint = extra.onTileAccents[accentIndex],
                 modifier = Modifier.size(28.dp),

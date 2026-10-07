@@ -48,6 +48,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -200,7 +201,7 @@ private fun RoutineTile(
                 horizontalArrangement = Arrangement.Center,
             ) {
                 Icon(
-                    routineIcon(name),
+                    painterResource(routineIcon(name)),
                     contentDescription = null,
                     tint = extra.onTileAccents[slot],
                     modifier = Modifier.size(22.dp),

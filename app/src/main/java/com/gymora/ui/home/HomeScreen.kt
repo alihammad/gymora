@@ -86,7 +86,6 @@ fun HomeScreen(
     onProgress: () -> Unit,
     onStartWorkout: ((Long) -> Unit)? = null,
     onResumeWorkout: ((Long) -> Unit)? = null,
-    onRecentWorkoutClick: ((Long) -> Unit)? = null,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -266,24 +265,6 @@ fun HomeScreen(
                                 onStart = { startRoutine(routine.id) },
                             )
                         }
-                        // Recent Workouts section (T050a, FR-002, spec Assumption).
-                        if (uiState.recentWorkouts.isNotEmpty()) {
-                            item {
-                                Text(
-                                    text = "Recent Workouts",
-                                    style = MaterialTheme.typography.titleMedium,
-                                )
-                            }
-                            items(
-                                uiState.recentWorkouts,
-                                key = { workout -> "recent-${workout.id}" },
-                            ) { workout ->
-                                RecentWorkoutRow(
-                                    workout = workout,
-                                    onClick = { onRecentWorkoutClick?.invoke(workout.id) },
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -459,38 +440,6 @@ private fun RoutineCard(
 
 private fun formatDate(timestamp: Long): String =
     SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(timestamp))
-
-/** Recent-workout row (T050a, FR-002): name, date, duration; tap opens detail. */
-@Composable
-private fun RecentWorkoutRow(
-    workout: com.gymora.domain.model.HistoryEntry,
-    onClick: () -> Unit,
-) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = workout.routineNameSnapshot, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = formatDate(workout.startedAt.toEpochMilli()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(
-                text = com.gymora.ui.workout.formatElapsed(workout.duration.seconds),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-    }
-}
 
 /** Before Android 10 the step sensor needs no runtime permission. */
 private fun hasStepPermission(context: android.content.Context): Boolean =

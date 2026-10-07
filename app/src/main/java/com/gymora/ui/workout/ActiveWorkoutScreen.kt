@@ -88,6 +88,7 @@ import java.time.format.DateTimeFormatter
 fun ActiveWorkoutScreen(
     onFinished: (Long) -> Unit,
     onDiscarded: () -> Unit,
+    onBack: () -> Unit = {},
     viewModel: ActiveWorkoutViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -120,8 +121,8 @@ fun ActiveWorkoutScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = viewModel::onCancelRequested) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Cancel workout")
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
             )
@@ -182,6 +183,17 @@ fun ActiveWorkoutScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text("FINISH WORKOUT")
+                        }
+                    }
+                    item {
+                        com.gymora.ui.components.TextButton(
+                            onClick = viewModel::onCancelRequested,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
+                        ) {
+                            Text("Discard workout")
                         }
                     }
                     }

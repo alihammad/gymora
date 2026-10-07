@@ -1,12 +1,10 @@
 package com.gymora.ui.home
 
-import com.gymora.domain.model.HistoryEntry
 import com.gymora.domain.model.RoutineSummary
 
 /** UI state for the home screen (FR-001, FR-002, FR-015). */
 data class HomeUiState(
     val routines: List<RoutineSummary> = emptyList(),
-    val recentWorkouts: List<HistoryEntry> = emptyList(),
     /** Monday of the week shown in the calendar strip. */
     val weekStart: java.time.LocalDate = java.time.LocalDate.now()
         .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)),

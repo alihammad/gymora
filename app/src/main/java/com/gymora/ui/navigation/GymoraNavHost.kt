@@ -158,9 +158,6 @@ fun GymoraNavHost(
                     onResumeWorkout = { sessionId ->
                         navController.navigate(Destinations.ActiveWorkout.create(sessionId))
                     },
-                    onRecentWorkoutClick = { sessionId ->
-                        navController.navigate(Destinations.WorkoutDetail.create(sessionId))
-                    },
                 )
             }
             composable(Destinations.History.route) {
@@ -240,6 +237,7 @@ fun GymoraNavHost(
                     onDiscarded = {
                         navController.popBackStack(Destinations.Home.route, inclusive = false)
                     },
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable(Destinations.StartWorkout.route) {
@@ -252,6 +250,7 @@ fun GymoraNavHost(
                     onDiscarded = {
                         navController.popBackStack(Destinations.Home.route, inclusive = false)
                     },
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable(Destinations.WorkoutSummary.route) {
