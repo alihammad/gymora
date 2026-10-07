@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.MonitorWeight
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import com.gymora.ui.components.Button
@@ -70,7 +69,6 @@ fun HomeScreen(
     onCreateRoutine: () -> Unit,
     onCreateExercise: () -> Unit,
     onMyRoutines: () -> Unit,
-    onRecentWorkouts: () -> Unit,
     onHistory: () -> Unit,
     onRecords: () -> Unit,
     onBody: () -> Unit,
@@ -81,6 +79,36 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var blockedStart by remember { mutableStateOf(false) }
+
+    // Only one workout can be active: START on the active routine resumes it,
+    // START on another routine explains why it can't begin.
+    val startRoutine: (Long) -> Unit = start@{ routineId ->
+        val active = uiState.activeWorkout
+        when {
+            active == null -> onStartWorkout?.invoke(routineId)
+            active.session.routineId == routineId -> onResumeWorkout?.invoke(active.session.id)
+            else -> blockedStart = true
+        }
+    }
+    if (blockedStart) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { blockedStart = false },
+            title = { Text("Workout in progress") },
+            text = {
+                Text("Finish or discard \"${uiState.activeWorkout?.session?.routineNameSnapshot.orEmpty()}\" before starting another workout.")
+            },
+            confirmButton = {
+                com.gymora.ui.components.TextButton(onClick = {
+                    blockedStart = false
+                    uiState.activeWorkout?.let { onResumeWorkout?.invoke(it.session.id) }
+                }) { Text("Resume") }
+            },
+            dismissButton = {
+                com.gymora.ui.components.TextButton(onClick = { blockedStart = false }) { Text("Cancel") }
+            },
+        )
+    }
 
     // Refresh the recent-workouts section whenever Home becomes visible again.
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -162,7 +190,6 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 QuickLinkChip("My Workouts", Icons.Filled.FormatListBulleted, onMyRoutines)
-                QuickLinkChip("Recent", Icons.Filled.Schedule, onRecentWorkouts)
                 QuickLinkChip("History", Icons.Filled.History, onHistory)
                 QuickLinkChip("Progress", Icons.AutoMirrored.Filled.ShowChart, onProgress)
                 QuickLinkChip("Records", Icons.Filled.EmojiEvents, onRecords)
@@ -192,7 +219,7 @@ fun HomeScreen(
                             RoutineCard(
                                 routine = routine,
                                 onClick = { onRoutineClick(routine.id) },
-                                onStart = { onStartWorkout?.invoke(routine.id) },
+                                onStart = { startRoutine(routine.id) },
                             )
                         }
                         // Recent Workouts section (T050a, FR-002, spec Assumption).
