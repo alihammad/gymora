@@ -37,6 +37,9 @@ data class WorkoutDetailUiState(
     val isEditing: Boolean = false,
     val editableSets: Map<Long, EditableSet> = emptyMap(),
     val editableNotes: String = "",
+    val editableStart: java.time.Instant? = null,
+    /** Duration in whole minutes, as typed. */
+    val editableDurationMinutes: String = "",
     val showAddExercise: Boolean = false,
     val libraryExercises: List<Exercise> = emptyList(),
     val pendingRemoveExerciseId: Long? = null,
@@ -104,8 +107,21 @@ class WorkoutDetailViewModel @Inject constructor(
                 isEditing = true,
                 editableSets = editable,
                 editableNotes = detail.session.notes.orEmpty(),
+                editableStart = detail.session.startedAt,
+                editableDurationMinutes = detail.session.endedAt?.let { ended ->
+                    (java.time.Duration.between(detail.session.startedAt, ended).seconds / 60)
+                        .toString()
+                }.orEmpty(),
             )
         }
+    }
+
+    fun onStartChanged(value: java.time.Instant) {
+        _uiState.update { it.copy(editableStart = value) }
+    }
+
+    fun onDurationMinutesChanged(value: String) {
+        _uiState.update { it.copy(editableDurationMinutes = value.filter(Char::isDigit).take(4)) }
     }
 
     fun cancelEdit() {
@@ -166,6 +182,15 @@ class WorkoutDetailViewModel @Inject constructor(
                     sessionId,
                     state.editableNotes.ifBlank { null },
                 )
+                val start = state.editableStart
+                val minutes = state.editableDurationMinutes.toLongOrNull()
+                if (start != null && minutes != null && detail.session.endedAt != null) {
+                    correctWorkoutUseCase.updateTimes(
+                        sessionId,
+                        start,
+                        start.plusSeconds(minutes * 60),
+                    )
+                }
             }.onSuccess {
                 _uiState.update { it.copy(isEditing = false, editableSets = emptyMap()) }
                 loadDetail()
