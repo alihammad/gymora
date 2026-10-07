@@ -9,6 +9,7 @@ import com.gymora.domain.model.ExerciseCategory
 import com.gymora.domain.model.ExerciseType
 import com.gymora.domain.model.ForceType
 import com.gymora.domain.model.Mechanics
+import com.gymora.domain.model.MuscleGroup
 import com.gymora.domain.repository.ExerciseRepository
 import com.gymora.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,6 +27,8 @@ enum class ExerciseFilterKind(val label: String) {
     FORCE("Force"),
     MECHANICS("Mechanics"),
     TYPE("Type"),
+    MUSCLE("Muscle"),
+    EQUIPMENT("Equipment"),
 }
 
 /** UI state for the filtered exercise list. */
@@ -67,6 +70,9 @@ class ExerciseFilterViewModel @Inject constructor(
         ExerciseFilterKind.FORCE -> exercise.forceType?.name == value
         ExerciseFilterKind.MECHANICS -> exercise.mechanics?.name == value
         ExerciseFilterKind.TYPE -> exercise.type?.name == value
+        ExerciseFilterKind.MUSCLE ->
+            exercise.muscleGroups.any { it.group.name == value } || exercise.muscleGroup?.name == value
+        ExerciseFilterKind.EQUIPMENT -> exercise.equipment.any { it.name == value }
         null -> false
     }
 
@@ -77,6 +83,8 @@ class ExerciseFilterViewModel @Inject constructor(
         ExerciseFilterKind.MECHANICS -> Mechanics.entries.firstOrNull { it.name == value }?.displayName
         ExerciseFilterKind.TYPE -> ExerciseType.entries.firstOrNull { it.name == value }?.name?.lowercase()
             ?.replaceFirstChar { it.uppercase() }
+        ExerciseFilterKind.MUSCLE -> MuscleGroup.entries.firstOrNull { it.name == value }?.displayName
+        ExerciseFilterKind.EQUIPMENT -> value
         null -> null
     } ?: "Exercises"
 }

@@ -173,45 +173,41 @@ private fun ExerciseDetailContent(
         // Muscle groups (primary & secondary)
         if (exercise.muscleGroups.isNotEmpty()) {
             SectionCard(title = "Muscles Targeted") {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val primary = exercise.muscleGroups.filter { it.type == MuscleGroupType.PRIMARY }
-                    val secondary = exercise.muscleGroups.filter { it.type == MuscleGroupType.SECONDARY }
-                    if (primary.isNotEmpty()) {
-                        MuscleGroupRow("Primary", primary)
-                    }
-                    if (secondary.isNotEmpty()) {
-                        MuscleGroupRow("Secondary", secondary)
+                val ordered = exercise.muscleGroups.sortedBy { it.type }
+                ChipFlow {
+                    ordered.forEach { ref ->
+                        AttributeChip(
+                            value = ref.group.displayName,
+                            label = ref.type.name.lowercase().replaceFirstChar { it.uppercase() },
+                            onClick = { onFilterClick(ExerciseFilterKind.MUSCLE.name, ref.group.name) },
+                        )
                     }
                 }
             }
         } else if (exercise.muscleGroup != null) {
             SectionCard(title = "Muscle Group") {
-                Text(exercise.muscleGroup.displayName)
+                ChipFlow {
+                    AttributeChip(
+                        value = exercise.muscleGroup.displayName,
+                        label = "Muscle",
+                        onClick = {
+                            onFilterClick(ExerciseFilterKind.MUSCLE.name, exercise.muscleGroup.name)
+                        },
+                    )
+                }
             }
         }
 
         // Equipment
         if (exercise.equipment.isNotEmpty()) {
             SectionCard(title = "Equipment") {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ChipFlow {
                     exercise.equipment.forEach { item ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                Icons.Filled.FitnessCenter,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(item.name)
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                text = item.usageType.name.lowercase(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        AttributeChip(
+                            value = item.name,
+                            label = item.usageType.name.lowercase().replaceFirstChar { it.uppercase() },
+                            onClick = { onFilterClick(ExerciseFilterKind.EQUIPMENT.name, item.name) },
+                        )
                     }
                 }
             }
@@ -285,30 +281,47 @@ private fun AttributeChips(
     }
     if (chips.isEmpty()) return
 
+    ChipFlow {
+        chips.forEach { (kind, value, filterValue) ->
+            AttributeChip(
+                value = value,
+                label = kind.label,
+                onClick = { onFilterClick(kind.name, filterValue) },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ChipFlow(content: @Composable () -> Unit) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) { content() }
+}
+
+/** Tappable two-line pill: the value on top, what it is underneath. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AttributeChip(value: String, label: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = GymoraShapes.chip,
+        color = MaterialTheme.colorScheme.primaryContainer,
     ) {
-        chips.forEach { (kind, value, filterValue) ->
-            Surface(
-                onClick = { onFilterClick(kind.name, filterValue) },
-                shape = GymoraShapes.chip,
-                color = MaterialTheme.colorScheme.primaryContainer,
-            ) {
-                Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
-                    Text(
-                        text = value,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    Text(
-                        text = kind.label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                    )
-                }
-            }
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+            )
         }
     }
 }
@@ -339,34 +352,6 @@ private fun SectionCard(
             }
             Spacer(Modifier.height(12.dp))
             content()
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun MuscleGroupRow(label: String, groups: List<MuscleGroupRef>) {
-    Column {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(4.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            groups.forEach { ref ->
-                Surface(
-                    shape = GymoraShapes.chip,
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                ) {
-                    Text(
-                        text = ref.group.displayName,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    )
-                }
-            }
         }
     }
 }
