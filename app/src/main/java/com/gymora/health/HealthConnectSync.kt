@@ -8,6 +8,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.metadata.Metadata
+import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -96,6 +97,22 @@ class HealthConnectSync @Inject constructor(
             ),
         )
         (result[StepsRecord.COUNT_TOTAL] ?: 0L).toInt()
+    }.getOrNull()
+
+    /** Daily step totals for the last [days] days (today included); null when [todaySteps] would be. */
+    suspend fun dailySteps(days: Int): Map<LocalDate, Int>? = runCatching {
+        if (!settingsRepository.observeSettings().first().healthStepsEnabled || !hasStepsPermission()) {
+            return@runCatching null
+        }
+        val start = LocalDate.now().minusDays(days - 1L).atStartOfDay()
+        val buckets = client.aggregateGroupByPeriod(
+            AggregateGroupByPeriodRequest(
+                metrics = setOf(StepsRecord.COUNT_TOTAL),
+                timeRangeFilter = TimeRangeFilter.between(start, java.time.LocalDateTime.now()),
+                timeRangeSlicer = java.time.Period.ofDays(1),
+            ),
+        )
+        buckets.associate { it.startTime.toLocalDate() to (it.result[StepsRecord.COUNT_TOTAL] ?: 0L).toInt() }
     }.getOrNull()
 
     /** After a workout is finished. No-op unless sync is on and permitted. */

@@ -286,7 +286,12 @@ fun GymoraNavHost(
                 BodyMeasurementsScreen(onBack = { navController.popBackStack() })
             }
             composable(Destinations.Records.route) {
-                RecordsScreen(onBack = { navController.popBackStack() })
+                RecordsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenWorkout = { sessionId ->
+                        navController.navigate(Destinations.WorkoutDetail.create(sessionId))
+                    },
+                )
             }
         }
     }

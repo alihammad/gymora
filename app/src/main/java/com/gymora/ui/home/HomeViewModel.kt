@@ -30,6 +30,7 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     private var stepJob: Job? = null
+    private var stepHistoryJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -48,6 +49,29 @@ class HomeViewModel @Inject constructor(
             }
         }
         loadRecentWorkouts()
+    }
+
+    /** Opens the step history sheet on the last 7 days. */
+    fun onStepsClicked() {
+        _uiState.update { it.copy(showStepHistory = true) }
+        loadStepHistory(STEP_HISTORY_WEEK)
+    }
+
+    fun onStepHistoryRangeSelected(days: Int) = loadStepHistory(days)
+
+    fun onStepHistoryDismissed() {
+        stepHistoryJob?.cancel()
+        _uiState.update { it.copy(showStepHistory = false, stepHistory = emptyList()) }
+    }
+
+    private fun loadStepHistory(days: Int) {
+        stepHistoryJob?.cancel()
+        _uiState.update { it.copy(stepHistoryDays = days, stepHistory = emptyList()) }
+        stepHistoryJob = viewModelScope.launch {
+            stepRepository.observeHistory(days).collect { history ->
+                _uiState.update { it.copy(stepHistory = history) }
+            }
+        }
     }
 
     /**
@@ -110,4 +134,8 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    companion object {
+        const val STEP_HISTORY_WEEK = 7
+        const val STEP_HISTORY_MONTH = 30
+    }
 }

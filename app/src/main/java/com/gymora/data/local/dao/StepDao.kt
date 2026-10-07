@@ -14,6 +14,9 @@ abstract class StepDao {
     @Query("SELECT steps FROM step_days WHERE date = :date")
     abstract fun observeSteps(date: String): Flow<Int?>
 
+    @Query("SELECT * FROM step_days WHERE date >= :from AND date <= :to ORDER BY date")
+    abstract fun observeRange(from: String, to: String): Flow<List<StepDayEntity>>
+
     @Query("SELECT * FROM step_days WHERE date = :date")
     abstract suspend fun get(date: String): StepDayEntity?
 

@@ -150,7 +150,7 @@ class PersonalRecordsTest {
             val best = sets
                 .filter { it.isCompleted && it.weight != null && it.weight > 0 }
                 .maxByOrNull { it.weight!! }
-            return best?.let { PersonalRecord(it.weight!!, exerciseName, date) }
+            return best?.let { PersonalRecord(it.weight!!, exerciseName, date, sessionId = 0L) }
         }
 
         fun findHighestReps(
@@ -161,7 +161,7 @@ class PersonalRecordsTest {
             val best = sets
                 .filter { it.isCompleted && it.reps != null && it.reps > 0 }
                 .maxByOrNull { it.reps!! }
-            return best?.let { PersonalRecord(it.reps!!.toDouble(), exerciseName, date) }
+            return best?.let { PersonalRecord(it.reps!!.toDouble(), exerciseName, date, sessionId = 0L) }
         }
 
         fun findBestEpley(
@@ -177,6 +177,7 @@ class PersonalRecordsTest {
                     WorkoutCalculators.estimatedOneRepMax(it.weight!!, it.reps!!),
                     exerciseName,
                     date,
+                    sessionId = 0L,
                 )
             }
         }

@@ -21,6 +21,10 @@ data class HomeUiState(
     /** Steps today from the step sensor and/or Health Connect; null when no source is available. */
     val stepsToday: Int? = null,
     val stepGoal: Int = com.gymora.domain.model.Settings.DEFAULT_STEP_GOAL,
+    /** Step history sheet (opened by tapping the steps card); [stepHistory] is oldest first. */
+    val showStepHistory: Boolean = false,
+    val stepHistoryDays: Int = 7,
+    val stepHistory: List<com.gymora.domain.model.DaySteps> = emptyList(),
     /** False on phones without a step counter sensor. */
     val stepsSupported: Boolean = true,
     val isLoading: Boolean = true,

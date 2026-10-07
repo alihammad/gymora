@@ -10,6 +10,7 @@ import android.hardware.SensorManager
 import android.os.Build
 import androidx.core.content.ContextCompat
 import com.gymora.data.local.dao.StepDao
+import com.gymora.domain.model.DaySteps
 import com.gymora.domain.repository.StepRepository
 import com.gymora.health.HealthConnectSync
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -51,6 +52,19 @@ class StepRepositoryImpl @Inject constructor(
         return combine(sensor, healthSteps()) { fromSensor, fromHealth ->
             if (fromSensor == null && fromHealth == null) null else maxOf(fromSensor ?: 0, fromHealth ?: 0)
         }.distinctUntilChanged()
+    }
+
+    override fun observeHistory(days: Int): Flow<List<DaySteps>> {
+        val today = LocalDate.now()
+        val first = today.minusDays(days - 1L)
+        val health = flow { emit(healthConnectSync.dailySteps(days).orEmpty()) }
+        return combine(stepDao.observeRange(first.toString(), today.toString()), health) { rows, fromHealth ->
+            val sensor = rows.associate { LocalDate.parse(it.date) to it.steps }
+            (0 until days).map { offset ->
+                val date = first.plusDays(offset.toLong())
+                DaySteps(date, maxOf(sensor[date] ?: 0, fromHealth[date] ?: 0))
+            }
+        }
     }
 
     override suspend fun recordSnapshot() {

@@ -9,6 +9,7 @@ data class PersonalRecord(
     val value: Double,
     val exerciseName: String,
     val date: Instant,
+    val sessionId: Long,
 )
 
 /**

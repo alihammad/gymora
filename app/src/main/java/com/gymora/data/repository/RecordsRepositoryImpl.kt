@@ -100,6 +100,7 @@ class RecordsRepositoryImpl @Inject constructor(
         val isCompleted: Boolean,
         val exerciseName: String,
         val sessionDate: Instant,
+        val sessionId: Long,
     )
 
     private suspend fun collectPerformedSets(
@@ -122,6 +123,7 @@ class RecordsRepositoryImpl @Inject constructor(
                         isCompleted = set.isCompleted,
                         exerciseName = exercise.exerciseNameSnapshot,
                         sessionDate = Instant.ofEpochMilli(session.startedAt),
+                        sessionId = session.id,
                     )
                 }
             }
@@ -132,13 +134,13 @@ class RecordsRepositoryImpl @Inject constructor(
         sets.asSequence()
             .filter { it.isCompleted && it.weightKg != null && it.weightKg > 0 }
             .maxByOrNull { it.weightKg!! }
-            ?.let { PersonalRecord(it.weightKg!!, it.exerciseName, it.sessionDate) }
+            ?.let { PersonalRecord(it.weightKg!!, it.exerciseName, it.sessionDate, it.sessionId) }
 
     private fun highestReps(sets: List<PerformedSet>): PersonalRecord? =
         sets.asSequence()
             .filter { it.isCompleted && it.reps != null && it.reps > 0 }
             .maxByOrNull { it.reps!! }
-            ?.let { PersonalRecord(it.reps!!.toDouble(), it.exerciseName, it.sessionDate) }
+            ?.let { PersonalRecord(it.reps!!.toDouble(), it.exerciseName, it.sessionDate, it.sessionId) }
 
     private fun bestEstimatedOneRepMax(sets: List<PerformedSet>): PersonalRecord? =
         sets.asSequence()
@@ -153,32 +155,34 @@ class RecordsRepositoryImpl @Inject constructor(
                     WorkoutCalculators.estimatedOneRepMax(it.weightKg!!, it.reps!!),
                     it.exerciseName,
                     it.sessionDate,
+                    it.sessionId,
                 )
             }
 
     private suspend fun largestWorkoutVolume(
         sessions: List<WorkoutSessionEntity>,
     ): PersonalRecord? {
-        var best: Triple<String, Double, Instant>? = null
+        var best: PersonalRecord? = null
         for (session in sessions) {
-            val volume = sessionVolume(session) ?: continue
-            if (best == null || volume.second > best.second) best = volume
+            val record = sessionVolume(session) ?: continue
+            if (best == null || record.value > best.value) best = record
         }
-        return best?.let { (name, volume, date) -> PersonalRecord(volume, name, date) }
+        return best
     }
 
     private suspend fun sessionVolume(
         session: WorkoutSessionEntity,
-    ): Triple<String, Double, Instant>? {
+    ): PersonalRecord? {
         val volume = database.workoutExerciseDao()
             .getForSession(session.id)
             .flatMap { exercise -> database.workoutSetDao().getForExercise(exercise.id) }
             .sumOf(::completedSetVolume)
         if (volume <= 0) return null
-        return Triple(
-            session.routineNameSnapshot,
+        return PersonalRecord(
             volume,
+            session.routineNameSnapshot,
             Instant.ofEpochMilli(session.startedAt),
+            session.id,
         )
     }
 

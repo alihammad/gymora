@@ -39,6 +39,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun RecordsScreen(
     onBack: () -> Unit,
+    onOpenWorkout: (Long) -> Unit,
     viewModel: RecordsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -76,21 +77,25 @@ fun RecordsScreen(
                     title = "Heaviest Weight",
                     record = records?.heaviestWeight,
                     formatValue = { "%.1f %s".format(toDisplay(it, displayUnit), unitLabel) },
+                    onOpenWorkout = onOpenWorkout,
                 )
                 RecordCard(
                     title = "Most Reps",
                     record = records?.highestReps,
                     formatValue = { "%.0f reps".format(it) },
+                    onOpenWorkout = onOpenWorkout,
                 )
                 RecordCard(
                     title = "Best Estimated 1RM (Epley)",
                     record = records?.bestEstimatedOneRepMax,
                     formatValue = { "%.1f %s".format(toDisplay(it, displayUnit), unitLabel) },
+                    onOpenWorkout = onOpenWorkout,
                 )
                 RecordCard(
                     title = "Largest Workout Volume",
                     record = records?.largestWorkoutVolume,
                     formatValue = { "%.1f %s".format(toDisplay(it, displayUnit), unitLabel) },
+                    onOpenWorkout = onOpenWorkout,
                 )
             }
         }
@@ -113,8 +118,13 @@ private fun RecordCard(
     title: String,
     record: PersonalRecord?,
     formatValue: (Double) -> String,
+    onOpenWorkout: (Long) -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = { record?.let { onOpenWorkout(it.sessionId) } },
+        enabled = record != null,
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = title,

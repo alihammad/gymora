@@ -21,6 +21,13 @@ interface StepRepository {
     fun observeTodaySteps(useSensor: Boolean): Flow<Int?>
 
     /**
+     * Steps for each of the last [days] days (oldest first, today last, days without data
+     * as 0). Merges the sensor history with Health Connect's when that is turned on,
+     * taking the larger count per day. Today updates live.
+     */
+    fun observeHistory(days: Int): Flow<List<com.gymora.domain.model.DaySteps>>
+
+    /**
      * Records the current sensor reading without the app being open (the midnight job), so
      * steps taken while the app was closed land on the right day. No-op without the
      * sensor or its permission.

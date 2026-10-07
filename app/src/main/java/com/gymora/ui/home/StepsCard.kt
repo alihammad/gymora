@@ -39,6 +39,7 @@ fun StepsCard(
     goal: Int,
     permissionGranted: Boolean,
     onGrantPermission: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val format = NumberFormat.getIntegerInstance()
@@ -50,7 +51,12 @@ fun StepsCard(
         else -> "${format.format(count)} of ${format.format(goal)} steps today" +
             if (goalReached) ", goal reached" else ""
     }
-    Card(modifier = modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = description }) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth().semantics(mergeDescendants = true) {
+            contentDescription = "$description Tap for step history."
+        },
+    ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,

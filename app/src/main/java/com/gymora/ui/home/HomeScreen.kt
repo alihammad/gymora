@@ -211,7 +211,17 @@ fun HomeScreen(
                     onGrantPermission = {
                         if (stepPermissionNeeded) permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
                     },
+                    onClick = viewModel::onStepsClicked,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+            if (uiState.showStepHistory) {
+                StepHistorySheet(
+                    history = uiState.stepHistory,
+                    days = uiState.stepHistoryDays,
+                    goal = uiState.stepGoal,
+                    onRangeSelected = viewModel::onStepHistoryRangeSelected,
+                    onDismiss = viewModel::onStepHistoryDismissed,
                 )
             }
 
