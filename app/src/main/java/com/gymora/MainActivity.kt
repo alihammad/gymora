@@ -27,7 +27,6 @@ import com.gymora.ui.theme.palette
 import com.gymora.widget.GymoraWidgetProvider
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
-import kotlinx.coroutines.launch // DEMO_SEED (temporary)
 
 /**
  * Single-activity host for the Compose navigation graph (FR-004).
@@ -39,10 +38,6 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var settingsRepository: SettingsRepository
 
-    // DEMO_SEED (temporary): remove with DemoDataSeeder.kt
-    @Inject
-    lateinit var demoDataSeeder: com.gymora.data.local.seed.DemoDataSeeder
-
     /** Routine to start a workout from, requested by the widget or a reminder; null once handled. */
     private var startRoutineRequest by mutableStateOf<Long?>(null)
 
@@ -50,12 +45,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Only a fresh launch: after a configuration change the request was already handled.
         if (savedInstanceState == null) readStartRequest(intent)
-        // DEMO_SEED (temporary)
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-            // Wait for first-launch library/routine seeding before inserting demo history.
-            kotlinx.coroutines.delay(3000)
-            demoDataSeeder.seed()
-        }
         setContent {
             val settings by settingsRepository.observeSettings()
                 .collectAsState(initial = Settings.DEFAULTS)
