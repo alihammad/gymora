@@ -148,7 +148,6 @@ fun GymoraNavHost(
                         navController.navigate(Destinations.ExerciseEditor.create(NEW_EXERCISE_ID))
                     },
                     onMyRoutines ={ navController.navigate(Destinations.RoutineList.route) },
-                    onRecentWorkouts = { navController.navigateToTab(Destinations.History) },
                     onHistory = { navController.navigateToTab(Destinations.History) },
                     onRecords = { navController.navigate(Destinations.Records.route) },
                     onBody = { navController.navigate(Destinations.Body.route) },
