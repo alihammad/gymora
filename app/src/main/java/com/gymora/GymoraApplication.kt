@@ -2,6 +2,7 @@ package com.gymora
 
 import android.app.Application
 import com.gymora.data.backup.AutoBackupScheduler
+import com.gymora.data.steps.StepSyncScheduler
 import com.gymora.domain.repository.SettingsRepository
 import com.gymora.reminders.ReminderReceiver
 import com.gymora.reminders.ReminderScheduler
@@ -25,6 +26,8 @@ class GymoraApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         ReminderReceiver.createChannel(this)
+        // Nightly step snapshot, so steps taken while the app is closed land on the right day.
+        StepSyncScheduler.ensureScheduled(this)
         // Keep the pending reminder alarm in step with the saved schedule.
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             settingsRepository.observeSettings()

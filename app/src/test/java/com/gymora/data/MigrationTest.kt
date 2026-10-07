@@ -110,6 +110,26 @@ class MigrationTest {
         db.close()
     }
 
+    @Test
+    fun migrate5To6AddsStepGoalDefaultAndStepTable() {
+        helper.createDatabase(DB_NAME, 5).use { db ->
+            db.execSQL(
+                "INSERT INTO settings (id, weight_unit, default_rest_seconds, theme, updated_at) " +
+                    "VALUES (1, 'KG', 90, 'DARK', 0)",
+            )
+        }
+
+        val db = helper.runMigrationsAndValidate(DB_NAME, 6, true, GymoraDatabase.MIGRATION_5_6)
+
+        db.query("SELECT step_goal, health_steps_enabled FROM settings").use { c ->
+            c.moveToFirst()
+            assertEquals(10_000, c.getInt(0))
+            assertEquals(0, c.getInt(1))
+        }
+        db.execSQL("INSERT INTO step_days (date, steps, last_counter) VALUES ('2026-10-07', 1200, 5000)")
+        db.close()
+    }
+
     private companion object {
         const val DB_NAME = "migration-test.db"
     }

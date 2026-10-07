@@ -75,6 +75,17 @@ fun SettingsScreen(
         viewModel::onHealthPermissionsResult,
     )
 
+    val healthStepsPermissionLauncher = rememberLauncherForActivityResult(
+        HealthConnectSync.permissionContract(),
+        viewModel::onHealthStepsPermissionResult,
+    )
+    LaunchedEffect(uiState.requestHealthStepsPermission) {
+        if (uiState.requestHealthStepsPermission) {
+            viewModel.onHealthStepsPermissionRequestLaunched()
+            healthStepsPermissionLauncher.launch(setOf(HealthConnectSync.STEPS_PERMISSION))
+        }
+    }
+
     LaunchedEffect(uiState.requestHealthPermissions) {
         if (uiState.requestHealthPermissions) {
             viewModel.onHealthPermissionRequestLaunched()
@@ -104,6 +115,10 @@ fun SettingsScreen(
         ) {
             SettingsSection(title = "Weekly Goal") {
                 WeeklyGoalSetting(goal = settings.weeklyGoal, onGoalChanged = viewModel::onWeeklyGoalChanged)
+            }
+
+            SettingsSection(title = "Daily Step Goal") {
+                StepGoalSetting(goal = settings.stepGoal, onGoalChanged = viewModel::onStepGoalChanged)
             }
 
             SettingsSection(title = "Workout Reminders") {
@@ -204,6 +219,8 @@ fun SettingsScreen(
                     busy = uiState.transferInProgress,
                     onToggle = viewModel::onHealthConnectToggled,
                     onSyncNow = viewModel::onHealthSyncNow,
+                    stepsEnabled = settings.healthStepsEnabled && uiState.healthStepsPermissionGranted,
+                    onStepsToggle = viewModel::onHealthStepsToggled,
                 )
             }
         }

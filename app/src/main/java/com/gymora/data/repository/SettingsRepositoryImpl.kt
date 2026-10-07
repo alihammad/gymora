@@ -43,6 +43,17 @@ class SettingsRepositoryImpl @Inject constructor(
         settingsDao.upsert(current.copy(weeklyGoal = clamped, updatedAt = now()))
     }
 
+    override suspend fun setStepGoal(goal: Int) {
+        val current = current()
+        val clamped = goal.coerceIn(Settings.MIN_STEP_GOAL, Settings.MAX_STEP_GOAL)
+        settingsDao.upsert(current.copy(stepGoal = clamped, updatedAt = now()))
+    }
+
+    override suspend fun setHealthStepsEnabled(enabled: Boolean) {
+        val current = current()
+        settingsDao.upsert(current.copy(healthStepsEnabled = enabled, updatedAt = now()))
+    }
+
     override suspend fun setReminder(days: Set<DayOfWeek>, time: LocalTime) {
         val current = current()
         settingsDao.upsert(
@@ -91,6 +102,8 @@ class SettingsRepositoryImpl @Inject constructor(
         autoBackupFolderUri = autoBackupFolderUri,
         lastAutoBackupAt = lastAutoBackupAt,
         healthConnectEnabled = healthConnectEnabled,
+        stepGoal = stepGoal,
+        healthStepsEnabled = healthStepsEnabled,
     )
 
     private companion object {

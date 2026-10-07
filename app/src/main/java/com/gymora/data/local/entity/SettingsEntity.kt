@@ -26,6 +26,9 @@ data class SettingsEntity(
     @ColumnInfo(name = "auto_backup_folder_uri") val autoBackupFolderUri: String? = null,
     @ColumnInfo(name = "last_auto_backup_at") val lastAutoBackupAt: Long? = null,
     @ColumnInfo(name = "health_connect_enabled", defaultValue = "0") val healthConnectEnabled: Boolean = false,
+    @ColumnInfo(name = "step_goal", defaultValue = "10000") val stepGoal: Int = 10_000,
+    /** Include steps from Health Connect (watch, other apps) in the Home step count. */
+    @ColumnInfo(name = "health_steps_enabled", defaultValue = "0") val healthStepsEnabled: Boolean = false,
 ) {
     companion object {
         const val SINGLE_ROW_ID = 1
@@ -36,6 +39,7 @@ data class SettingsEntity(
             "auto_backup_folder_uri",
             "last_auto_backup_at",
             "health_connect_enabled",
+            "health_steps_enabled",
         )
 
         /** Defaults per data-model.md: KG / 90s / SYSTEM. */

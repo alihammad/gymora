@@ -1,5 +1,16 @@
 package com.gymora.ui.home
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.gymora.ui.theme.GymoraShapes
 import com.gymora.ui.components.GymoraLoading
 import androidx.compose.foundation.layout.Arrangement
@@ -110,6 +121,26 @@ fun HomeScreen(
         )
     }
 
+    // Step counter: needs the activity-recognition permission on Android 10+. Re-checked
+    // on resume, so granting it from system settings also takes effect.
+    val context = LocalContext.current
+    val stepPermissionNeeded = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+    var stepPermissionGranted by remember { mutableStateOf(hasStepPermission(context)) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> stepPermissionGranted = granted }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) stepPermissionGranted = hasStepPermission(context)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    androidx.compose.runtime.LaunchedEffect(stepPermissionGranted) {
+        viewModel.startStepTracking(stepPermissionGranted)
+    }
+
     // Refresh the recent-workouts section whenever Home becomes visible again.
     androidx.compose.runtime.LaunchedEffect(Unit) {
         viewModel.loadRecentWorkouts()
@@ -168,6 +199,19 @@ fun HomeScreen(
             uiState.weeklyProgress?.let { progress ->
                 WeeklyGoalCard(
                     progress = progress,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+
+            // Hidden only on phones with no sensor and no Health Connect steps.
+            if (uiState.stepsSupported || uiState.stepsToday != null) {
+                StepsCard(
+                    steps = uiState.stepsToday,
+                    goal = uiState.stepGoal,
+                    permissionGranted = stepPermissionGranted || uiState.stepsToday != null,
+                    onGrantPermission = {
+                        if (stepPermissionNeeded) permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+                    },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
@@ -447,3 +491,9 @@ private fun RecentWorkoutRow(
         }
     }
 }
+
+/** Before Android 10 the step sensor needs no runtime permission. */
+private fun hasStepPermission(context: android.content.Context): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) ==
+        PackageManager.PERMISSION_GRANTED

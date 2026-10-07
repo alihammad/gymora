@@ -44,6 +44,9 @@ data class SettingsUiState(
     val healthPermissionsGranted: Boolean = false,
     /** One-shot: the screen should launch Health Connect's permission request. */
     val requestHealthPermissions: Boolean = false,
+    val healthStepsPermissionGranted: Boolean = false,
+    /** One-shot: the screen should launch Health Connect's steps permission request. */
+    val requestHealthStepsPermission: Boolean = false,
 )
 
 @HiltViewModel
@@ -81,6 +84,10 @@ class SettingsViewModel @Inject constructor(
 
     fun onWeeklyGoalChanged(goal: Int) {
         viewModelScope.launch { settingsRepository.setWeeklyGoal(goal) }
+    }
+
+    fun onStepGoalChanged(goal: Int) {
+        viewModelScope.launch { settingsRepository.setStepGoal(goal) }
     }
 
     /** Adds or removes [day] from the reminder schedule; the app reschedules the alarm on save. */
@@ -203,7 +210,36 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val availability = healthConnectSync.availability()
             val granted = runCatching { healthConnectSync.hasAllPermissions() }.getOrDefault(false)
-            _uiState.update { it.copy(healthAvailability = availability, healthPermissionsGranted = granted) }
+            val stepsGranted = runCatching { healthConnectSync.hasStepsPermission() }.getOrDefault(false)
+            _uiState.update {
+                it.copy(
+                    healthAvailability = availability,
+                    healthPermissionsGranted = granted,
+                    healthStepsPermissionGranted = stepsGranted,
+                )
+            }
+        }
+    }
+
+    fun onHealthStepsToggled(enabled: Boolean) {
+        if (enabled && !_uiState.value.healthStepsPermissionGranted) {
+            _uiState.update { it.copy(requestHealthStepsPermission = true) }
+            return
+        }
+        viewModelScope.launch { settingsRepository.setHealthStepsEnabled(enabled) }
+    }
+
+    fun onHealthStepsPermissionRequestLaunched() {
+        _uiState.update { it.copy(requestHealthStepsPermission = false) }
+    }
+
+    fun onHealthStepsPermissionResult(granted: Set<String>) {
+        val ok = HealthConnectSync.STEPS_PERMISSION in granted
+        _uiState.update { it.copy(healthStepsPermissionGranted = ok) }
+        if (ok) {
+            viewModelScope.launch { settingsRepository.setHealthStepsEnabled(true) }
+        } else {
+            _uiState.update { it.copy(transferMessage = "Steps from Health Connect need the steps permission.") }
         }
     }
 

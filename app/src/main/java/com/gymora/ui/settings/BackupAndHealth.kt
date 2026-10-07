@@ -98,6 +98,8 @@ fun HealthConnectSetting(
     busy: Boolean,
     onToggle: (Boolean) -> Unit,
     onSyncNow: () -> Unit,
+    stepsEnabled: Boolean,
+    onStepsToggle: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -139,6 +141,18 @@ fun HealthConnectSetting(
                     TextButton(onClick = onSyncNow, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                         Text("Sync now")
                     }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Include steps from Health Connect", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Adds steps from your watch and other apps to the Home step ring. " +
+                                "The larger of that and this phone's own count is shown, so nothing is counted twice.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = stepsEnabled, onCheckedChange = onStepsToggle)
                 }
             }
         }

@@ -49,6 +49,7 @@ import java.time.DayOfWeek
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.text.NumberFormat
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -70,6 +71,34 @@ fun WeeklyGoalSetting(goal: Int, onGoalChanged: (Int) -> Unit) {
         Text(goal.toString(), style = MaterialTheme.typography.titleLarge)
         IconButton(onClick = { onGoalChanged(goal + 1) }, enabled = goal < Settings.MAX_WEEKLY_GOAL) {
             Icon(Icons.Filled.Add, contentDescription = "More workouts per week")
+        }
+    }
+}
+
+/** Daily step goal stepper (drives the steps ring on Home). */
+@Composable
+fun StepGoalSetting(goal: Int, onGoalChanged: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Steps per day", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "The goal for the ring on Home.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(
+            onClick = { onGoalChanged(goal - Settings.STEP_GOAL_STEP) },
+            enabled = goal > Settings.MIN_STEP_GOAL,
+        ) {
+            Icon(Icons.Filled.Remove, contentDescription = "Lower step goal")
+        }
+        Text(NumberFormat.getIntegerInstance().format(goal), style = MaterialTheme.typography.titleLarge)
+        IconButton(
+            onClick = { onGoalChanged(goal + Settings.STEP_GOAL_STEP) },
+            enabled = goal < Settings.MAX_STEP_GOAL,
+        ) {
+            Icon(Icons.Filled.Add, contentDescription = "Raise step goal")
         }
     }
 }

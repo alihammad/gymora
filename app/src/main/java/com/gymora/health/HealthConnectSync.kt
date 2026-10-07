@@ -5,8 +5,10 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.metadata.Metadata
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.Mass
@@ -17,6 +19,7 @@ import com.gymora.domain.model.SessionStatus
 import com.gymora.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -69,6 +72,31 @@ class HealthConnectSync @Inject constructor(
     suspend fun hasAllPermissions(): Boolean =
         availability() == HealthConnectAvailability.AVAILABLE &&
             client.permissionController.getGrantedPermissions().containsAll(PERMISSIONS)
+
+    /** Whether Gymora may read steps; asked for separately so workout/weight sync is unaffected. */
+    suspend fun hasStepsPermission(): Boolean =
+        availability() == HealthConnectAvailability.AVAILABLE &&
+            client.permissionController.getGrantedPermissions().contains(STEPS_PERMISSION)
+
+    /**
+     * Steps recorded today by all apps and devices that write to Health Connect, which it
+     * de-duplicates across sources. Null when the user hasn't turned this on, permission is
+     * missing, or Health Connect can't be read.
+     */
+    suspend fun todaySteps(): Int? = runCatching {
+        if (!settingsRepository.observeSettings().first().healthStepsEnabled || !hasStepsPermission()) {
+            return@runCatching null
+        }
+        val zone = ZoneId.systemDefault()
+        val start = LocalDate.now(zone).atStartOfDay(zone).toInstant()
+        val result = client.aggregate(
+            AggregateRequest(
+                metrics = setOf(StepsRecord.COUNT_TOTAL),
+                timeRangeFilter = TimeRangeFilter.between(start, Instant.now()),
+            ),
+        )
+        (result[StepsRecord.COUNT_TOTAL] ?: 0L).toInt()
+    }.getOrNull()
 
     /** After a workout is finished. No-op unless sync is on and permitted. */
     fun onWorkoutFinished(sessionId: Long) = launchIfEnabled {
@@ -186,6 +214,8 @@ class HealthConnectSync @Inject constructor(
             HealthPermission.getWritePermission(WeightRecord::class),
             HealthPermission.getReadPermission(WeightRecord::class),
         )
+
+        val STEPS_PERMISSION = HealthPermission.getReadPermission(StepsRecord::class)
 
         /** Launches Health Connect's permission screen. */
         fun permissionContract() = PermissionController.createRequestPermissionResultContract()

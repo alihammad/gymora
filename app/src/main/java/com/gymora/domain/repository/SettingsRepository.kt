@@ -22,6 +22,8 @@ interface SettingsRepository {
 
     /** Clamped to [Settings.MIN_WEEKLY_GOAL]..[Settings.MAX_WEEKLY_GOAL]. */
     suspend fun setWeeklyGoal(goal: Int)
+    suspend fun setStepGoal(goal: Int)
+    suspend fun setHealthStepsEnabled(enabled: Boolean)
 
     /** Empty [days] turns reminders off. */
     suspend fun setReminder(days: Set<java.time.DayOfWeek>, time: java.time.LocalTime)

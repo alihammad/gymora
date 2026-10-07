@@ -27,8 +27,16 @@ data class Settings(
     val lastAutoBackupAt: Long? = null,
     /** Sync workouts and body weight with Health Connect. */
     val healthConnectEnabled: Boolean = false,
+    /** Daily step target shown as the ring on Home. */
+    val stepGoal: Int = DEFAULT_STEP_GOAL,
+    /** Include steps from Health Connect (watch, other apps) in the Home step count. */
+    val healthStepsEnabled: Boolean = false,
 ) {
     companion object {
+        const val DEFAULT_STEP_GOAL = 10_000
+        const val MIN_STEP_GOAL = 1_000
+        const val MAX_STEP_GOAL = 50_000
+        const val STEP_GOAL_STEP = 500
         const val DEFAULT_WEEKLY_GOAL = 3
         const val MIN_WEEKLY_GOAL = 1
         const val MAX_WEEKLY_GOAL = 7

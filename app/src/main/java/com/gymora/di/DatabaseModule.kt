@@ -52,6 +52,7 @@ object DatabaseModule {
                 GymoraDatabase.MIGRATION_2_3,
                 GymoraDatabase.MIGRATION_3_4,
                 GymoraDatabase.MIGRATION_4_5,
+                GymoraDatabase.MIGRATION_5_6,
             )
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
@@ -86,6 +87,9 @@ object DatabaseModule {
 
     @Provides
     fun provideSettingsDao(database: GymoraDatabase): SettingsDao = database.settingsDao()
+
+    @Provides
+    fun provideStepDao(database: GymoraDatabase): com.gymora.data.local.dao.StepDao = database.stepDao()
 
     @Provides
     fun provideExerciseDao(database: GymoraDatabase): ExerciseDao = database.exerciseDao()

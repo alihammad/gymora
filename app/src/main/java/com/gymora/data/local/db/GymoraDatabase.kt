@@ -39,8 +39,9 @@ import com.gymora.data.local.entity.WorkoutSetEntity
         WorkoutExerciseEntity::class, // registered by T035 (US3)
         WorkoutSetEntity::class, // registered by T035 (US3)
         com.gymora.data.local.entity.BodyMeasurementEntity::class, // v2
+        com.gymora.data.local.entity.StepDayEntity::class, // v6
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class GymoraDatabase : RoomDatabase() {
@@ -48,6 +49,8 @@ abstract class GymoraDatabase : RoomDatabase() {
     abstract fun bodyMeasurementDao(): com.gymora.data.local.dao.BodyMeasurementDao
 
     abstract fun settingsDao(): SettingsDao
+
+    abstract fun stepDao(): com.gymora.data.local.dao.StepDao
 
     abstract fun exerciseDao(): ExerciseDao
 
@@ -143,6 +146,21 @@ abstract class GymoraDatabase : RoomDatabase() {
                         "ON `body_measurements` (`external_id`)",
                 )
                 applyTrackingDefaults(db)
+            }
+        }
+
+        /** v5 → v6: daily step counter totals, the editable daily step goal and Health Connect steps. */
+        val MIGRATION_5_6 = object : androidx.room.migration.Migration(5, 6) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // See MIGRATION_1_2: the partial index must be dropped before validation.
+                db.execSQL("DROP INDEX IF EXISTS index_workout_sessions_single_active")
+                db.execSQL("ALTER TABLE `settings` ADD COLUMN `step_goal` INTEGER NOT NULL DEFAULT 10000")
+                db.execSQL("ALTER TABLE `settings` ADD COLUMN `health_steps_enabled` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `step_days` (" +
+                        "`date` TEXT NOT NULL, `steps` INTEGER NOT NULL, " +
+                        "`last_counter` INTEGER NOT NULL, PRIMARY KEY(`date`))",
+                )
             }
         }
 

@@ -53,4 +53,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindRecordsRepository(impl: RecordsRepositoryImpl): RecordsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindStepRepository(
+        impl: com.gymora.data.repository.StepRepositoryImpl,
+    ): com.gymora.domain.repository.StepRepository
 }

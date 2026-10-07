@@ -4,9 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gymora.domain.repository.HistoryRepository
 import com.gymora.domain.repository.RoutineRepository
+import com.gymora.domain.repository.SettingsRepository
+import com.gymora.domain.repository.StepRepository
 import com.gymora.domain.usecase.GetEngagementUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,12 +22,21 @@ class HomeViewModel @Inject constructor(
     private val historyRepository: HistoryRepository,
     private val getEngagement: GetEngagementUseCase,
     private val workoutSessionRepository: com.gymora.domain.repository.WorkoutSessionRepository,
+    private val stepRepository: StepRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HomeUiState())
+    private val _uiState = MutableStateFlow(HomeUiState(stepsSupported = stepRepository.isSupported))
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private var stepJob: Job? = null
+
     init {
+        viewModelScope.launch {
+            settingsRepository.observeSettings().collect { settings ->
+                _uiState.update { it.copy(stepGoal = settings.stepGoal) }
+            }
+        }
         viewModelScope.launch {
             routineRepository.observeAll().collect { routines ->
                 _uiState.update { it.copy(routines = routines, isLoading = false) }
@@ -36,6 +48,20 @@ class HomeViewModel @Inject constructor(
             }
         }
         loadRecentWorkouts()
+    }
+
+    /**
+     * (Re)starts step tracking. [sensorAllowed] is whether the activity-recognition
+     * permission is held; Health Connect steps, if the user turned them on, count either way.
+     * The count stays null (the card asks for permission) when no source is available.
+     */
+    fun startStepTracking(sensorAllowed: Boolean) {
+        stepJob?.cancel()
+        stepJob = viewModelScope.launch {
+            stepRepository.observeTodaySteps(sensorAllowed).collect { steps ->
+                _uiState.update { it.copy(stepsToday = steps) }
+            }
+        }
     }
 
     /** The 3 most recent completed workouts, plus the weekly goal card (spec Assumption, FR-002, T050a). */

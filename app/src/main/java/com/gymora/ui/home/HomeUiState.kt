@@ -20,6 +20,11 @@ data class HomeUiState(
     val weeklyProgress: com.gymora.domain.calculator.WeeklyProgress? = null,
     /** Unfinished workout, if any; shown as a resume banner. */
     val activeWorkout: com.gymora.domain.model.ActiveWorkout? = null,
+    /** Steps today from the step sensor and/or Health Connect; null when no source is available. */
+    val stepsToday: Int? = null,
+    val stepGoal: Int = com.gymora.domain.model.Settings.DEFAULT_STEP_GOAL,
+    /** False on phones without a step counter sensor. */
+    val stepsSupported: Boolean = true,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
 )
