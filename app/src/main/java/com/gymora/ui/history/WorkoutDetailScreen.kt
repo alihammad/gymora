@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.AlertDialog
@@ -86,6 +87,7 @@ fun WorkoutDetailScreen(
                         onSave = viewModel::save,
                         onCancel = viewModel::cancelEdit,
                         onEdit = viewModel::enterEditMode,
+                        onDelete = viewModel::onDeleteClicked,
                     )
                 },
             )
@@ -96,6 +98,23 @@ fun WorkoutDetailScreen(
             uiState = uiState,
             onExerciseHistory = onExerciseHistory,
             viewModel = viewModel,
+        )
+    }
+
+    androidx.compose.runtime.LaunchedEffect(uiState.isDeleted) {
+        if (uiState.isDeleted) onBack()
+    }
+    if (uiState.showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = viewModel::onDeleteDismissed,
+            title = { Text("Delete workout?") },
+            text = { Text("This permanently deletes the workout and all its sets. This can't be undone.") },
+            confirmButton = {
+                TextButton(onClick = viewModel::onDeleteConfirmed) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::onDeleteDismissed) { Text("Cancel") }
+            },
         )
     }
 
@@ -124,6 +143,7 @@ private fun DetailActions(
     onSave: () -> Unit,
     onCancel: () -> Unit,
     onEdit: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     if (!showActions) return
     if (isEditing) {
@@ -133,6 +153,9 @@ private fun DetailActions(
         // FR-042: history is read-only unless Edit is explicitly chosen.
         IconButton(onClick = onEdit) {
             Icon(Icons.Filled.Edit, contentDescription = "Edit workout")
+        }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Filled.Delete, contentDescription = "Delete workout")
         }
     }
 }

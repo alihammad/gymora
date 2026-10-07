@@ -242,6 +242,10 @@ class HistoryRepositoryImpl @Inject constructor(
         exerciseDao.deleteById(workoutExerciseId)
     }
 
+    override suspend fun deleteWorkout(sessionId: Long) {
+        sessionDao.deleteById(sessionId)
+    }
+
     override suspend fun updateHistoricalWorkoutNotes(sessionId: Long, notes: String?) {
         val entity = sessionDao.getById(sessionId) ?: throw EntityNotFoundException(sessionId)
         sessionDao.update(entity.copy(notes = notes))

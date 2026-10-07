@@ -43,6 +43,8 @@ data class WorkoutDetailUiState(
     val showAddExercise: Boolean = false,
     val libraryExercises: List<Exercise> = emptyList(),
     val pendingRemoveExerciseId: Long? = null,
+    val showDeleteConfirm: Boolean = false,
+    val isDeleted: Boolean = false,
     /** Unit for weights entered on sets that had none. */
     val weightUnit: WeightUnit = WeightUnit.KG,
 )
@@ -221,6 +223,26 @@ class WorkoutDetailViewModel @Inject constructor(
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(showAddExercise = false, errorMessage = friendlyMessage(error))
+                    }
+                }
+        }
+    }
+
+    fun onDeleteClicked() {
+        _uiState.update { it.copy(showDeleteConfirm = true) }
+    }
+
+    fun onDeleteDismissed() {
+        _uiState.update { it.copy(showDeleteConfirm = false) }
+    }
+
+    fun onDeleteConfirmed() {
+        viewModelScope.launch {
+            runCatching { correctWorkoutUseCase.deleteWorkout(sessionId) }
+                .onSuccess { _uiState.update { it.copy(showDeleteConfirm = false, isDeleted = true) } }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(showDeleteConfirm = false, errorMessage = friendlyMessage(error))
                     }
                 }
         }
