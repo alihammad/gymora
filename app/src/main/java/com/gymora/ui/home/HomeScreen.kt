@@ -175,86 +175,82 @@ fun HomeScreen(
             }
         },
     ) { innerPadding ->
-        Column(
+        // One lazy list for the whole page, so everything scrolls together.
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
+            // Room under the last routine so the create button never covers it.
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 88.dp),
         ) {
             uiState.activeWorkout?.let { active ->
-                InProgressBanner(
-                    workout = active,
-                    onResume = { onResumeWorkout?.invoke(active.session.id) },
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                item(key = "active-workout") {
+                    InProgressBanner(
+                        workout = active,
+                        onResume = { onResumeWorkout?.invoke(active.session.id) },
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                    )
+                }
+            }
+
+            item(key = "week-strip") {
+                WeekStrip(
+                    weekStart = uiState.weekStart,
+                    workoutDays = uiState.workoutDays,
+                    onShiftWeek = viewModel::onShiftWeek,
+                    onDayClick = viewModel::onDaySelected,
                 )
             }
 
-            WeekStrip(
-                weekStart = uiState.weekStart,
-                workoutDays = uiState.workoutDays,
-                onShiftWeek = viewModel::onShiftWeek,
-                onDayClick = viewModel::onDaySelected,
-            )
-
             uiState.weeklyProgress?.let { progress ->
-                WeeklyGoalCard(
-                    progress = progress,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
+                item(key = "weekly-goal") {
+                    WeeklyGoalCard(
+                        progress = progress,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
             }
 
             // Hidden only on phones with no sensor and no Health Connect steps.
             if (uiState.stepsSupported || uiState.stepsToday != null) {
-                StepsCard(
-                    steps = uiState.stepsToday,
-                    goal = uiState.stepGoal,
-                    permissionGranted = stepPermissionGranted || uiState.stepsToday != null,
-                    onGrantPermission = {
-                        if (stepPermissionNeeded) permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
-                    },
-                    onClick = viewModel::onStepsClicked,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-            }
-            if (uiState.showStepHistory) {
-                StepHistorySheet(
-                    history = uiState.stepHistory,
-                    days = uiState.stepHistoryDays,
-                    goal = uiState.stepGoal,
-                    onRangeSelected = viewModel::onStepHistoryRangeSelected,
-                    onDismiss = viewModel::onStepHistoryDismissed,
-                )
-            }
-
-            uiState.selectedDay?.let { day ->
-                DayWorkoutsSheet(
-                    day = day,
-                    workouts = uiState.selectedDayWorkouts,
-                    onDismiss = viewModel::onDayDismissed,
-                )
+                item(key = "steps") {
+                    StepsCard(
+                        steps = uiState.stepsToday,
+                        goal = uiState.stepGoal,
+                        permissionGranted = stepPermissionGranted || uiState.stepsToday != null,
+                        onGrantPermission = {
+                            if (stepPermissionNeeded) permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+                        },
+                        onClick = viewModel::onStepsClicked,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
             }
 
             // Single-line chips in a horizontally scrollable row: nothing wraps
             // or squeezes on narrow screens.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                QuickLinkChip("My Workouts", Icons.Filled.FormatListBulleted, onMyRoutines)
-                QuickLinkChip("History", Icons.Filled.History, onHistory)
-                QuickLinkChip("Progress", Icons.AutoMirrored.Filled.ShowChart, onProgress)
-                QuickLinkChip("Records", Icons.Filled.EmojiEvents, onRecords)
-                QuickLinkChip("Body", Icons.Filled.MonitorWeight, onBody)
+            item(key = "quick-links") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    QuickLinkChip("My Workouts", Icons.Filled.FormatListBulleted, onMyRoutines)
+                    QuickLinkChip("History", Icons.Filled.History, onHistory)
+                    QuickLinkChip("Progress", Icons.AutoMirrored.Filled.ShowChart, onProgress)
+                    QuickLinkChip("Records", Icons.Filled.EmojiEvents, onRecords)
+                    QuickLinkChip("Body", Icons.Filled.MonitorWeight, onBody)
+                }
             }
 
             when {
-                uiState.isLoading -> {
+                uiState.isLoading -> item(key = "loading") {
                     GymoraLoading(modifier = Modifier.padding(16.dp))
                 }
 
-                uiState.routines.isEmpty() -> {
+                uiState.routines.isEmpty() -> item(key = "empty") {
                     EmptyState(
                         message = EmptyStateCopy.NO_ROUTINES,
                         actionLabel = EmptyStateCopy.CREATE_ROUTINE_ACTION,
@@ -262,22 +258,35 @@ fun HomeScreen(
                     )
                 }
 
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        itemsIndexed(uiState.routines, key = { _, routine -> routine.id }) { index, routine ->
-                            RoutineCard(
-                                routine = routine,
-                                onClick = { onRoutineClick(routine.id) },
-                                onStart = { startRoutine(routine.id) },
-                            )
-                        }
+                else -> itemsIndexed(uiState.routines, key = { _, routine -> routine.id }) { _, routine ->
+                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                        RoutineCard(
+                            routine = routine,
+                            onClick = { onRoutineClick(routine.id) },
+                            onStart = { startRoutine(routine.id) },
+                        )
                     }
                 }
             }
+        }
+
+        // Sheets are modal windows, so they live outside the scrolling list.
+        if (uiState.showStepHistory) {
+            StepHistorySheet(
+                history = uiState.stepHistory,
+                days = uiState.stepHistoryDays,
+                goal = uiState.stepGoal,
+                onRangeSelected = viewModel::onStepHistoryRangeSelected,
+                onDismiss = viewModel::onStepHistoryDismissed,
+            )
+        }
+
+        uiState.selectedDay?.let { day ->
+            DayWorkoutsSheet(
+                day = day,
+                workouts = uiState.selectedDayWorkouts,
+                onDismiss = viewModel::onDayDismissed,
+            )
         }
     }
 }
