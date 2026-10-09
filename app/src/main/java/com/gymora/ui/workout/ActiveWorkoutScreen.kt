@@ -1,5 +1,13 @@
 package com.gymora.ui.workout
 
+import androidx.compose.ui.unit.sp
+import com.gymora.ui.components.ActionButton
+import com.gymora.ui.components.AngularPanel
+import com.gymora.ui.components.HeroCard
+import com.gymora.ui.components.MuscleChip
+import com.gymora.ui.components.SectionHeader
+import com.gymora.ui.theme.DisplayHero
+import com.gymora.ui.theme.LabelCaps
 import com.gymora.ui.components.GymoraLoading
 import androidx.compose.foundation.background
 import androidx.compose.foundation.text.KeyboardOptions
@@ -107,7 +115,40 @@ fun ActiveWorkoutScreen(
         }
     }
 
+    // The exercise in focus: the user's tap, else the first one with sets left to log.
+    var focusedId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val allExercises = uiState.activeWorkout?.exercises.orEmpty()
+    val current = allExercises.firstOrNull { it.workoutExerciseId == focusedId }
+        ?: allExercises.firstOrNull { ex -> ex.sets.any { !it.isCompleted } }
+        ?: allExercises.lastOrNull()
+    val nextSet = current?.sets?.firstOrNull { !it.isCompleted }
+
     Scaffold(
+        bottomBar = {
+            if (current != null) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    RestTimerBar(
+                        state = uiState.restTimer,
+                        onSkip = viewModel::onRestTimerSkip,
+                        onAdd30s = viewModel::onRestTimerAdd30s,
+                        onRestart = viewModel::onRestTimerRestart,
+                    )
+                    // Primary action: complete the next set, or add one when all are logged.
+                    ActionButton(
+                        text = if (nextSet != null) "Log set" else "Add set",
+                        onClick = {
+                            if (nextSet != null) viewModel.onToggleComplete(nextSet.id, true)
+                            else viewModel.onAddSet(current.workoutExerciseId)
+                        },
+                    )
+                }
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -140,32 +181,47 @@ fun ActiveWorkoutScreen(
                 )
             } else {
                 Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                    // FR-031/032: rest timer bar shown during active workout
-                    RestTimerBar(
-                        state = uiState.restTimer,
-                        onSkip = viewModel::onRestTimerSkip,
-                        onAdd30s = viewModel::onRestTimerAdd30s,
-                        onRestart = viewModel::onRestTimerRestart,
-                    )
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
+                    if (current != null) {
+                        item(key = "current-exercise") {
+                            CurrentExerciseHero(
+                                exercise = current,
+                                index = allExercises.indexOf(current),
+                                total = allExercises.size,
+                                nextSet = nextSet,
+                                previousPerformance = current.exerciseId?.let { uiState.previousPerformanceMap[it] },
+                                onSetValuesChanged = viewModel::onSetValuesChanged,
+                            )
+                        }
+                        item(key = "all-header") { SectionHeader("All exercises") }
+                    }
                     val blocks = SupersetRules.blocks(workout.exercises) { it.supersetGroup }
                     items(blocks, key = { it.first().workoutExerciseId }) { block ->
                         ExerciseBlock(block) { exercise ->
-                            ExerciseCard(
-                                exercise = exercise,
-                                previousPerformance = exercise.exerciseId?.let {
-                                    uiState.previousPerformanceMap[it]
-                                },
-                                onSetValuesChanged = viewModel::onSetValuesChanged,
-                                onToggleComplete = viewModel::onToggleComplete,
-                                onAddSet = viewModel::onAddSet,
-                                onRemove = { viewModel.onRemoveExercise(exercise.workoutExerciseId) },
-                            )
+                            if (exercise.workoutExerciseId == current?.workoutExerciseId) {
+                                ExerciseCard(
+                                    exercise = exercise,
+                                    previousPerformance = exercise.exerciseId?.let {
+                                        uiState.previousPerformanceMap[it]
+                                    },
+                                    hideSetId = nextSet?.id,
+                                    onSetValuesChanged = viewModel::onSetValuesChanged,
+                                    onToggleComplete = viewModel::onToggleComplete,
+                                    onAddSet = viewModel::onAddSet,
+                                    onRemove = { viewModel.onRemoveExercise(exercise.workoutExerciseId) },
+                                )
+                            } else {
+                                ExerciseSummaryRow(
+                                    exercise = exercise,
+                                    onFocus = { focusedId = exercise.workoutExerciseId },
+                                    onRemove = { viewModel.onRemoveExercise(exercise.workoutExerciseId) },
+                                )
+                            }
                         }
                     }
                     item {
@@ -318,10 +374,108 @@ fun ActiveWorkoutScreen(
     }
 }
 
+/** Focus panel for the exercise being trained: huge name, set position and big weight/reps entry. */
+@Composable
+private fun CurrentExerciseHero(
+    exercise: ActiveExercise,
+    index: Int,
+    total: Int,
+    nextSet: ActiveSet?,
+    previousPerformance: PreviousPerformance?,
+    onSetValuesChanged: (Long, SetEntry) -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val displayUnit = LocalWeightUnit.current
+    val setIndex = exercise.sets.indexOfFirst { it.id == nextSet?.id }
+    val previous = previousPerformance?.sets?.getOrNull(setIndex.coerceAtLeast(0))
+    HeroCard {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("EXERCISE ${index + 1} OF $total", style = LabelCaps, color = scheme.primary)
+            Text(
+                text = exercise.exerciseName.uppercase(),
+                style = DisplayHero.copy(fontSize = 46.sp, lineHeight = 45.sp),
+                color = Color.White,
+                maxLines = 3,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            val done = exercise.sets.count { it.isCompleted }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                MuscleChip(
+                    text = if (nextSet != null) "SET ${setIndex + 1} OF ${exercise.sets.size}" else "ALL SETS DONE",
+                    selected = true,
+                )
+                if (previous != null) {
+                    Text(
+                        text = "LAST: " + SetSummary.describe(
+                            nextSet?.measurementType ?: exercise.sets.first().measurementType,
+                            previous.weight, previous.weightUnit, previous.reps,
+                            previous.durationSeconds, previous.distanceMeters, displayUnit,
+                        ),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.85f),
+                    )
+                }
+            }
+            if (nextSet != null) {
+                SetInputRow(
+                    key = nextSet.id,
+                    type = nextSet.measurementType,
+                    initial = SetEntry(nextSet.weight, nextSet.reps, nextSet.durationSeconds, nextSet.distanceMeters),
+                    hint = previous?.let { SetEntry(it.weight, it.reps, it.durationSeconds, it.distanceMeters) },
+                    onChange = { onSetValuesChanged(nextSet.id, it) },
+                    large = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                Text(
+                    text = "$done sets logged. Add another set or move to the next exercise.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.85f),
+                )
+            }
+        }
+    }
+}
+
+/** Collapsed row for an exercise that is not in focus; tap to bring it into focus. */
+@Composable
+private fun ExerciseSummaryRow(
+    exercise: ActiveExercise,
+    onFocus: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    val done = exercise.sets.count { it.isCompleted }
+    val complete = exercise.sets.isNotEmpty() && done == exercise.sets.size
+    AngularPanel(modifier = Modifier.fillMaxWidth(), onClick = onFocus) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            if (complete) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = "Completed",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(end = 12.dp),
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(exercise.exerciseName.uppercase(), style = MaterialTheme.typography.titleLarge)
+                Text(
+                    text = "$done of ${exercise.sets.size} sets",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = onRemove) {
+                Icon(Icons.Filled.Close, contentDescription = "Remove ${exercise.exerciseName} from this workout")
+            }
+        }
+    }
+}
+
 @Composable
 private fun ExerciseCard(
     exercise: ActiveExercise,
     previousPerformance: PreviousPerformance?,
+    hideSetId: Long?,
     onSetValuesChanged: (Long, SetEntry) -> Unit,
     onToggleComplete: (Long, Boolean) -> Unit,
     onAddSet: (Long) -> Unit,
@@ -369,6 +523,8 @@ private fun ExerciseCard(
 
             val labels = SetLabels.of(exercise.sets)
             exercise.sets.forEachIndexed { index, set ->
+                // The next set to log is edited in the hero above; showing it twice would desync.
+                if (set.id == hideSetId) return@forEachIndexed
                 SetRow(
                     set = set,
                     label = labels[index],

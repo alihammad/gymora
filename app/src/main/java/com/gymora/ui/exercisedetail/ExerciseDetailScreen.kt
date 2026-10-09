@@ -1,5 +1,16 @@
 package com.gymora.ui.exercisedetail
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.sp
+import com.gymora.ui.components.ActionButton
+import com.gymora.ui.components.AngularPanel
+import com.gymora.ui.components.HeroCard
+import com.gymora.ui.components.MuscleChip
+import com.gymora.ui.components.SectionHeader
+import com.gymora.ui.routines.routineIcon
+import com.gymora.ui.theme.DisplayHero
 import com.gymora.ui.components.GymoraLoading
 import com.gymora.ui.theme.GymoraShapes
 import androidx.compose.foundation.background
@@ -94,6 +105,21 @@ fun ExerciseDetailScreen(
                 ),
             )
         },
+        bottomBar = {
+            uiState.exercise?.let { exercise ->
+                Box(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    ActionButton(
+                        text = "View history",
+                        onClick = { onExerciseHistory(exercise.id) },
+                        icon = Icons.Filled.FitnessCenter,
+                    )
+                }
+            }
+        },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         when {
@@ -140,15 +166,40 @@ private fun ExerciseDetailContent(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
             .padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        // Media first: the demo animation (or artwork when there is none), edge to edge.
+        if (exercise.mediaFile != null) {
+            Box(
+                modifier = Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Color.Black),
+                contentAlignment = Alignment.Center,
+            ) {
+                ExerciseMediaImage(exercise.mediaFile, "${exercise.name} demo")
+            }
+        } else {
+            HeroCard(
+                modifier = Modifier.padding(horizontal = 16.dp).height(160.dp),
+                watermark = {
+                    Icon(
+                        painter = painterResource(routineIcon(exercise.name)),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                        modifier = Modifier.align(Alignment.Center).size(120.dp),
+                    )
+                },
+            ) {}
+        }
+
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
         // Hero header
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = exercise.name,
-                style = MaterialTheme.typography.headlineMedium,
+                text = exercise.name.uppercase(),
+                style = DisplayHero.copy(fontSize = 44.sp, lineHeight = 43.sp),
             )
             val primaryName = exercise.muscleGroups
                 .firstOrNull { it.type == MuscleGroupType.PRIMARY }
@@ -156,12 +207,8 @@ private fun ExerciseDetailContent(
                 ?.displayName
                 ?: exercise.muscleGroup?.displayName
             if (primaryName != null) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Primary: $primaryName",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Spacer(Modifier.height(8.dp))
+                MuscleChip(text = primaryName, selected = true)
             }
         }
 
@@ -242,6 +289,7 @@ private fun ExerciseDetailContent(
                 Text(description)
             }
         }
+        }
     }
 }
 
@@ -255,12 +303,9 @@ private fun TrackingAndFormGuide(exercise: Exercise) {
             style = MaterialTheme.typography.bodyMedium,
         )
     }
-    if (exercise.mediaFile != null || exercise.formCues.isNotEmpty()) {
-        SectionCard(title = "Form Guide") {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                exercise.mediaFile?.let { ExerciseMediaImage(it, "${exercise.name} demo") }
-                if (exercise.formCues.isNotEmpty()) FormCuesList(exercise.formCues)
-            }
+    if (exercise.formCues.isNotEmpty()) {
+        SectionCard(title = "Technique cues") {
+            FormCuesList(exercise.formCues)
         }
     }
 }
@@ -332,17 +377,9 @@ private fun SectionCard(
     subtitle: String? = null,
     content: @Composable () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-            )
+    AngularPanel(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            SectionHeader(title = title)
             if (subtitle != null) {
                 Text(
                     text = subtitle,

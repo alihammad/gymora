@@ -1,6 +1,13 @@
 package com.gymora.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.style.TextAlign
+import com.gymora.ui.theme.DisplayMetric
+import com.gymora.ui.theme.LabelCaps
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
@@ -45,6 +52,7 @@ fun SetInputRow(
     onChange: (SetEntry) -> Unit,
     modifier: Modifier = Modifier,
     hint: SetEntry? = null,
+    large: Boolean = false,
 ) {
     val unit = LocalWeightUnit.current
     var weightText by remember(key) { mutableStateOf(SetFormat.number(initial.weight)) }
@@ -75,6 +83,7 @@ fun SetInputRow(
                     label = type.weightLabel,
                     placeholder = SetFormat.number(hint?.weight),
                     keyboardType = KeyboardType.Decimal,
+                    large = large,
                     accept = ::isDecimalInput,
                     onValueChange = { weightText = it.replace(',', '.'); report() },
                 )
@@ -83,6 +92,7 @@ fun SetInputRow(
                     label = "Reps",
                     placeholder = hint?.reps?.toString().orEmpty(),
                     keyboardType = KeyboardType.Number,
+                    large = large,
                     accept = { it.length <= 4 && it.all(Char::isDigit) },
                     onValueChange = { repsText = it; report() },
                 )
@@ -92,6 +102,7 @@ fun SetInputRow(
                     placeholder = SetFormat.duration(hint?.durationSeconds).ifEmpty { "m:ss" },
                     // The phone keypad offers ':' only on some keyboards; plain seconds also work.
                     keyboardType = KeyboardType.Phone,
+                    large = large,
                     accept = SetFormat::isDurationInput,
                     onValueChange = { durationText = it; report() },
                 )
@@ -100,6 +111,7 @@ fun SetInputRow(
                     label = SetFormat.distanceUnitLabel(unit),
                     placeholder = SetFormat.distance(hint?.distanceMeters, unit),
                     keyboardType = KeyboardType.Decimal,
+                    large = large,
                     accept = ::isDecimalInput,
                     onValueChange = { distanceText = it.replace(',', '.'); report() },
                 )
@@ -114,18 +126,44 @@ private fun androidx.compose.foundation.layout.RowScope.ValueField(
     label: String,
     placeholder: String,
     keyboardType: KeyboardType,
+    large: Boolean,
     accept: (String) -> Boolean,
     onValueChange: (String) -> Unit,
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = { input -> if (accept(input.replace(',', '.'))) onValueChange(input) },
-        label = { Text(label) },
-        placeholder = placeholder.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        modifier = Modifier.weight(1f),
-    )
+    val change: (String) -> Unit = { input -> if (accept(input.replace(',', '.'))) onValueChange(input) }
+    val options = KeyboardOptions(keyboardType = keyboardType)
+    if (large) {
+        // Prominent entry: caption above, big centered number.
+        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = label.uppercase(),
+                style = LabelCaps,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+            OutlinedTextField(
+                value = value,
+                onValueChange = change,
+                textStyle = DisplayMetric.copy(textAlign = TextAlign.Center),
+                placeholder = placeholder.takeIf { it.isNotEmpty() }?.let {
+                    { Text(it, style = DisplayMetric.copy(textAlign = TextAlign.Center), modifier = Modifier.fillMaxWidth()) }
+                },
+                singleLine = true,
+                keyboardOptions = options,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    } else {
+        OutlinedTextField(
+            value = value,
+            onValueChange = change,
+            label = { Text(label) },
+            placeholder = placeholder.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+            singleLine = true,
+            keyboardOptions = options,
+            modifier = Modifier.weight(1f),
+        )
+    }
 }
 
 /** Digits with at most one decimal point and at most 6 characters. */

@@ -280,6 +280,7 @@ fun GymoraNavHost(
                     onRoutineClick = { routineId ->
                         navController.navigate(Destinations.RoutineEditor.create(routineId))
                     },
+                    onRecords = { navController.navigate(Destinations.Records.route) },
                 )
             }
             composable(Destinations.Body.route) {

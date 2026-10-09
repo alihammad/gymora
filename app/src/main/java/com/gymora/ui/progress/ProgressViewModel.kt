@@ -2,7 +2,15 @@ package com.gymora.ui.progress
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gymora.domain.calculator.WeeklyProgress
 import com.gymora.domain.model.EquipmentUsageType
+import com.gymora.domain.model.PersonalRecords
+import com.gymora.domain.model.WeightUnit
+import com.gymora.domain.repository.RecordsRepository
+import com.gymora.domain.repository.SettingsRepository
+import com.gymora.domain.usecase.GetEngagementUseCase
+import java.time.LocalDate
+import java.time.ZoneId
 import com.gymora.domain.model.ProgressSeries
 import com.gymora.domain.repository.ExerciseRepository
 import com.gymora.domain.repository.HistoryRepository
@@ -27,6 +35,10 @@ enum class ProgressPeriod(val label: String, val days: Long?) {
 data class ProgressRow(val series: ProgressSeries, val subtitle: String?)
 
 data class ProgressUiState(
+    val week: WeekOverview = WeekOverview(),
+    val weeklyProgress: WeeklyProgress? = null,
+    val records: PersonalRecords? = null,
+    val weightUnit: WeightUnit = WeightUnit.KG,
     val period: ProgressPeriod = ProgressPeriod.DAYS_30,
     val exercises: List<ProgressRow> = emptyList(),
     val routines: List<ProgressRow> = emptyList(),
@@ -37,13 +49,33 @@ data class ProgressUiState(
 class ProgressViewModel @Inject constructor(
     private val historyRepository: HistoryRepository,
     private val exerciseRepository: ExerciseRepository,
+    private val recordsRepository: RecordsRepository,
+    private val getEngagement: GetEngagementUseCase,
+    settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProgressUiState())
     val uiState: StateFlow<ProgressUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            settingsRepository.observeSettings().collect { settings ->
+                _uiState.update { it.copy(weightUnit = settings.weightUnit) }
+            }
+        }
+        loadDashboard()
         load(ProgressPeriod.DAYS_30)
+    }
+
+    /** Weekly overview, consistency and personal records; independent of the period filter. */
+    private fun loadDashboard() {
+        viewModelScope.launch {
+            val stats = runCatching { historyRepository.getWorkoutStats() }.getOrDefault(emptyList())
+            val week = weekOverview(stats, LocalDate.now(), ZoneId.systemDefault())
+            val engagement = runCatching { getEngagement() }.getOrNull()
+            val records = runCatching { recordsRepository.getPersonalRecords() }.getOrNull()
+            _uiState.update { it.copy(week = week, weeklyProgress = engagement?.progress, records = records) }
+        }
     }
 
     fun onPeriodSelected(period: ProgressPeriod) = load(period)

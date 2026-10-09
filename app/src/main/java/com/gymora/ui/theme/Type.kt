@@ -22,6 +22,11 @@ private fun variable(resId: Int, weight: FontWeight) = Font(
 private val weights = listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.SemiBold, FontWeight.Bold)
 
 val SpaceGrotesk = FontFamily(weights.map { variable(R.font.space_grotesk_variable, it) })
+/** Heavy condensed italic face for workout names, headlines and big metrics. */
+val BarlowCondensed = FontFamily(
+    Font(R.font.barlow_condensed_bold_italic, FontWeight.Bold, FontStyle.Italic),
+    Font(R.font.barlow_condensed_extrabold_italic, FontWeight.ExtraBold, FontStyle.Italic),
+)
 val Inter = FontFamily(weights.map { variable(R.font.inter_variable, it) })
 
 // Tabular figures keep changing numbers (timers, reps, counts) from jittering.
@@ -36,26 +41,51 @@ val DisplayStat = TextStyle(
     fontFeatureSettings = TABULAR,
 )
 
+/** Hero workout / exercise name: condensed, italic, very large. Pair with uppercase text. */
+val DisplayHero = TextStyle(
+    fontFamily = BarlowCondensed,
+    fontWeight = FontWeight.ExtraBold,
+    fontStyle = FontStyle.Italic,
+    fontSize = 52.sp,
+    lineHeight = 50.sp,
+)
+
+/** Large numeric metric (weight, reps, volume). Tabular so values do not jitter. */
+val DisplayMetric = TextStyle(
+    fontFamily = BarlowCondensed,
+    fontWeight = FontWeight.ExtraBold,
+    fontStyle = FontStyle.Italic,
+    fontSize = 40.sp,
+    lineHeight = 42.sp,
+    fontFeatureSettings = TABULAR,
+)
+
+/** Small uppercase-style caption above a metric or section. */
+val LabelCaps = TextStyle(
+    fontFamily = Inter,
+    fontWeight = FontWeight.SemiBold,
+    fontSize = 11.sp,
+    lineHeight = 14.sp,
+    letterSpacing = 1.2.sp,
+)
+
+private fun condensed(size: Int, line: Int) = TextStyle(
+    fontFamily = BarlowCondensed,
+    fontWeight = FontWeight.ExtraBold,
+    fontStyle = FontStyle.Italic,
+    fontSize = size.sp,
+    lineHeight = line.sp,
+    fontFeatureSettings = TABULAR,
+)
+
 val Typography = Typography(
-    displayLarge = DisplayStat,
-    displayMedium = DisplayStat,
+    displayLarge = DisplayHero,
+    displayMedium = DisplayMetric,
     displaySmall = DisplayStat,
-    headlineLarge = TextStyle(
-        fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold,
-        fontSize = 28.sp, lineHeight = 34.sp, fontFeatureSettings = TABULAR,
-    ),
-    headlineMedium = TextStyle(
-        fontFamily = SpaceGrotesk, fontWeight = FontWeight.Medium,
-        fontSize = 24.sp, lineHeight = 30.sp, fontFeatureSettings = TABULAR,
-    ),
-    headlineSmall = TextStyle(
-        fontFamily = SpaceGrotesk, fontWeight = FontWeight.Medium,
-        fontSize = 24.sp, lineHeight = 30.sp, fontFeatureSettings = TABULAR,
-    ),
-    titleLarge = TextStyle(
-        fontFamily = SpaceGrotesk, fontWeight = FontWeight.Medium,
-        fontSize = 20.sp, lineHeight = 26.sp, fontFeatureSettings = TABULAR,
-    ),
+    headlineLarge = condensed(34, 36),
+    headlineMedium = condensed(28, 30),
+    headlineSmall = condensed(24, 26),
+    titleLarge = condensed(24, 26),
     titleMedium = TextStyle(
         fontFamily = Inter, fontWeight = FontWeight.Medium,
         fontSize = 16.sp, lineHeight = 22.sp, fontFeatureSettings = TABULAR,

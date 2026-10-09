@@ -1,5 +1,19 @@
 package com.gymora.ui.home
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import com.gymora.ui.components.ActionButton
+import com.gymora.ui.components.AngularPanel
+import com.gymora.ui.components.HeroCard
+import com.gymora.ui.components.SectionHeader
+import com.gymora.ui.components.SegmentedProgress
+import com.gymora.ui.routines.routineIcon
+import com.gymora.ui.theme.DisplayHero
+import com.gymora.ui.theme.LabelCaps
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -183,16 +197,6 @@ fun HomeScreen(
             // Room under the last routine so the create button never covers it.
             contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 88.dp),
         ) {
-            uiState.activeWorkout?.let { active ->
-                item(key = "active-workout") {
-                    InProgressBanner(
-                        workout = active,
-                        onResume = { onResumeWorkout?.invoke(active.session.id) },
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
-                    )
-                }
-            }
-
             item(key = "week-strip") {
                 WeekStrip(
                     weekStart = uiState.weekStart,
@@ -202,12 +206,29 @@ fun HomeScreen(
                 )
             }
 
-            uiState.weeklyProgress?.let { progress ->
-                item(key = "weekly-goal") {
-                    WeeklyGoalCard(
-                        progress = progress,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    )
+            // Hero: the workout to do next (or resume), with the weekly completion progress.
+            if (!uiState.isLoading) {
+                val active = uiState.activeWorkout
+                val next = nextRoutine(uiState.routines)
+                if (active != null || next != null) {
+                    item(key = "today-hero") {
+                        TodayWorkoutHero(
+                            name = active?.session?.routineNameSnapshot ?: next!!.name,
+                            exerciseCount = if (active != null) active.exercises.size else next!!.exerciseCount,
+                            resuming = active != null,
+                            startedAt = active?.startedAt,
+                            progress = uiState.weeklyProgress,
+                            onClick = {
+                                if (active != null) onResumeWorkout?.invoke(active.session.id)
+                                else onRoutineClick(next!!.id)
+                            },
+                            onAction = {
+                                if (active != null) onResumeWorkout?.invoke(active.session.id)
+                                else startRoutine(next!!.id)
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
                 }
             }
 
@@ -258,13 +279,22 @@ fun HomeScreen(
                     )
                 }
 
-                else -> itemsIndexed(uiState.routines, key = { _, routine -> routine.id }) { _, routine ->
+                else -> {
+                    val heroId = if (uiState.activeWorkout == null) nextRoutine(uiState.routines)?.id else null
+                    val others = uiState.routines.filter { it.id != heroId }
+                    if (others.isNotEmpty()) {
+                        item(key = "routines-header") {
+                            SectionHeader("Your workouts", modifier = Modifier.padding(horizontal = 16.dp))
+                        }
+                    }
+                    itemsIndexed(others, key = { _, routine -> routine.id }) { _, routine ->
                     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                         RoutineCard(
                             routine = routine,
                             onClick = { onRoutineClick(routine.id) },
                             onStart = { startRoutine(routine.id) },
                         )
+                    }
                     }
                 }
             }
@@ -291,48 +321,81 @@ fun HomeScreen(
     }
 }
 
-/** Prominent resume card for the unfinished workout, with a live elapsed timer. */
+/** The routine to do next: never performed first, otherwise the one performed longest ago. */
+private fun nextRoutine(routines: List<RoutineSummary>): RoutineSummary? =
+    routines.minByOrNull { it.lastPerformedAt ?: Long.MIN_VALUE }
+
+/** Today's Workout hero: name, size, weekly progress and the dominant START / RESUME action. */
 @Composable
-private fun InProgressBanner(
-    workout: com.gymora.domain.model.ActiveWorkout,
-    onResume: () -> Unit,
+private fun TodayWorkoutHero(
+    name: String,
+    exerciseCount: Int,
+    resuming: Boolean,
+    startedAt: java.time.Instant?,
+    progress: com.gymora.domain.calculator.WeeklyProgress?,
+    onClick: () -> Unit,
+    onAction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var elapsed by remember { mutableStateOf(0L) }
-    androidx.compose.runtime.LaunchedEffect(workout.startedAt) {
-        while (true) {
-            elapsed = java.time.Duration.between(workout.startedAt, java.time.Instant.now()).seconds
+    androidx.compose.runtime.LaunchedEffect(startedAt) {
+        while (startedAt != null) {
+            elapsed = java.time.Duration.between(startedAt, java.time.Instant.now()).seconds
             kotlinx.coroutines.delay(1000)
         }
     }
-    Card(
-        onClick = onResume,
-        modifier = modifier.fillMaxWidth(),
-        colors = androidx.compose.material3.CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        ),
+    val scheme = MaterialTheme.colorScheme
+    HeroCard(
+        modifier = modifier,
+        onClick = onClick,
+        watermark = {
+            Icon(
+                painter = painterResource(routineIcon(name)),
+                contentDescription = null,
+                tint = scheme.primary.copy(alpha = 0.18f),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 8.dp)
+                    .size(180.dp),
+            )
+        },
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Workout in progress", style = MaterialTheme.typography.labelLarge)
-                Text(
-                    text = workout.session.routineNameSnapshot,
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                Text(
-                    text = com.gymora.ui.workout.formatElapsed(elapsed),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                text = if (resuming) "WORKOUT IN PROGRESS" else "TODAY'S WORKOUT",
+                style = LabelCaps,
+                color = scheme.primary,
+            )
+            Text(
+                text = name.uppercase(),
+                style = DisplayHero,
+                color = Color.White,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.padding(end = 56.dp),
+            )
+            val detail = if (resuming) {
+                "${com.gymora.ui.workout.formatElapsed(elapsed)} elapsed"
+            } else {
+                "$exerciseCount ${if (exerciseCount == 1) "exercise" else "exercises"}"
             }
-            FilledIconButton(onClick = onResume) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = "Resume workout")
+            Text(text = detail, style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.85f))
+            if (progress != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SegmentedProgress(done = progress.done, total = progress.goal)
+                    Text(
+                        text = "${progress.done} of ${progress.goal} workouts this week" +
+                            if (progress.streakWeeks > 0) " · ${progress.streakWeeks} wk streak" else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.85f),
+                    )
+                }
             }
+            ActionButton(
+                text = if (resuming) "Resume workout" else "Start workout",
+                onClick = onAction,
+                icon = Icons.Filled.PlayArrow,
+            )
         }
     }
 }
@@ -422,35 +485,38 @@ private fun RoutineCard(
     onClick: () -> Unit,
     onStart: () -> Unit,
 ) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = routine.name, style = MaterialTheme.typography.titleLarge)
+    val scheme = MaterialTheme.colorScheme
+    AngularPanel(modifier = Modifier.fillMaxWidth(), onClick = onClick, accentBar = scheme.primary) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(routineIcon(routine.name)),
+                contentDescription = null,
+                tint = scheme.primary,
+                modifier = Modifier.size(36.dp),
+            )
+            Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                Text(text = routine.name.uppercase(), style = MaterialTheme.typography.titleLarge)
                 Text(
-                    text = "${routine.exerciseCount} exercises",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = buildString {
+                        append("${routine.exerciseCount} exercises")
+                        routine.lastPerformedAt?.let { append(" · last ${formatDate(it)}") }
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
                 )
-                routine.lastPerformedAt?.let { timestamp ->
-                    Text(
-                        text = "Last performed ${formatDate(timestamp)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
-            FilledIconButton(onClick = onStart) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(GymoraShapes.chip)
+                    .background(scheme.primary)
+                    .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onStart),
+                contentAlignment = Alignment.Center,
+            ) {
                 Icon(
                     Icons.Filled.PlayArrow,
                     contentDescription = "Start ${routine.name}",
+                    tint = scheme.onPrimary,
                 )
             }
         }

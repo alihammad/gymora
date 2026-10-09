@@ -352,12 +352,12 @@ fun gymoraFilterChipBorder(selected: Boolean, enabled: Boolean = true) =
         selectedBorderWidth = 0.dp,
     )
 
-/** Bottom navigation item colors: lime icon with a lime pill at ~15% opacity when selected. */
+/** Bottom navigation item colors: selected is lime icon and label, no pill. */
 @Composable
 fun gymoraNavigationBarItemColors() = NavigationBarItemDefaults.colors(
     selectedIconColor = MaterialTheme.colorScheme.primary,
     selectedTextColor = MaterialTheme.colorScheme.primary,
-    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+    indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
 )

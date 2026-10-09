@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -57,7 +59,7 @@ fun ExerciseMediaImage(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(max = 260.dp)
-            .clip(RoundedCornerShape(12.dp)),
+            .clip(com.gymora.ui.theme.GymoraShapes.card),
     )
 }
 
@@ -81,13 +83,18 @@ private fun decode(file: File, context: android.content.Context): Drawable? {
     return BitmapDrawable(context.resources, bitmap)
 }
 
-/** Bulleted coaching cues. */
+/** Coaching cues, each with a lime check so they read as a checklist. */
 @Composable
 fun FormCuesList(cues: List<String>, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         cues.forEach { cue ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("•", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                androidx.compose.material3.Icon(
+                    androidx.compose.material.icons.Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
                 Text(cue, style = MaterialTheme.typography.bodyMedium)
             }
         }
