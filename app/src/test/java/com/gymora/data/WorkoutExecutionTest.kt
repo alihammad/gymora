@@ -228,6 +228,23 @@ class WorkoutExecutionTest {
     }
 
     @Test
+    fun reorderSessionExercisesPersistsOrderAndLeavesRoutineUntouched() = runTest {
+        val (routineId, _) = createRoutineWithOneExercise()
+        val extraExerciseId = exerciseRepository
+            .createCustom(CreateExerciseInput(name = "Dips")).id
+        val sessionId = sessionRepository.startFromRoutine(routineId)
+        sessionRepository.addExerciseToSession(sessionId, extraExerciseId, addToRoutine = false)
+        val before = sessionRepository.getActiveWorkout(sessionId).exercises.map { it.workoutExerciseId }
+        assertEquals(2, before.size)
+
+        sessionRepository.reorderSessionExercises(sessionId, before.reversed())
+
+        val after = sessionRepository.getActiveWorkout(sessionId).exercises.map { it.workoutExerciseId }
+        assertEquals(before.reversed(), after)
+        assertEquals(1, routineRepository.getById(routineId).exercises.size)
+    }
+
+    @Test
     fun observeActiveSessionReturnsNullWhenNoneActive() = runTest {
         val active = sessionRepository.observeActiveSession().first()
         assertNull(active)

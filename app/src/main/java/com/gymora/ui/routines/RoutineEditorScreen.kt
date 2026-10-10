@@ -24,7 +24,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
@@ -77,6 +79,8 @@ import com.gymora.ui.components.LocalWeightUnit
 import com.gymora.ui.components.SetEntry
 import com.gymora.ui.components.SetInputRow
 import com.gymora.ui.components.ConfirmDialog
+import com.gymora.ui.components.ReorderExerciseRow
+import com.gymora.ui.components.ReorderableList
 import com.gymora.ui.components.SupersetBlock
 import com.gymora.ui.components.SupersetLinkButton
 import com.gymora.ui.components.ChartPoint
@@ -101,6 +105,7 @@ fun RoutineEditorScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val exit = { viewModel.onExit(onBack) }
+    var reordering by rememberSaveable { mutableStateOf(false) }
 
     BackHandler(onBack = exit)
 
@@ -126,6 +131,12 @@ fun RoutineEditorScreen(
                 },
                 actions = {
                     if (uiState.routine != null) {
+                        IconButton(onClick = { reordering = !reordering }) {
+                            Icon(
+                                if (reordering) Icons.Filled.Check else Icons.Filled.SwapVert,
+                                contentDescription = if (reordering) "Done reordering" else "Reorder exercises",
+                            )
+                        }
                         IconButton(onClick = viewModel::onDeleteRequested) {
                             Icon(Icons.Filled.Delete, contentDescription = "Delete workout")
                         }
@@ -179,6 +190,7 @@ fun RoutineEditorScreen(
                     ExerciseList(
                         exercises = routine.exercises,
                         viewModel = viewModel,
+                        reordering = reordering,
                     )
 
                     OutlinedButton(
@@ -370,7 +382,23 @@ private fun WorkoutDetailsForm(
 private fun ExerciseList(
     exercises: List<RoutineExerciseDetail>,
     viewModel: RoutineEditorViewModel,
+    reordering: Boolean,
 ) {
+    if (reordering) {
+        ReorderableList(
+            items = exercises,
+            key = { it.routineExerciseId },
+            onMove = viewModel::onMoveExercise,
+        ) { exercise, handle, isDragging ->
+            ReorderExerciseRow(
+                name = exercise.exerciseName,
+                inSuperset = exercise.supersetGroup != null,
+                handle = handle,
+                isDragging = isDragging,
+            )
+        }
+        return
+    }
     val blocks = SupersetRules.blocks(exercises) { it.supersetGroup }
     val card: @Composable (RoutineExerciseDetail) -> Unit = { exercise ->
         ExerciseCard(

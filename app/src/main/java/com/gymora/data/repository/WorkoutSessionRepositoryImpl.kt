@@ -22,6 +22,8 @@ import com.gymora.domain.model.EntityNotFoundException
 import com.gymora.domain.model.MeasurementType
 import com.gymora.domain.model.PreviousPerformance
 import com.gymora.domain.model.Side
+import com.gymora.domain.model.SupersetEntry
+import com.gymora.domain.model.SupersetRules
 import com.gymora.domain.model.SessionStatus
 import com.gymora.domain.model.WeightUnit
 import com.gymora.domain.model.WorkoutSession
@@ -319,6 +321,28 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
     override suspend fun removeExerciseFromSession(workoutExerciseId: Long) {
         // FR-029: session-only removal; the routine template is untouched.
         exerciseDao.deleteById(workoutExerciseId)
+    }
+
+    override suspend fun reorderSessionExercises(
+        sessionId: Long,
+        orderedWorkoutExerciseIds: List<Long>,
+    ) {
+        database.withTransaction {
+            // Two passes to respect UNIQUE(session_id, position).
+            orderedWorkoutExerciseIds.forEachIndexed { index, id ->
+                exerciseDao.updatePosition(id, -(index + 1))
+            }
+            orderedWorkoutExerciseIds.forEachIndexed { index, id ->
+                exerciseDao.updatePosition(id, index)
+            }
+            // A move can split a superset or strand a single member.
+            val entities = exerciseDao.getForSession(sessionId)
+            val groups = SupersetRules.normalize(entities.map { SupersetEntry(it.id, it.supersetGroup) })
+            entities.forEach { entity ->
+                val group = groups[entity.id]
+                if (group != entity.supersetGroup) exerciseDao.updateSupersetGroup(entity.id, group)
+            }
+        }
     }
 
     override suspend fun updateSessionNotes(sessionId: Long, notes: String?) {

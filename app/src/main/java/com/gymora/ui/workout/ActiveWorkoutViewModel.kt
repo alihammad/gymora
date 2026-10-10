@@ -327,6 +327,17 @@ class ActiveWorkoutViewModel @Inject constructor(
         }
     }
 
+    fun onMoveExercise(fromIndex: Int, toIndex: Int) {
+        val exercises = _uiState.value.activeWorkout?.exercises ?: return
+        if (fromIndex == toIndex || fromIndex !in exercises.indices || toIndex !in exercises.indices) return
+        val ids = exercises.map { it.workoutExerciseId }.toMutableList()
+        ids.add(toIndex, ids.removeAt(fromIndex))
+        viewModelScope.launch {
+            modifySessionStructureUseCase.reorderExercises(sessionId, ids)
+            loadSession()
+        }
+    }
+
     fun onFinishRequested() {
         _uiState.update { it.copy(showFinishConfirm = true) }
     }

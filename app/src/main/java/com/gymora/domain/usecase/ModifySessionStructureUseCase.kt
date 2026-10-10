@@ -26,4 +26,9 @@ class ModifySessionStructureUseCase @Inject constructor(
     suspend fun removeExercise(workoutExerciseId: Long) {
         workoutSessionRepository.removeExerciseFromSession(workoutExerciseId)
     }
+
+    /** Session-only reorder; the routine is untouched. */
+    suspend fun reorderExercises(sessionId: Long, orderedWorkoutExerciseIds: List<Long>) {
+        workoutSessionRepository.reorderSessionExercises(sessionId, orderedWorkoutExerciseIds)
+    }
 }

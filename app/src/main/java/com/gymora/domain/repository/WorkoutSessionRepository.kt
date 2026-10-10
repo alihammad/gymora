@@ -57,6 +57,12 @@ interface WorkoutSessionRepository {
     /** FR-029: remove from this session only; routine untouched. */
     suspend fun removeExerciseFromSession(workoutExerciseId: Long)
 
+    /**
+     * Persists a new exercise order for this session only; the routine is untouched.
+     * A move that separates a superset's members unlinks them.
+     */
+    suspend fun reorderSessionExercises(sessionId: Long, orderedWorkoutExerciseIds: List<Long>)
+
     suspend fun updateSessionNotes(sessionId: Long, notes: String?)
 
     /** Records ended_at, sets status COMPLETED, returns summary (FR-033/034/035). */

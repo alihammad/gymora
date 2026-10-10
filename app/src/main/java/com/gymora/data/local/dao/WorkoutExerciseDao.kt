@@ -28,6 +28,9 @@ interface WorkoutExerciseDao {
     @Query("UPDATE workout_exercises SET superset_group = :group WHERE id = :id")
     suspend fun updateSupersetGroup(id: Long, group: Long?)
 
+    @Query("UPDATE workout_exercises SET position = :position WHERE id = :id")
+    suspend fun updatePosition(id: Long, position: Int)
+
     @Query("DELETE FROM workout_exercises WHERE id = :id")
     suspend fun deleteById(id: Long)
 

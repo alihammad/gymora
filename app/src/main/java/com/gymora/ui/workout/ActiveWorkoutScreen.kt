@@ -35,6 +35,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.SwapVert
+import com.gymora.ui.components.ReorderExerciseRow
+import com.gymora.ui.components.ReorderableList
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.clickable
@@ -119,6 +122,7 @@ fun ActiveWorkoutScreen(
 
     // The exercise in focus: the user's tap, else the first one with sets left to log.
     var focusedId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var reordering by rememberSaveable { mutableStateOf(false) }
     val allExercises = uiState.activeWorkout?.exercises.orEmpty()
     val current = allExercises.firstOrNull { it.workoutExerciseId == focusedId }
         ?: allExercises.firstOrNull { ex -> ex.sets.any { !it.isCompleted } }
@@ -168,6 +172,16 @@ fun ActiveWorkoutScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
+                actions = {
+                    if (allExercises.size > 1) {
+                        IconButton(onClick = { reordering = !reordering }) {
+                            Icon(
+                                if (reordering) Icons.Filled.Check else Icons.Filled.SwapVert,
+                                contentDescription = if (reordering) "Done reordering" else "Reorder exercises",
+                            )
+                        }
+                    }
+                },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -189,7 +203,7 @@ fun ActiveWorkoutScreen(
                             .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                    if (current != null) {
+                    if (current != null && !reordering) {
                         item(key = "current-exercise") {
                             CurrentExerciseHero(
                                 exercise = current,
@@ -202,7 +216,23 @@ fun ActiveWorkoutScreen(
                         }
                         item(key = "all-header") { SectionHeader("All exercises") }
                     }
-                    val blocks = SupersetRules.blocks(workout.exercises) { it.supersetGroup }
+                    if (reordering) {
+                        item(key = "reorder-list") {
+                            ReorderableList(
+                                items = workout.exercises,
+                                key = { it.workoutExerciseId },
+                                onMove = viewModel::onMoveExercise,
+                            ) { exercise, handle, isDragging ->
+                                ReorderExerciseRow(
+                                    name = exercise.exerciseName,
+                                    inSuperset = exercise.supersetGroup != null,
+                                    handle = handle,
+                                    isDragging = isDragging,
+                                )
+                            }
+                        }
+                    }
+                    val blocks = if (reordering) emptyList() else SupersetRules.blocks(workout.exercises) { it.supersetGroup }
                     items(blocks, key = { it.first().workoutExerciseId }) { block ->
                         ExerciseBlock(block) { exercise ->
                             if (exercise.workoutExerciseId == current?.workoutExerciseId) {
