@@ -23,6 +23,13 @@ interface WorkoutSessionRepository {
      */
     suspend fun startFromRoutine(routineId: Long): Long
 
+    /**
+     * Ad hoc: creates an ACTIVE session with no routine holding just this exercise and one
+     * empty set (one per side if unilateral), so it can be logged straight from its detail screen.
+     * Throws ActiveWorkoutConflictException if one is already active.
+     */
+    suspend fun startAdHoc(exerciseId: Long): Long
+
     /** Full active-workout graph for rendering/recovery (FR-039). */
     suspend fun getActiveWorkout(sessionId: Long): ActiveWorkout
 

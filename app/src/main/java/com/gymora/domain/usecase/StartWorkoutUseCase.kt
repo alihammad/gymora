@@ -14,4 +14,8 @@ class StartWorkoutUseCase @Inject constructor(
 
     suspend operator fun invoke(routineId: Long): Long =
         workoutSessionRepository.startFromRoutine(routineId)
+
+    /** Start a standalone session for a single exercise, without a routine. */
+    suspend fun startAdHoc(exerciseId: Long): Long =
+        workoutSessionRepository.startAdHoc(exerciseId)
 }

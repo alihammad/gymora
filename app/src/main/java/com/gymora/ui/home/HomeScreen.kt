@@ -7,6 +7,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.gymora.ui.components.ActionButton
+import com.gymora.ui.components.GymBackdrops
+import com.gymora.ui.components.gymBackdrop
 import com.gymora.ui.components.AngularPanel
 import com.gymora.ui.components.HeroCard
 import com.gymora.ui.components.SectionHeader
@@ -193,6 +195,7 @@ fun HomeScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .gymBackdrop(GymBackdrops.Home)
                 .padding(innerPadding),
             // Room under the last routine so the create button never covers it.
             contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 88.dp),

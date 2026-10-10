@@ -64,17 +64,20 @@ class ActiveWorkoutViewModel @Inject constructor(
             // Started via START on a routine card: routineId is passed via a
             // separate saved-state key set by the navigation caller.
             val routineId = savedStateHandle.get<String>(ARG_ROUTINE_ID)?.toLongOrNull()
+            val adHocExerciseId = savedStateHandle.get<String>(ARG_EXERCISE_ID)?.toLongOrNull()
             if (routineId != null) {
-                startWorkout(routineId)
+                startWorkout { startWorkoutUseCase(routineId) }
+            } else if (adHocExerciseId != null) {
+                startWorkout { startWorkoutUseCase.startAdHoc(adHocExerciseId) }
             }
         } else {
             loadSession()
         }
     }
 
-    private fun startWorkout(routineId: Long) {
+    private fun startWorkout(start: suspend () -> Long) {
         viewModelScope.launch {
-            runCatching { startWorkoutUseCase(routineId) }
+            runCatching { start() }
                 .onSuccess { id ->
                     sessionId = id
                     loadSession()
@@ -396,5 +399,6 @@ class ActiveWorkoutViewModel @Inject constructor(
     companion object {
         const val NEW_SESSION_ID = 0L
         const val ARG_ROUTINE_ID = "routineId"
+        const val ARG_EXERCISE_ID = "exerciseId"
     }
 }

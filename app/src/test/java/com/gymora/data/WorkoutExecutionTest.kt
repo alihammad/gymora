@@ -90,6 +90,33 @@ class WorkoutExecutionTest {
     }
 
     @Test
+    fun adHocStartCreatesRoutinelessSessionWithOneExerciseAndSet() = runTest {
+        val exerciseId = exerciseRepository.createCustom(CreateExerciseInput(name = "Squat")).id
+
+        val sessionId = sessionRepository.startAdHoc(exerciseId)
+
+        val active = sessionRepository.getActiveWorkout(sessionId)
+        assertNull(active.session.routineId)
+        assertEquals(1, active.exercises.size)
+        assertEquals("Squat", active.exercises.first().exerciseName)
+        assertEquals(1, active.exercises.first().sets.size)
+    }
+
+    @Test
+    fun adHocStartThrowsConflictWhenWorkoutActive() = runTest {
+        val exerciseId = exerciseRepository.createCustom(CreateExerciseInput(name = "Squat")).id
+        sessionRepository.startAdHoc(exerciseId)
+
+        val exception = try {
+            sessionRepository.startAdHoc(exerciseId)
+            null
+        } catch (e: ActiveWorkoutConflictException) {
+            e
+        }
+        assertNotNull(exception)
+    }
+
+    @Test
     fun startingSecondWorkoutThrowsConflict() = runTest {
         val (routineId, _) = createRoutineWithOneExercise()
         sessionRepository.startFromRoutine(routineId)

@@ -40,7 +40,11 @@ sealed class Destinations(val route: String) {
         fun create(routineId: Long) = "workout/start/$routineId"
         const val ARG = "routineId"
     }
-    data object WorkoutSummary : Destinations("workout/summary/{sessionId}") {
+    data object AdHocExercise : Destinations("workout/adhoc/{exerciseId}") {
+        fun create(exerciseId: Long) = "workout/adhoc/$exerciseId"
+        const val ARG = "exerciseId"
+    }
+    data object WorkoutSummary: Destinations("workout/summary/{sessionId}") {
         fun create(sessionId: Long) = "workout/summary/$sessionId"
         const val ARG = "sessionId"
     }

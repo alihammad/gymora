@@ -217,6 +217,9 @@ fun GymoraNavHost(
                     onEdit = { exerciseId ->
                         navController.navigate(Destinations.ExerciseEditor.create(exerciseId))
                     },
+                    onStartExercise = { exerciseId ->
+                        navController.navigate(Destinations.AdHocExercise.create(exerciseId))
+                    },
                 )
             }
             composable(Destinations.ExerciseFilter.route) {
@@ -250,6 +253,17 @@ fun GymoraNavHost(
                     onDiscarded = {
                         navController.popBackStack(Destinations.Home.route, inclusive = false)
                     },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Destinations.AdHocExercise.route) {
+                ActiveWorkoutScreen(
+                    onFinished = { sessionId ->
+                        navController.navigate(Destinations.WorkoutSummary.create(sessionId)) {
+                            popUpTo(Destinations.Home.route)
+                        }
+                    },
+                    onDiscarded = { navController.popBackStack() },
                     onBack = { navController.popBackStack() },
                 )
             }

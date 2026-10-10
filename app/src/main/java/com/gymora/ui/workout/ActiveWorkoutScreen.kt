@@ -2,6 +2,8 @@ package com.gymora.ui.workout
 
 import androidx.compose.ui.unit.sp
 import com.gymora.ui.components.ActionButton
+import com.gymora.ui.components.GymBackdrops
+import com.gymora.ui.components.gymBackdrop
 import com.gymora.ui.components.AngularPanel
 import com.gymora.ui.components.HeroCard
 import com.gymora.ui.components.MuscleChip
@@ -180,7 +182,7 @@ fun ActiveWorkoutScreen(
                     modifier = Modifier.padding(innerPadding).padding(16.dp),
                 )
             } else {
-                Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                Column(modifier = Modifier.fillMaxSize().gymBackdrop(GymBackdrops.Workout).padding(innerPadding)) {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()

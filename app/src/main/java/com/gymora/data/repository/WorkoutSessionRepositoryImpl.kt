@@ -133,6 +133,55 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun startAdHoc(exerciseId: Long): Long {
+        sessionDao.getActiveOnce()?.let { active ->
+            throw ActiveWorkoutConflictException(active.id)
+        }
+        val exercise = database.exerciseDao().getById(exerciseId)
+            ?: throw EntityNotFoundException(exerciseId)
+        val now = System.currentTimeMillis()
+
+        return database.withTransaction {
+            val sessionId = sessionDao.insert(
+                WorkoutSessionEntity(
+                    routineId = null,
+                    routineNameSnapshot = exercise.name,
+                    startedAt = now,
+                    endedAt = null,
+                    status = SessionStatus.ACTIVE.name,
+                    notes = null,
+                    createdAt = now,
+                ),
+            )
+            val workoutExerciseId = exerciseDao.insert(
+                WorkoutExerciseEntity(
+                    sessionId = sessionId,
+                    exerciseId = exerciseId,
+                    exerciseNameSnapshot = exercise.name,
+                    position = 0,
+                    notes = null,
+                ),
+            )
+            sidesFor(exercise).forEachIndexed { index, side ->
+                setDao.insert(
+                    WorkoutSetEntity(
+                        workoutExerciseId = workoutExerciseId,
+                        setNumber = index + 1,
+                        reps = null,
+                        weight = null,
+                        weightUnit = null,
+                        measurementType = exercise.measurementType,
+                        isCompleted = false,
+                        completedAt = null,
+                        notes = null,
+                        side = side?.name,
+                    ),
+                )
+            }
+            sessionId
+        }
+    }
+
     override suspend fun getActiveWorkout(sessionId: Long): ActiveWorkout {
         val session = sessionDao.getById(sessionId) ?: throw EntityNotFoundException(sessionId)
         return ActiveWorkout(

@@ -35,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.PlayArrow
 import com.gymora.ui.components.ExerciseMediaImage
 import com.gymora.ui.components.FormCuesList
 import com.gymora.ui.components.Card
@@ -74,6 +75,7 @@ fun ExerciseDetailScreen(
     onExerciseHistory: (Long) -> Unit = {},
     onFilterClick: (kind: String, value: String) -> Unit = { _, _ -> },
     onEdit: (Long) -> Unit = {},
+    onStartExercise: (Long) -> Unit = {},
     viewModel: ExerciseDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -113,9 +115,9 @@ fun ExerciseDetailScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                 ) {
                     ActionButton(
-                        text = "View history",
-                        onClick = { onExerciseHistory(exercise.id) },
-                        icon = Icons.Filled.FitnessCenter,
+                        text = "Start exercise",
+                        onClick = { onStartExercise(exercise.id) },
+                        icon = Icons.Filled.PlayArrow,
                     )
                 }
             }
