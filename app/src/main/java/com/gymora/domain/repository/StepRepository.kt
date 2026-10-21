@@ -15,8 +15,8 @@ interface StepRepository {
      * Today's steps, or null when no source is available (sensor not allowed and Health
      * Connect steps not on). With [useSensor] the sensor is listened to while collected
      * and its readings recorded; pass it only when the activity-recognition permission is
-     * held. Health Connect is polled while collected. When both sources report, the larger
-     * count wins, so steps are never counted twice. Rolls over at midnight.
+     * held. Health Connect is polled while collected. When both sources report, Health
+     * Connect's de-duplicated count wins; the sensor is the fallback. Rolls over at midnight.
      */
     fun observeTodaySteps(useSensor: Boolean): Flow<Int?>
 

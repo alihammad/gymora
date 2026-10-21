@@ -31,7 +31,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -50,7 +49,9 @@ class StepRepositoryImpl @Inject constructor(
     override fun observeTodaySteps(useSensor: Boolean): Flow<Int?> {
         val sensor: Flow<Int?> = if (useSensor && isSupported) sensorSteps() else flowOf(null)
         return combine(sensor, healthSteps()) { fromSensor, fromHealth ->
-            if (fromSensor == null && fromHealth == null) null else maxOf(fromSensor ?: 0, fromHealth ?: 0)
+            // Health Connect de-duplicates across sources and matches Google Fit / Samsung Health;
+            // the raw sensor also counts shakes and catches up in jumps, so it is only a fallback.
+            fromHealth ?: fromSensor
         }.distinctUntilChanged()
     }
 
@@ -62,7 +63,7 @@ class StepRepositoryImpl @Inject constructor(
             val sensor = rows.associate { LocalDate.parse(it.date) to it.steps }
             (0 until days).map { offset ->
                 val date = first.plusDays(offset.toLong())
-                DaySteps(date, maxOf(sensor[date] ?: 0, fromHealth[date] ?: 0))
+                DaySteps(date, if (fromHealth.isNotEmpty()) fromHealth[date] ?: 0 else sensor[date] ?: 0)
             }
         }
     }
@@ -92,7 +93,7 @@ class StepRepositoryImpl @Inject constructor(
             }
         }
         today()
-            .flatMapLatest { date -> stepDao.observeSteps(date.toString()).map { it ?: 0 } }
+            .flatMapLatest { date -> stepDao.observeSteps(date.toString()) }
             .collect { send(it) }
     }
 
