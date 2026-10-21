@@ -10,6 +10,29 @@ import com.gymora.ui.theme.DisplayMetric
 import com.gymora.ui.theme.LabelCaps
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.window.Dialog
+import kotlin.math.abs
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -87,14 +110,11 @@ fun SetInputRow(
                     accept = ::isDecimalInput,
                     onValueChange = { weightText = it.replace(',', '.'); report() },
                 )
-                SetField.REPS -> ValueField(
-                    value = repsText,
-                    label = "Reps",
-                    placeholder = hint?.reps?.toString().orEmpty(),
-                    keyboardType = KeyboardType.Number,
+                SetField.REPS -> RepsField(
+                    reps = repsText.toIntOrNull(),
+                    hint = hint?.reps,
                     large = large,
-                    accept = { it.length <= 4 && it.all(Char::isDigit) },
-                    onValueChange = { repsText = it; report() },
+                    onRepsChange = { repsText = it.toString(); report() },
                 )
                 SetField.DURATION -> ValueField(
                     value = durationText,
@@ -119,6 +139,126 @@ fun SetInputRow(
         }
     }
 }
+
+/** Reps entry: a tappable field that opens a wheel picker, 1..[MAX_REPS]; empty until the user picks. */
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.RepsField(
+    reps: Int?,
+    hint: Int?,
+    large: Boolean,
+    onRepsChange: (Int) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier.weight(1f),
+        horizontalAlignment = if (large) Alignment.CenterHorizontally else Alignment.Start,
+    ) {
+        Text(
+            text = "REPS",
+            style = LabelCaps,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = if (large) 64.dp else 56.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                .clickable { open = true },
+        ) {
+            val style = if (large) DisplayMetric else MaterialTheme.typography.titleMedium
+            if (reps != null) {
+                Text(reps.toString(), style = style)
+            } else {
+                Text(
+                    hint?.toString() ?: "—",
+                    style = style,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                )
+            }
+        }
+    }
+    if (open) {
+        RepsPickerDialog(
+            initial = reps ?: hint ?: DEFAULT_REPS,
+            onDismiss = { open = false },
+            onUpdate = { onRepsChange(it); open = false },
+        )
+    }
+}
+
+@Composable
+private fun RepsPickerDialog(initial: Int, onDismiss: () -> Unit, onUpdate: (Int) -> Unit) {
+    val itemHeight = 44.dp
+    val itemPx = with(LocalDensity.current) { itemHeight.toPx() }
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initial.coerceIn(1, MAX_REPS) - 1)
+    // Rows are padded by two items above and below, so the snapped-to row sits in the middle.
+    val selected by remember {
+        derivedStateOf {
+            val offsetRows = if (listState.firstVisibleItemScrollOffset > itemPx / 2) 1 else 0
+            (listState.firstVisibleItemIndex + offsetRows + 1).coerceIn(1, MAX_REPS)
+        }
+    }
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Filled.Close, contentDescription = "Close")
+                    }
+                }
+                Text("Reps", style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(16.dp))
+                Box(modifier = Modifier.height(itemHeight * 5), contentAlignment = Alignment.Center) {
+                    LazyColumn(
+                        state = listState,
+                        flingBehavior = rememberSnapFlingBehavior(listState),
+                        contentPadding = PaddingValues(vertical = itemHeight * 2),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        items(MAX_REPS) { index ->
+                            val value = index + 1
+                            val distance = abs(value - selected)
+                            Box(
+                                modifier = Modifier.fillMaxWidth().height(itemHeight),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = value.toString(),
+                                    style = if (distance == 0) {
+                                        MaterialTheme.typography.headlineMedium
+                                    } else {
+                                        MaterialTheme.typography.titleLarge
+                                    },
+                                    fontWeight = if (distance == 0) FontWeight.Bold else FontWeight.Normal,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(
+                                        alpha = when (distance) { 0 -> 1f; 1 -> 0.35f; else -> 0.15f },
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                    // Lines framing the selected row.
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        HorizontalDivider(modifier = Modifier.padding(top = itemHeight * 2), color = MaterialTheme.colorScheme.onSurface)
+                        Spacer(Modifier.height(itemHeight))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Button(onClick = { onUpdate(selected) }) { Text("Update") }
+            }
+        }
+    }
+}
+
+private const val MAX_REPS = 100
+private const val DEFAULT_REPS = 8
 
 @Composable
 private fun androidx.compose.foundation.layout.RowScope.ValueField(

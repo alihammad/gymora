@@ -1,15 +1,9 @@
 package com.gymora.ui.workout
 
-import androidx.compose.ui.unit.sp
-import com.gymora.ui.components.ActionButton
 import com.gymora.ui.components.GymBackdrops
 import com.gymora.ui.components.gymBackdrop
 import com.gymora.ui.components.AngularPanel
-import com.gymora.ui.components.HeroCard
-import com.gymora.ui.components.MuscleChip
 import com.gymora.ui.components.SectionHeader
-import com.gymora.ui.theme.DisplayHero
-import com.gymora.ui.theme.LabelCaps
 import com.gymora.ui.components.GymoraLoading
 import androidx.compose.foundation.background
 import androidx.compose.foundation.text.KeyboardOptions
@@ -71,6 +65,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gymora.domain.model.ActiveExercise
 import com.gymora.domain.model.ActiveSet
 import com.gymora.domain.model.PreviousPerformance
+import com.gymora.domain.model.SetField
 import com.gymora.domain.model.SetValue
 import com.gymora.domain.model.SupersetRules
 import com.gymora.domain.calculator.SetFormat
@@ -120,18 +115,19 @@ fun ActiveWorkoutScreen(
         }
     }
 
-    // The exercise in focus: the user's tap, else the first one with sets left to log.
+    // The expanded exercise: the user's tap, else the first one; NO_EXPANDED once collapsed by the user.
     var focusedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var reordering by rememberSaveable { mutableStateOf(false) }
     val allExercises = uiState.activeWorkout?.exercises.orEmpty()
-    val current = allExercises.firstOrNull { it.workoutExerciseId == focusedId }
-        ?: allExercises.firstOrNull { ex -> ex.sets.any { !it.isCompleted } }
-        ?: allExercises.lastOrNull()
-    val nextSet = current?.sets?.firstOrNull { !it.isCompleted }
+    val current = if (focusedId == NO_EXPANDED) {
+        null
+    } else {
+        allExercises.firstOrNull { it.workoutExerciseId == focusedId } ?: allExercises.firstOrNull()
+    }
 
     Scaffold(
         bottomBar = {
-            if (current != null) {
+            if (allExercises.isNotEmpty()) {
                 Column(
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.background)
@@ -143,14 +139,6 @@ fun ActiveWorkoutScreen(
                         onSkip = viewModel::onRestTimerSkip,
                         onAdd30s = viewModel::onRestTimerAdd30s,
                         onRestart = viewModel::onRestTimerRestart,
-                    )
-                    // Primary action: complete the next set, or add one when all are logged.
-                    ActionButton(
-                        text = if (nextSet != null) "Log set" else "Add set",
-                        onClick = {
-                            if (nextSet != null) viewModel.onToggleComplete(nextSet.id, true)
-                            else viewModel.onAddSet(current.workoutExerciseId)
-                        },
                     )
                 }
             }
@@ -203,17 +191,7 @@ fun ActiveWorkoutScreen(
                             .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                    if (current != null && !reordering) {
-                        item(key = "current-exercise") {
-                            CurrentExerciseHero(
-                                exercise = current,
-                                index = allExercises.indexOf(current),
-                                total = allExercises.size,
-                                nextSet = nextSet,
-                                previousPerformance = current.exerciseId?.let { uiState.previousPerformanceMap[it] },
-                                onSetValuesChanged = viewModel::onSetValuesChanged,
-                            )
-                        }
+                    if (allExercises.isNotEmpty() && !reordering) {
                         item(key = "all-header") { SectionHeader("All exercises") }
                     }
                     if (reordering) {
@@ -241,10 +219,10 @@ fun ActiveWorkoutScreen(
                                     previousPerformance = exercise.exerciseId?.let {
                                         uiState.previousPerformanceMap[it]
                                     },
-                                    hideSetId = nextSet?.id,
                                     onSetValuesChanged = viewModel::onSetValuesChanged,
                                     onToggleComplete = viewModel::onToggleComplete,
                                     onAddSet = viewModel::onAddSet,
+                                    onCollapse = { focusedId = NO_EXPANDED },
                                     onRemove = { viewModel.onRemoveExercise(exercise.workoutExerciseId) },
                                 )
                             } else {
@@ -406,69 +384,6 @@ fun ActiveWorkoutScreen(
     }
 }
 
-/** Focus panel for the exercise being trained: huge name, set position and big weight/reps entry. */
-@Composable
-private fun CurrentExerciseHero(
-    exercise: ActiveExercise,
-    index: Int,
-    total: Int,
-    nextSet: ActiveSet?,
-    previousPerformance: PreviousPerformance?,
-    onSetValuesChanged: (Long, SetEntry) -> Unit,
-) {
-    val scheme = MaterialTheme.colorScheme
-    val displayUnit = LocalWeightUnit.current
-    val setIndex = exercise.sets.indexOfFirst { it.id == nextSet?.id }
-    val previous = previousPerformance?.sets?.getOrNull(setIndex.coerceAtLeast(0))
-    HeroCard {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("EXERCISE ${index + 1} OF $total", style = LabelCaps, color = scheme.primary)
-            Text(
-                text = exercise.exerciseName.uppercase(),
-                style = DisplayHero.copy(fontSize = 46.sp, lineHeight = 45.sp),
-                color = Color.White,
-                maxLines = 3,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            )
-            val done = exercise.sets.count { it.isCompleted }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                MuscleChip(
-                    text = if (nextSet != null) "SET ${setIndex + 1} OF ${exercise.sets.size}" else "ALL SETS DONE",
-                    selected = true,
-                )
-                if (previous != null) {
-                    Text(
-                        text = "LAST: " + SetSummary.describe(
-                            nextSet?.measurementType ?: exercise.sets.first().measurementType,
-                            previous.weight, previous.weightUnit, previous.reps,
-                            previous.durationSeconds, previous.distanceMeters, displayUnit,
-                        ),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.85f),
-                    )
-                }
-            }
-            if (nextSet != null) {
-                SetInputRow(
-                    key = nextSet.id,
-                    type = nextSet.measurementType,
-                    initial = SetEntry(nextSet.weight, nextSet.reps, nextSet.durationSeconds, nextSet.distanceMeters),
-                    hint = previous?.let { SetEntry(it.weight, it.reps, it.durationSeconds, it.distanceMeters) },
-                    onChange = { onSetValuesChanged(nextSet.id, it) },
-                    large = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            } else {
-                Text(
-                    text = "$done sets logged. Add another set or move to the next exercise.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.85f),
-                )
-            }
-        }
-    }
-}
-
 /** Collapsed row for an exercise that is not in focus; tap to bring it into focus. */
 @Composable
 private fun ExerciseSummaryRow(
@@ -507,10 +422,10 @@ private fun ExerciseSummaryRow(
 private fun ExerciseCard(
     exercise: ActiveExercise,
     previousPerformance: PreviousPerformance?,
-    hideSetId: Long?,
     onSetValuesChanged: (Long, SetEntry) -> Unit,
     onToggleComplete: (Long, Boolean) -> Unit,
     onAddSet: (Long) -> Unit,
+    onCollapse: () -> Unit,
     onRemove: () -> Unit,
 ) {
     var showGuide by rememberSaveable(exercise.workoutExerciseId) { mutableStateOf(false) }
@@ -525,7 +440,7 @@ private fun ExerciseCard(
                 Text(
                     text = exercise.exerciseName,
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).clickable(onClick = onCollapse),
                 )
                 if (hasGuide) {
                     IconButton(onClick = { showGuide = !showGuide }) {
@@ -555,8 +470,6 @@ private fun ExerciseCard(
 
             val labels = SetLabels.of(exercise.sets)
             exercise.sets.forEachIndexed { index, set ->
-                // The next set to log is edited in the hero above; showing it twice would desync.
-                if (set.id == hideSetId) return@forEachIndexed
                 SetRow(
                     set = set,
                     label = labels[index],
@@ -643,6 +556,8 @@ private fun SetRow(
                     )
                     .toggleable(
                         value = done,
+                        // Unchecking is always allowed; checking needs a value.
+                        enabled = done || set.hasLoggableValue(),
                         role = Role.Checkbox,
                         onValueChange = { onToggleComplete(it) },
                     ),
@@ -672,6 +587,17 @@ private fun SetRow(
         }
     }
 }
+
+/** Sentinel for "every exercise collapsed". */
+private const val NO_EXPANDED = -1L
+
+/** A set can only be checked once it has the value its measurement type needs (reps for rep-based sets). */
+private fun ActiveSet.hasLoggableValue(): Boolean =
+    if (SetField.REPS in measurementType.fields) {
+        (reps ?: 0) > 0
+    } else {
+        (durationSeconds ?: 0) > 0 || (distanceMeters ?: 0.0) > 0.0 || (weight ?: 0.0) > 0.0
+    }
 
 /** 00:00:00 format (FR-021). */
 internal fun formatElapsed(seconds: Long): String {
