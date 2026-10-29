@@ -13,6 +13,7 @@ import androidx.room.PrimaryKey
     tableName = "exercises",
     indices = [
         Index(value = ["deleted_at", "name"]),
+        Index(value = ["sync_id"], unique = true),
     ],
 )
 data class ExerciseEntity(
@@ -41,4 +42,6 @@ data class ExerciseEntity(
     @ColumnInfo(name = "form_cues_json") val formCuesJson: String? = null,
     /** File name inside filesDir/exercise_media; relative so backups restore anywhere. */
     @ColumnInfo(name = "media_file") val mediaFile: String? = null,
+    /** Cross-device id (v7). Built-ins use their exercises.json id; see SyncTriggers. */
+    @ColumnInfo(name = "sync_id") val syncId: String? = null,
 )

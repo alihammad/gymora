@@ -7,6 +7,7 @@ import androidx.room.withTransaction
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.gymora.data.local.db.GymoraDatabase
 import com.gymora.data.local.entity.SettingsEntity
+import com.gymora.data.local.sync.BuiltInSyncIds
 import com.gymora.data.media.ExerciseMediaStore
 import java.io.File
 import java.io.InputStream
@@ -45,6 +46,7 @@ class BackupException(message: String) : Exception(message)
 class BackupService @Inject constructor(
     private val database: GymoraDatabase,
     private val mediaStore: ExerciseMediaStore,
+    private val builtInSyncIds: BuiltInSyncIds,
 ) {
 
     suspend fun export(out: OutputStream): BackupSummary = withContext(Dispatchers.IO) {
@@ -97,6 +99,8 @@ class BackupService @Inject constructor(
                         db.insert(table, SQLiteDatabase.CONFLICT_ABORT, values)
                     }
                 }
+                // Pre-v7 backups carry no sync ids for built-in exercises.
+                builtInSyncIds.backfill(db)
             }
             replaceMedia(staging)
             summarize(tables, staging.listFiles().orEmpty().size)

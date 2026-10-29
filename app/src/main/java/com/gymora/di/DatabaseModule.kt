@@ -14,6 +14,8 @@ import com.gymora.data.local.seed.LibrarySeeder
 import com.gymora.data.local.seed.LibrarySeederImpl
 import com.gymora.data.local.seed.RoutineSeeder
 import com.gymora.data.local.seed.RoutineSeederImpl
+import com.gymora.data.local.sync.BuiltInSyncIds
+import com.gymora.data.local.sync.SyncTriggers
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -40,6 +42,7 @@ object DatabaseModule {
         @ApplicationContext context: Context,
         seeder: LibrarySeeder,
         routineSeeder: RoutineSeeder,
+        builtInSyncIds: BuiltInSyncIds,
     ): GymoraDatabase {
         val databaseRef = AtomicReference<GymoraDatabase>()
         val database = Room.databaseBuilder(
@@ -53,6 +56,7 @@ object DatabaseModule {
                 GymoraDatabase.MIGRATION_3_4,
                 GymoraDatabase.MIGRATION_4_5,
                 GymoraDatabase.MIGRATION_5_6,
+                GymoraDatabase.MIGRATION_6_7,
             )
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
@@ -61,6 +65,9 @@ object DatabaseModule {
                     // (unknown to Room) cannot trip it. Recreates it after a
                     // migration dropped it; no-op otherwise.
                     db.execSQL(SINGLE_ACTIVE_INDEX_SQL)
+                    SyncTriggers.install(db)
+                    // Built-ins left without an id by MIGRATION_6_7.
+                    builtInSyncIds.backfill(db)
                 }
 
                 override fun onCreate(db: SupportSQLiteDatabase) {
@@ -69,6 +76,8 @@ object DatabaseModule {
                     // at the persistence layer. Room's @Index cannot express a
                     // partial index, so it is created here (data-model.md).
                     db.execSQL(SINGLE_ACTIVE_INDEX_SQL)
+                    // Before seeding, so seeded rows get their sync bookkeeping.
+                    SyncTriggers.install(db)
                     // R-08: seed the built-in exercise library on first database
                     // creation. Runs after the database object is fully built.
                     CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {

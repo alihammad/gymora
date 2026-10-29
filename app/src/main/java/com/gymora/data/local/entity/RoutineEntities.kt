@@ -9,7 +9,7 @@ import androidx.room.PrimaryKey
 /** Routine template header (FR-011..FR-015, data-model.md). */
 @Entity(
     tableName = "routines",
-    indices = [Index(value = ["position"])],
+    indices = [Index(value = ["position"]), Index(value = ["sync_id"], unique = true)],
 )
 data class RoutineEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -18,6 +18,8 @@ data class RoutineEntity(
     @ColumnInfo(name = "position") val position: Int,
     @ColumnInfo(name = "created_at") val createdAt: Long,
     @ColumnInfo(name = "updated_at") val updatedAt: Long,
+    /** Cross-device id (v7); assigned by SyncTriggers on insert. */
+    @ColumnInfo(name = "sync_id") val syncId: String? = null,
 )
 
 /** Ordered routine↔exercise link (FR-016, FR-017, data-model.md). */

@@ -12,7 +12,10 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "body_measurements",
-    indices = [Index(value = ["external_id"], unique = true)],
+    indices = [
+        Index(value = ["external_id"], unique = true),
+        Index(value = ["sync_id"], unique = true),
+    ],
 )
 data class BodyMeasurementEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -26,4 +29,8 @@ data class BodyMeasurementEntity(
     @ColumnInfo(name = "thigh_cm") val thighCm: Double?,
     /** Health Connect record id for weigh-ins imported from other apps (v5); null for own entries. */
     @ColumnInfo(name = "external_id") val externalId: String? = null,
+    /** Cross-device id (v7); assigned by SyncTriggers on insert. */
+    @ColumnInfo(name = "sync_id") val syncId: String? = null,
+    /** Last change (v7); maintained by SyncTriggers. */
+    @ColumnInfo(name = "updated_at", defaultValue = "0") val updatedAt: Long = 0,
 )

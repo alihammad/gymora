@@ -25,6 +25,7 @@ import androidx.room.PrimaryKey
         Index(value = ["status"]),
         Index(value = ["started_at"]),
         Index(value = ["routine_id"]),
+        Index(value = ["sync_id"], unique = true),
     ],
 )
 data class WorkoutSessionEntity(
@@ -36,6 +37,10 @@ data class WorkoutSessionEntity(
     @ColumnInfo(name = "status") val status: String,
     @ColumnInfo(name = "notes") val notes: String?,
     @ColumnInfo(name = "created_at") val createdAt: Long,
+    /** Cross-device id (v7); assigned by SyncTriggers on insert. */
+    @ColumnInfo(name = "sync_id") val syncId: String? = null,
+    /** Last change to the session or its exercises/sets (v7); maintained by SyncTriggers. */
+    @ColumnInfo(name = "updated_at", defaultValue = "0") val updatedAt: Long = 0,
 )
 
 /** Exercise as performed in a session (FR-055, FR-056, data-model.md). */

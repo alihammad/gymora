@@ -1,9 +1,12 @@
 package com.gymora.data
 
 import androidx.room.testing.MigrationTestHelper
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gymora.data.local.db.GymoraDatabase
+import com.gymora.data.local.sync.BuiltInSyncIds
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -130,7 +133,58 @@ class MigrationTest {
         db.close()
     }
 
+    @Test
+    fun migrate6To7AddsSyncIdsAndUpdatedAt() {
+        helper.createDatabase(DB_NAME, 6).use { db ->
+            db.execSQL(
+                "INSERT INTO exercises (id, name, is_custom, created_at, updated_at) " +
+                    "VALUES (1, 'Machine Pec Fly', 0, 0, 0), (2, 'My Fly', 1, 0, 0)",
+            )
+            db.execSQL("INSERT INTO routines (id, name, position, created_at, updated_at) VALUES (1, 'Push', 0, 0, 7)")
+            db.execSQL(
+                "INSERT INTO workout_sessions (id, routine_name_snapshot, started_at, ended_at, status, created_at) " +
+                    "VALUES (1, 'Push', 100, 200, 'COMPLETED', 100)",
+            )
+            db.execSQL("INSERT INTO body_measurements (id, measured_at, weight_kg) VALUES (1, 300, 80.0)")
+        }
+
+        val db = helper.runMigrationsAndValidate(DB_NAME, 7, true, GymoraDatabase.MIGRATION_6_7)
+
+        db.query("SELECT sync_id FROM exercises ORDER BY id").use { c ->
+            c.moveToNext()
+            assertTrue("Built-ins wait for their stable id", c.isNull(0))
+            c.moveToNext()
+            assertTrue(c.getString(0).matches(UUID_REGEX))
+        }
+        db.query("SELECT sync_id FROM routines").use { c ->
+            c.moveToFirst()
+            assertTrue(c.getString(0).matches(UUID_REGEX))
+        }
+        db.query("SELECT sync_id, updated_at FROM workout_sessions").use { c ->
+            c.moveToFirst()
+            assertNotNull(c.getString(0))
+            assertEquals(200L, c.getLong(1))
+        }
+        db.query("SELECT sync_id, updated_at FROM body_measurements").use { c ->
+            c.moveToFirst()
+            assertNotNull(c.getString(0))
+            assertEquals(300L, c.getLong(1))
+        }
+
+        BuiltInSyncIds(ApplicationProvider.getApplicationContext()).backfill(db)
+        db.query("SELECT sync_id FROM exercises WHERE id = 1").use { c ->
+            c.moveToFirst()
+            assertEquals("4aba0e31-4c5b-45d3-b32b-1bc3480b06c7", c.getString(0))
+        }
+        db.query("SELECT COUNT(*) FROM sync_tombstones").use { c ->
+            c.moveToFirst()
+            assertEquals(0, c.getInt(0))
+        }
+        db.close()
+    }
+
     private companion object {
         const val DB_NAME = "migration-test.db"
+        val UUID_REGEX = Regex("[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
     }
 }

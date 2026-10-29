@@ -7,6 +7,7 @@ import com.gymora.data.backup.BackupException
 import com.gymora.data.backup.BackupService
 import com.gymora.data.local.db.GymoraDatabase
 import com.gymora.data.local.entity.BodyMeasurementEntity
+import com.gymora.data.local.sync.BuiltInSyncIds
 import com.gymora.data.media.ExerciseMediaStore
 import com.gymora.data.repository.ExerciseRepositoryImpl
 import com.gymora.data.repository.RoutineRepositoryImpl
@@ -48,7 +49,7 @@ class BackupServiceTest {
             .allowMainThreadQueries().build()
         media = ExerciseMediaStore(context)
         media.directory.deleteRecursively()
-        backup = BackupService(database, media)
+        backup = BackupService(database, media, BuiltInSyncIds(context))
     }
 
     @After

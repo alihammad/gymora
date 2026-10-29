@@ -88,6 +88,7 @@ class LibrarySeederImpl @Inject constructor(
         equipmentJson = ExerciseMetadataCodec.encodeEquipment(equipment),
         measurementType = ExerciseTrackingDefaults.measurementType(name, category, equipment.map { it.name }).name,
         isUnilateral = ExerciseTrackingDefaults.isUnilateral(name),
+        syncId = id,
     )
 
     private companion object {
@@ -101,6 +102,8 @@ class LibrarySeederImpl @Inject constructor(
  * so malformed values surface as a clear failure at seed time.
  */
 private data class ParsedExercise(
+    /** Stable id shared by every install; becomes the sync id. */
+    val id: String,
     val name: String,
     val type: ExerciseType,
     val difficultyLevel: DifficultyLevel,
@@ -136,6 +139,7 @@ private data class ParsedExercise(
                 }
             }
             return ParsedExercise(
+                id = o.getString("id"),
                 name = o.getString("name"),
                 type = ExerciseType.valueOf(o.getString("type").uppercase()),
                 difficultyLevel = DifficultyLevel.valueOf(o.getString("difficultyLevel").uppercase()),

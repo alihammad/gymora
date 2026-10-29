@@ -4,18 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import com.gymora.ui.components.ActionButton
 import com.gymora.ui.components.GymBackdrops
 import com.gymora.ui.components.gymBackdrop
 import com.gymora.ui.components.AngularPanel
-import com.gymora.ui.components.HeroCard
 import com.gymora.ui.components.SectionHeader
-import com.gymora.ui.components.SegmentedProgress
 import com.gymora.ui.routines.routineIcon
-import com.gymora.ui.theme.DisplayHero
-import com.gymora.ui.theme.LabelCaps
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -209,32 +203,6 @@ fun HomeScreen(
                 )
             }
 
-            // Hero: the workout to do next (or resume), with the weekly completion progress.
-            if (!uiState.isLoading) {
-                val active = uiState.activeWorkout
-                val next = nextRoutine(uiState.routines)
-                if (active != null || next != null) {
-                    item(key = "today-hero") {
-                        TodayWorkoutHero(
-                            name = active?.session?.routineNameSnapshot ?: next!!.name,
-                            exerciseCount = if (active != null) active.exercises.size else next!!.exerciseCount,
-                            resuming = active != null,
-                            startedAt = active?.startedAt,
-                            progress = uiState.weeklyProgress,
-                            onClick = {
-                                if (active != null) onResumeWorkout?.invoke(active.session.id)
-                                else onRoutineClick(next!!.id)
-                            },
-                            onAction = {
-                                if (active != null) onResumeWorkout?.invoke(active.session.id)
-                                else startRoutine(next!!.id)
-                            },
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
-                    }
-                }
-            }
-
             // Hidden only on phones with no sensor and no Health Connect steps.
             if (uiState.stepsSupported || uiState.stepsToday != null) {
                 item(key = "steps") {
@@ -283,14 +251,10 @@ fun HomeScreen(
                 }
 
                 else -> {
-                    val heroId = if (uiState.activeWorkout == null) nextRoutine(uiState.routines)?.id else null
-                    val others = uiState.routines.filter { it.id != heroId }
-                    if (others.isNotEmpty()) {
-                        item(key = "routines-header") {
-                            SectionHeader("Your workouts", modifier = Modifier.padding(horizontal = 16.dp))
-                        }
+                    item(key = "routines-header") {
+                        SectionHeader("Your workouts", modifier = Modifier.padding(horizontal = 16.dp))
                     }
-                    itemsIndexed(others, key = { _, routine -> routine.id }) { _, routine ->
+                    itemsIndexed(uiState.routines, key = { _, routine -> routine.id }) { _, routine ->
                     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                         RoutineCard(
                             routine = routine,
@@ -319,85 +283,6 @@ fun HomeScreen(
                 day = day,
                 workouts = uiState.selectedDayWorkouts,
                 onDismiss = viewModel::onDayDismissed,
-            )
-        }
-    }
-}
-
-/** The routine to do next: never performed first, otherwise the one performed longest ago. */
-private fun nextRoutine(routines: List<RoutineSummary>): RoutineSummary? =
-    routines.minByOrNull { it.lastPerformedAt ?: Long.MIN_VALUE }
-
-/** Today's Workout hero: name, size, weekly progress and the dominant START / RESUME action. */
-@Composable
-private fun TodayWorkoutHero(
-    name: String,
-    exerciseCount: Int,
-    resuming: Boolean,
-    startedAt: java.time.Instant?,
-    progress: com.gymora.domain.calculator.WeeklyProgress?,
-    onClick: () -> Unit,
-    onAction: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var elapsed by remember { mutableStateOf(0L) }
-    androidx.compose.runtime.LaunchedEffect(startedAt) {
-        while (startedAt != null) {
-            elapsed = java.time.Duration.between(startedAt, java.time.Instant.now()).seconds
-            kotlinx.coroutines.delay(1000)
-        }
-    }
-    val scheme = MaterialTheme.colorScheme
-    HeroCard(
-        modifier = modifier,
-        onClick = onClick,
-        watermark = {
-            Icon(
-                painter = painterResource(routineIcon(name)),
-                contentDescription = null,
-                tint = scheme.primary.copy(alpha = 0.18f),
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 8.dp)
-                    .size(180.dp),
-            )
-        },
-    ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                text = if (resuming) "WORKOUT IN PROGRESS" else "TODAY'S WORKOUT",
-                style = LabelCaps,
-                color = scheme.primary,
-            )
-            Text(
-                text = name.uppercase(),
-                style = DisplayHero,
-                color = Color.White,
-                maxLines = 2,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.padding(end = 56.dp),
-            )
-            val detail = if (resuming) {
-                "${com.gymora.ui.workout.formatElapsed(elapsed)} elapsed"
-            } else {
-                "$exerciseCount ${if (exerciseCount == 1) "exercise" else "exercises"}"
-            }
-            Text(text = detail, style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.85f))
-            if (progress != null) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SegmentedProgress(done = progress.done, total = progress.goal)
-                    Text(
-                        text = "${progress.done} of ${progress.goal} workouts this week" +
-                            if (progress.streakWeeks > 0) " · ${progress.streakWeeks} wk streak" else "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.85f),
-                    )
-                }
-            }
-            ActionButton(
-                text = if (resuming) "Resume workout" else "Start workout",
-                onClick = onAction,
-                icon = Icons.Filled.PlayArrow,
             )
         }
     }

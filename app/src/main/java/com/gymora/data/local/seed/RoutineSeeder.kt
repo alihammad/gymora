@@ -6,6 +6,7 @@ import com.gymora.data.local.entity.RoutineEntity
 import com.gymora.data.local.entity.RoutineExerciseEntity
 import com.gymora.data.local.entity.SetTemplateEntity
 import com.gymora.domain.model.MeasurementType
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,6 +41,8 @@ class RoutineSeederImpl @Inject constructor() : RoutineSeeder {
                         position = index,
                         createdAt = now,
                         updatedAt = now,
+                        // Same id on every install, so default routines don't duplicate across devices.
+                        syncId = UUID.nameUUIDFromBytes("gymora.routine:${routine.name}".toByteArray()).toString(),
                     ),
                 )
                 routine.exercises.forEachIndexed { exerciseIndex, exercise ->

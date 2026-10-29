@@ -40,8 +40,9 @@ import com.gymora.data.local.entity.WorkoutSetEntity
         WorkoutSetEntity::class, // registered by T035 (US3)
         com.gymora.data.local.entity.BodyMeasurementEntity::class, // v2
         com.gymora.data.local.entity.StepDayEntity::class, // v6
+        com.gymora.data.local.entity.SyncTombstoneEntity::class, // v7
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class GymoraDatabase : RoomDatabase() {
@@ -163,6 +164,38 @@ abstract class GymoraDatabase : RoomDatabase() {
                 )
             }
         }
+
+        /**
+         * v6 → v7: cross-device sync ids, `updated_at` on workouts and body measurements,
+         * and the tombstone table. Built-in exercises are left without an id here;
+         * BuiltInSyncIds assigns their stable exercises.json ids once the database is open.
+         */
+        val MIGRATION_6_7 = object : androidx.room.migration.Migration(6, 7) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // See MIGRATION_1_2: the partial index must be dropped before validation.
+                db.execSQL("DROP INDEX IF EXISTS index_workout_sessions_single_active")
+                SYNCED_TABLES.forEach { db.execSQL("ALTER TABLE `$it` ADD COLUMN `sync_id` TEXT") }
+                db.execSQL("ALTER TABLE `workout_sessions` ADD COLUMN `updated_at` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `body_measurements` ADD COLUMN `updated_at` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE `workout_sessions` SET `updated_at` = COALESCE(`ended_at`, `started_at`)")
+                db.execSQL("UPDATE `body_measurements` SET `updated_at` = `measured_at`")
+                val newId = com.gymora.data.local.sync.SyncTriggers.NEW_UUID_SQL
+                db.execSQL("UPDATE `exercises` SET `sync_id` = $newId WHERE `is_custom` = 1")
+                listOf("routines", "workout_sessions", "body_measurements").forEach {
+                    db.execSQL("UPDATE `$it` SET `sync_id` = $newId")
+                }
+                SYNCED_TABLES.forEach {
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_${it}_sync_id` ON `$it` (`sync_id`)")
+                }
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `sync_tombstones` (" +
+                        "`entity` TEXT NOT NULL, `sync_id` TEXT NOT NULL, `deleted_at` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`entity`, `sync_id`))",
+                )
+            }
+        }
+
+        private val SYNCED_TABLES = listOf("exercises", "routines", "workout_sessions", "body_measurements")
 
         /**
          * Gives built-in exercises their best-guess tracking type and side mode, and
