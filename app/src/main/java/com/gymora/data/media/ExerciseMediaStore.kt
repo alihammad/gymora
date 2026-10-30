@@ -3,6 +3,8 @@ package com.gymora.data.media
 import android.content.Context
 import android.net.Uri
 import android.webkit.MimeTypeMap
+import com.gymora.account.AccountFiles
+import com.gymora.account.ActiveAccount
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.util.UUID
@@ -12,7 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Demo images and GIFs attached to exercises. Files live in app storage under
+ * Demo images and GIFs attached to exercises. Files live in the active account's
  * [DIRECTORY]; exercises store only the file name, so backups restore them on any device.
  */
 @Singleton
@@ -47,7 +49,8 @@ class ExerciseMediaStore @Inject constructor(
         private const val ONE_MB = 1024L * 1024L
         private const val MAX_BYTES = 20 * ONE_MB
 
-        fun directory(context: Context): File = File(context.filesDir, DIRECTORY)
+        /** The active account's media folder; see AccountFiles. */
+        fun directory(context: Context): File = AccountFiles.mediaDir(context, ActiveAccount.id(context))
 
         fun file(context: Context, name: String): File = File(directory(context), name)
     }

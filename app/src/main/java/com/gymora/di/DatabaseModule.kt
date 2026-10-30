@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.gymora.account.AccountFiles
+import com.gymora.account.AccountSession
 import com.gymora.data.local.dao.ExerciseDao
 import com.gymora.data.local.dao.RoutineDao
 import com.gymora.data.local.dao.RoutineExerciseDao
@@ -43,12 +45,16 @@ object DatabaseModule {
         seeder: LibrarySeeder,
         routineSeeder: RoutineSeeder,
         builtInSyncIds: BuiltInSyncIds,
+        session: AccountSession,
     ): GymoraDatabase {
+        // Each account has its own database file; see AccountFiles.
+        val file = AccountFiles.databaseFile(context, session.activeAccount.id)
+        file.parentFile?.mkdirs()
         val databaseRef = AtomicReference<GymoraDatabase>()
         val database = Room.databaseBuilder(
             context,
             GymoraDatabase::class.java,
-            GymoraDatabase.NAME,
+            file.absolutePath,
         )
             .addMigrations(
                 GymoraDatabase.MIGRATION_1_2,
