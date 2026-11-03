@@ -35,6 +35,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gymora.data.backup.BackupService
 import com.gymora.domain.model.Theme
 import com.gymora.health.HealthConnectSync
+import com.gymora.ui.account.AccountSection
 import com.gymora.ui.components.ConfirmDialog
 import java.time.LocalDate
 import com.gymora.domain.model.WeightUnit
@@ -49,6 +50,7 @@ private val IMPORT_MIME_TYPES = arrayOf("text/*", "application/csv", "applicatio
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    onSignIn: (email: String?) -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -113,6 +115,10 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            SettingsSection(title = "Account") {
+                AccountSection(onSignIn = onSignIn)
+            }
+
             SettingsSection(title = "Weekly Goal") {
                 WeeklyGoalSetting(goal = settings.weeklyGoal, onGoalChanged = viewModel::onWeeklyGoalChanged)
             }
@@ -189,7 +195,7 @@ fun SettingsScreen(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
-                        onClick = { exportLauncher.launch("gymora-workouts.csv") },
+                        onClick = { exportLauncher.launch("heavylyft-workouts.csv") },
                         enabled = !uiState.transferInProgress,
                     ) { Text("Export CSV") }
                     OutlinedButton(
@@ -203,7 +209,7 @@ fun SettingsScreen(
                 BackupSetting(
                     settings = settings,
                     busy = uiState.transferInProgress,
-                    onExport = { backupLauncher.launch("gymora-backup-${LocalDate.now()}.zip") },
+                    onExport = { backupLauncher.launch("heavylyft-backup-${LocalDate.now()}.zip") },
                     onRestore = { restoreLauncher.launch(RESTORE_MIME_TYPES) },
                     onPickFolder = { folderLauncher.launch(null) },
                     onIntervalSelected = viewModel::onAutoBackupIntervalSelected,

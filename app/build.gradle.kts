@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -12,7 +13,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.gymora"
+        applicationId = "com.sydney.heavylyft"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -94,6 +95,14 @@ dependencies {
 
     // Health Connect: write workouts and body weight, read weight from smart scales
     implementation(libs.health.connect.client)
+
+    // Accounts: Firebase sign-in (email and Google via Credential Manager)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services)
+    implementation(libs.googleid)
 
     // Hilt (dependency injection)
     implementation(libs.hilt.android)

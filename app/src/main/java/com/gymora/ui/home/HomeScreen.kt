@@ -156,7 +156,7 @@ fun HomeScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Gymora") }) },
+        topBar = { TopAppBar(title = { Text("HeavyLyft") }) },
         floatingActionButton = {
             var menuOpen by remember { mutableStateOf(false) }
             Box {

@@ -187,7 +187,7 @@ class SettingsViewModel @Inject constructor(
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
             )
         }.onFailure {
-            _uiState.update { it.copy(transferMessage = "Gymora can't keep access to that folder. Pick another.") }
+            _uiState.update { it.copy(transferMessage = "HeavyLyft can't keep access to that folder. Pick another.") }
             return
         }
         val interval = _uiState.value.settings.autoBackupIntervalDays.takeIf { it > 0 } ?: DEFAULT_BACKUP_DAYS

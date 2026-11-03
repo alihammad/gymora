@@ -22,6 +22,9 @@ import com.gymora.ui.components.gymoraNavigationBarItemColors
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.gymora.ui.account.SignInScreen
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -187,7 +190,21 @@ fun GymoraNavHost(
                     },
                 )
             }
-            composable(Destinations.Settings.route) { SettingsScreen() }
+            composable(Destinations.Settings.route) {
+                SettingsScreen(onSignIn = { email -> navController.navigate(Destinations.SignIn.create(email)) })
+            }
+            composable(
+                Destinations.SignIn.route,
+                arguments = listOf(
+                    navArgument(Destinations.SignIn.EMAIL_ARG) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
+            ) {
+                SignInScreen(onBack = { navController.popBackStack() })
+            }
             composable(Destinations.RoutineList.route) {
                 RoutineListScreen(
                     onBack = { navController.popBackStack() },

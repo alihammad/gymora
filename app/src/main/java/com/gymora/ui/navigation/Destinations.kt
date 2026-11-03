@@ -59,4 +59,9 @@ sealed class Destinations(val route: String) {
     data object Records : Destinations("records")
     data object Body : Destinations("body")
     data object Progress : Destinations("progress")
+    data object SignIn : Destinations("account/signin?email={email}") {
+        fun create(email: String?) =
+            if (email == null) "account/signin" else "account/signin?email=${android.net.Uri.encode(email)}"
+        const val EMAIL_ARG = "email"
+    }
 }

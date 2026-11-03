@@ -157,7 +157,7 @@ fun ReminderSetting(
             text = when {
                 days.isEmpty() -> "Off. Pick the days you plan to train."
                 !permissionGranted ->
-                    "Notifications are blocked for Gymora. Allow them in system settings to get reminders."
+                    "Notifications are blocked for HeavyLyft. Allow them in system settings to get reminders."
                 else -> "${describeDays(days)} at $timeText, unless you've already trained that day."
             },
             style = MaterialTheme.typography.bodySmall,

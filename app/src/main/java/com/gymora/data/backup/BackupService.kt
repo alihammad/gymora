@@ -133,7 +133,7 @@ class BackupService @Inject constructor(
     private fun readZip(input: InputStream, staging: File): JSONObject {
         val text = ZipInputStream(input.buffered()).use { zip ->
             generateSequence { zip.nextEntry }.mapNotNull { readEntry(zip, it, staging) }.lastOrNull()
-        } ?: invalid("This is not a Gymora backup (backup.json is missing).")
+        } ?: invalid("This is not a HeavyLyft backup (backup.json is missing).")
         return runCatching { JSONObject(text) }.getOrElse { invalid(DAMAGED) }
     }
 
@@ -153,10 +153,10 @@ class BackupService @Inject constructor(
         name.isNotEmpty() && name != ".." && name.none { it == '/' || it == '\\' }
 
     private fun validate(root: JSONObject): JSONObject {
-        if (root.optString("format") != FORMAT) invalid("This is not a Gymora backup.")
+        if (root.optString("format") != FORMAT) invalid("This is not a HeavyLyft backup.")
         val current = database.openHelper.readableDatabase.version
         if (root.optInt("schemaVersion", -1) > current) {
-            invalid("This backup is from a newer version of Gymora. Update the app first.")
+            invalid("This backup is from a newer version of HeavyLyft. Update the app first.")
         }
         return root.optJSONObject("tables") ?: invalid(DAMAGED)
     }

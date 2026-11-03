@@ -64,7 +64,7 @@ fun WorkoutShareCard(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "GYMORA",
+                "HEAVYLYFT",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 3.sp,

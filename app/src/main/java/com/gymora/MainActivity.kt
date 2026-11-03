@@ -18,6 +18,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.gymora.account.AccountSession
+import com.gymora.account.AuthService
 import com.gymora.domain.model.Settings
 import com.gymora.domain.repository.SettingsRepository
 import com.gymora.ui.components.LocalWeightUnit
@@ -38,11 +40,23 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var settingsRepository: SettingsRepository
 
+    @Inject
+    lateinit var accountSession: AccountSession
+
+    @Inject
+    lateinit var authService: AuthService
+
     /** Routine to start a workout from, requested by the widget or a reminder; null once handled. */
     private var startRoutineRequest by mutableStateOf<Long?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The account's login ended elsewhere (signed out, deleted or disabled): don't show its data.
+        val active = accountSession.activeAccount
+        if (!active.isGuest && authService.currentUserId != active.id) {
+            accountSession.signOut(removeLocalData = false)
+            return
+        }
         // Only a fresh launch: after a configuration change the request was already handled.
         if (savedInstanceState == null) readStartRequest(intent)
         setContent {

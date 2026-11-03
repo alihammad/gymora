@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "230759956074",
+    "project_id": "heavylyft",
+    "storage_bucket": "heavylyft.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:230759956074:android:e1b2be0e2ca328a90ed413",
+        "android_client_info": {
+          "package_name": "com.sydney.heavylyft"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "230759956074-fidsdae3vlthb7qbmbrnbi0joheplthk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sydney.heavylyft",
+            "certificate_hash": "ec6707ddd7257ffce80baa158684f92a4b60fabf"
+          }
+        },
+        {
+          "client_id": "230759956074-o3qp0ct8eb159nfqb5t0nnfdhucof4b4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoX_YGRWHxZegSoo8re-kAf7pocmagH_o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "230759956074-o3qp0ct8eb159nfqb5t0nnfdhucof4b4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
