@@ -31,4 +31,13 @@ class ModifySessionStructureUseCase @Inject constructor(
     suspend fun reorderExercises(sessionId: Long, orderedWorkoutExerciseIds: List<Long>) {
         workoutSessionRepository.reorderSessionExercises(sessionId, orderedWorkoutExerciseIds)
     }
+
+    /** Session-only superset; the routine is untouched. */
+    suspend fun joinSuperset(sessionId: Long, anchorId: Long, memberId: Long) {
+        workoutSessionRepository.joinSessionSuperset(sessionId, anchorId, memberId)
+    }
+
+    suspend fun leaveSuperset(sessionId: Long, workoutExerciseId: Long) {
+        workoutSessionRepository.leaveSessionSuperset(sessionId, workoutExerciseId)
+    }
 }

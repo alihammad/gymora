@@ -44,7 +44,7 @@ data class Settings(
 
         val DEFAULTS = Settings(
             weightUnit = WeightUnit.KG,
-            defaultRestSeconds = 90,
+            defaultRestSeconds = 60,
             theme = Theme.SYSTEM,
         )
     }

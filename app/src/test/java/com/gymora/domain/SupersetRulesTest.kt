@@ -67,4 +67,45 @@ class SupersetRulesTest {
         val groups = SupersetRules.unlinkFromNext(entries(1L, 1L, 3L, 3L, 3L), index = 3)
         assertEquals(mapOf(1L to 1L, 2L to 1L, 3L to 3L, 4L to 3L, 5L to null), groups)
     }
+
+    @Test
+    fun `numbers count supersets in order and skip singles`() {
+        val blocks = SupersetRules.blocks(entries(null, 2L, 2L, null, 5L, 5L)) { it.group }
+        assertEquals(listOf(null, 1, null, 2), SupersetRules.numbers(blocks))
+    }
+
+    @Test
+    fun `join moves the member next to a single anchor`() {
+        val layout = SupersetRules.join(entries(null, null, null), anchorId = 1L, memberId = 3L)
+        assertEquals(listOf(1L, 3L, 2L), layout.order)
+        assertEquals(mapOf(1L to 1L, 3L to 1L, 2L to null), layout.groups)
+    }
+
+    @Test
+    fun `join appends the member after the anchor's superset`() {
+        val layout = SupersetRules.join(entries(1L, 1L, null, null), anchorId = 1L, memberId = 4L)
+        assertEquals(listOf(1L, 2L, 4L, 3L), layout.order)
+        assertEquals(mapOf(1L to 1L, 2L to 1L, 4L to 1L, 3L to null), layout.groups)
+    }
+
+    @Test
+    fun `join takes the member out of its old superset`() {
+        val layout = SupersetRules.join(entries(null, 2L, 2L), anchorId = 1L, memberId = 3L)
+        assertEquals(listOf(1L, 3L, 2L), layout.order)
+        assertEquals(mapOf(1L to 1L, 3L to 1L, 2L to null), layout.groups)
+    }
+
+    @Test
+    fun `leave places the exercise after the remaining members`() {
+        val layout = SupersetRules.leave(entries(1L, 1L, 1L, null), id = 1L)
+        assertEquals(listOf(2L, 3L, 1L, 4L), layout.order)
+        assertEquals(mapOf(2L to 2L, 3L to 2L, 1L to null, 4L to null), layout.groups)
+    }
+
+    @Test
+    fun `leaving a pair dissolves it`() {
+        val layout = SupersetRules.leave(entries(1L, 1L), id = 2L)
+        assertEquals(listOf(1L, 2L), layout.order)
+        assertEquals(mapOf(1L to null, 2L to null), layout.groups)
+    }
 }

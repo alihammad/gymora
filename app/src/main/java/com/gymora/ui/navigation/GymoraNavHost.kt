@@ -1,5 +1,7 @@
 package com.gymora.ui.navigation
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FitnessCenter
@@ -45,6 +47,8 @@ import com.gymora.ui.records.RecordsScreen
 import com.gymora.ui.routines.RoutineEditorScreen
 import com.gymora.ui.routines.RoutineListScreen
 import com.gymora.ui.settings.SettingsScreen
+import com.gymora.ui.workout.ActiveWorkoutBar
+import com.gymora.ui.workout.ActiveWorkoutBarViewModel
 import com.gymora.ui.workout.ActiveWorkoutScreen
 import com.gymora.ui.workout.RecoveryPromptDialog
 import com.gymora.ui.workout.RecoveryViewModel
@@ -62,6 +66,14 @@ private val bottomTabs = listOf(
     BottomTab(Destinations.Exercises, "Exercises", Icons.Filled.FitnessCenter),
     BottomTab(Destinations.Profile, "Profile", Icons.Filled.Person),
     BottomTab(Destinations.Settings, "Settings", Icons.Filled.Settings),
+)
+
+/** Screens that are the workout itself; the in-progress bar is hidden on them. */
+private val workoutRoutes = setOf(
+    Destinations.ActiveWorkout.route,
+    Destinations.StartWorkout.route,
+    Destinations.AdHocExercise.route,
+    Destinations.WorkoutSummary.route,
 )
 
 /** Sentinel id for creating a new exercise (no existing id). */
@@ -112,23 +124,37 @@ fun GymoraNavHost(
     // The active workout replaces the bottom nav with a dedicated experience (FR-004).
     val showBottomBar = currentRoute in bottomTabs.map { it.destination.route }
 
+    // While a workout is in progress, every other screen shows its timer at the bottom.
+    val activeWorkoutBarViewModel: ActiveWorkoutBarViewModel = hiltViewModel()
+    val activeWorkout by activeWorkoutBarViewModel.activeWorkout.collectAsState()
+    val showActiveWorkoutBar = activeWorkout != null && currentRoute != null && currentRoute !in workoutRoutes
+
     Scaffold(
         modifier = modifier,
         bottomBar = {
-            if (showBottomBar) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    tonalElevation = 0.dp,
-                ) {
-                    bottomTabs.forEach { tab ->
-                        NavigationBarItem(
-                            selected = currentRoute == tab.destination.route,
-                            onClick = { navController.navigateToTab(tab.destination) },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) },
-                            colors = gymoraNavigationBarItemColors(),
-                        )
+            Column {
+                activeWorkout?.takeIf { showActiveWorkoutBar }?.let { workout ->
+                    ActiveWorkoutBar(
+                        workout = workout,
+                        onResume = { navController.navigate(Destinations.ActiveWorkout.create(workout.session.id)) },
+                        modifier = if (showBottomBar) Modifier else Modifier.navigationBarsPadding(),
+                    )
+                }
+                if (showBottomBar) {
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tonalElevation = 0.dp,
+                    ) {
+                        bottomTabs.forEach { tab ->
+                            NavigationBarItem(
+                                selected = currentRoute == tab.destination.route,
+                                onClick = { navController.navigateToTab(tab.destination) },
+                                icon = { Icon(tab.icon, contentDescription = tab.label) },
+                                label = { Text(tab.label) },
+                                colors = gymoraNavigationBarItemColors(),
+                            )
+                        }
                     }
                 }
             }

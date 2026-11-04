@@ -294,7 +294,16 @@ class ActiveWorkoutViewModel @Inject constructor(
 
     fun onAddSet(workoutExerciseId: Long) {
         viewModelScope.launch {
-            modifySessionStructureUseCase.addSet(workoutExerciseId)
+            // The new set copies the previous one, so pending edits must land first.
+            editMutex.withLock { modifySessionStructureUseCase.addSet(workoutExerciseId) }
+            loadSession()
+        }
+    }
+
+    /** Sets are deleted straight away; only removing a whole exercise asks first. */
+    fun onDeleteSet(setId: Long) {
+        viewModelScope.launch {
+            editMutex.withLock { modifySessionStructureUseCase.deleteSet(setId) }
             loadSession()
         }
     }
@@ -334,6 +343,23 @@ class ActiveWorkoutViewModel @Inject constructor(
         ids.add(toIndex, ids.removeAt(fromIndex))
         viewModelScope.launch {
             modifySessionStructureUseCase.reorderExercises(sessionId, ids)
+            loadSession()
+        }
+    }
+
+    /** Supersets [memberId] with [anchorId]; the member moves next to the anchor. */
+    fun onCreateSuperset(anchorId: Long, memberId: Long) {
+        viewModelScope.launch {
+            runCatching { modifySessionStructureUseCase.joinSuperset(sessionId, anchorId, memberId) }
+                .onFailure { error -> _uiState.update { it.copy(errorMessage = friendlyMessage(error)) } }
+            loadSession()
+        }
+    }
+
+    fun onLeaveSuperset(workoutExerciseId: Long) {
+        viewModelScope.launch {
+            runCatching { modifySessionStructureUseCase.leaveSuperset(sessionId, workoutExerciseId) }
+                .onFailure { error -> _uiState.update { it.copy(errorMessage = friendlyMessage(error)) } }
             loadSession()
         }
     }

@@ -76,6 +76,9 @@ object RoutineRules {
 /** One exercise's id and superset group, in workout order. */
 data class SupersetEntry(val id: Long, val group: Long?)
 
+/** A new exercise order with each exercise's canonical superset group. */
+data class SupersetLayout(val order: List<Long>, val groups: Map<Long, Long?>)
+
 /**
  * Superset grouping rules. A superset is a run of two or more adjacent
  * exercises sharing the same non-null group; in canonical form the group is
@@ -120,6 +123,36 @@ object SupersetRules {
             }
         }
         return normalize(relabelled)
+    }
+
+    /** Display number of each block: superset blocks count 1, 2, 3… in order; single exercises get null. */
+    fun <T> numbers(blocks: List<List<T>>): List<Int?> {
+        var count = 0
+        return blocks.map { if (it.size > 1) ++count else null }
+    }
+
+    /**
+     * Supersets [memberId] with [anchorId]: the member leaves any superset it was
+     * in and moves to just after the anchor (and the anchor's superset).
+     */
+    fun join(entries: List<SupersetEntry>, anchorId: Long, memberId: Long): SupersetLayout {
+        require(anchorId != memberId) { "An exercise cannot be supersetted with itself" }
+        val anchor = entries.first { it.id == anchorId }
+        val group = anchor.group ?: anchor.id
+        val rest = entries.filter { it.id != memberId }
+            .map { if (it.id == anchorId) it.copy(group = group) else it }
+            .toMutableList()
+        rest.add(rest.indexOfLast { it.group == group } + 1, SupersetEntry(memberId, group))
+        return SupersetLayout(rest.map { it.id }, normalize(rest))
+    }
+
+    /** Takes [id] out of its superset and places it just after the remaining members. */
+    fun leave(entries: List<SupersetEntry>, id: Long): SupersetLayout {
+        val group = entries.first { it.id == id }.group
+            ?: return SupersetLayout(entries.map { it.id }, normalize(entries))
+        val rest = entries.filter { it.id != id }.toMutableList()
+        rest.add(rest.indexOfLast { it.group == group } + 1, SupersetEntry(id, null))
+        return SupersetLayout(rest.map { it.id }, normalize(rest))
     }
 
     /** Splits the superset between the exercise at [index] and the next one. */

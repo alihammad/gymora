@@ -12,6 +12,7 @@ import com.gymora.data.local.toDomain
 import com.gymora.data.local.entity.WorkoutExerciseEntity
 import com.gymora.data.local.entity.WorkoutSessionEntity
 import com.gymora.data.local.entity.WorkoutSetEntity
+import com.gymora.data.local.entity.SetTemplateEntity
 import com.gymora.domain.calculator.WorkoutCalculators
 import com.gymora.domain.model.ActiveExercise
 import com.gymora.domain.model.ActiveSet
@@ -21,6 +22,8 @@ import com.gymora.domain.model.CompletedSet
 import com.gymora.domain.model.EntityNotFoundException
 import com.gymora.domain.model.MeasurementType
 import com.gymora.domain.model.PreviousPerformance
+import com.gymora.domain.model.SetDefaults
+import com.gymora.domain.model.SetValue
 import com.gymora.domain.model.Side
 import com.gymora.domain.model.SupersetEntry
 import com.gymora.domain.model.SupersetRules
@@ -164,22 +167,7 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
                     notes = null,
                 ),
             )
-            sidesFor(exercise).forEachIndexed { index, side ->
-                setDao.insert(
-                    WorkoutSetEntity(
-                        workoutExerciseId = workoutExerciseId,
-                        setNumber = index + 1,
-                        reps = null,
-                        weight = null,
-                        weightUnit = null,
-                        measurementType = exercise.measurementType,
-                        isCompleted = false,
-                        completedAt = null,
-                        notes = null,
-                        side = side?.name,
-                    ),
-                )
-            }
+            insertFirstSets(workoutExerciseId, exercise)
             sessionId
         }
     }
@@ -251,30 +239,67 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
         val workoutExercise = exerciseDao.getById(workoutExerciseId)
             ?: throw EntityNotFoundException(workoutExerciseId)
         val library = workoutExercise.exerciseId?.let { database.exerciseDao().getById(it) }
+        val existing = setDao.getForExercise(workoutExerciseId)
         // Follow the sets already logged here; fall back to the library's tracking.
-        val measurementType = setDao.getForExercise(workoutExerciseId).lastOrNull()?.measurementType
+        val measurementType = existing.lastOrNull()?.measurementType
             ?: library?.measurementType
             ?: MeasurementType.WEIGHT_AND_REPS.name
         // A unilateral exercise gets one set per side.
         return database.withTransaction {
             sidesFor(library).map { side ->
+                // Copy the previous set of this side so edited values carry forward.
+                val value = existing.lastOrNull { it.side == side?.name }?.toSetValue()
+                    ?: firstSetValue(workoutExercise.exerciseId, measurementType, side)
                 setDao.insert(
-                    WorkoutSetEntity(
-                        workoutExerciseId = workoutExerciseId,
-                        setNumber = setDao.nextSetNumber(workoutExerciseId),
-                        reps = null,
-                        weight = null,
-                        weightUnit = null,
-                        measurementType = measurementType,
-                        isCompleted = false,
-                        completedAt = null,
-                        notes = null,
-                        side = side?.name,
-                    ),
+                    newSet(workoutExerciseId, setDao.nextSetNumber(workoutExerciseId), measurementType, value),
                 )
             }.first()
         }
     }
+
+    /** The first set(s) of a newly added exercise, starting from its last logged set. */
+    private suspend fun insertFirstSets(workoutExerciseId: Long, exercise: ExerciseEntity) {
+        sidesFor(exercise).forEachIndexed { index, side ->
+            val value = firstSetValue(exercise.id, exercise.measurementType, side)
+            setDao.insert(newSet(workoutExerciseId, index + 1, exercise.measurementType, value))
+        }
+    }
+
+    private suspend fun firstSetValue(exerciseId: Long?, measurementType: String, side: Side?): SetValue {
+        val type = MeasurementType.entries.firstOrNull { it.name == measurementType }
+            ?: MeasurementType.WEIGHT_AND_REPS
+        val previous = exerciseId?.let { getPreviousPerformance(it) }
+        return SetDefaults.firstSet(type, previous, side, preferredUnit())
+    }
+
+    private suspend fun preferredUnit(): WeightUnit = settingsDao.getOnce()?.let { entity ->
+        try { WeightUnit.valueOf(entity.weightUnit) } catch (_: Exception) { WeightUnit.KG }
+    } ?: WeightUnit.KG
+
+    private fun newSet(workoutExerciseId: Long, setNumber: Int, measurementType: String, value: SetValue) =
+        WorkoutSetEntity(
+            workoutExerciseId = workoutExerciseId,
+            setNumber = setNumber,
+            reps = value.reps,
+            weight = value.weight,
+            weightUnit = value.weightUnit?.name,
+            measurementType = measurementType,
+            isCompleted = false,
+            completedAt = null,
+            notes = null,
+            durationSeconds = value.durationSeconds,
+            distanceMeters = value.distanceMeters,
+            side = value.side?.name,
+        )
+
+    private fun WorkoutSetEntity.toSetValue() = SetValue(
+        weight = weight,
+        weightUnit = weightUnit?.let { raw -> WeightUnit.entries.firstOrNull { it.name == raw } },
+        reps = reps,
+        durationSeconds = durationSeconds,
+        distanceMeters = distanceMeters,
+        side = side?.let { raw -> Side.entries.firstOrNull { it.name == raw } },
+    )
 
     /** One entry per set to create: both sides for a unilateral exercise, else a single null. */
     private fun sidesFor(exercise: ExerciseEntity?): List<Side?> =
@@ -294,7 +319,7 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
             ?: throw EntityNotFoundException(exerciseId)
 
         database.withTransaction {
-            exerciseDao.insert(
+            val workoutExerciseId = exerciseDao.insert(
                 WorkoutExerciseEntity(
                     sessionId = sessionId,
                     exerciseId = exerciseId,
@@ -303,15 +328,30 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
                     notes = null,
                 ),
             )
+            insertFirstSets(workoutExerciseId, exerciseEntity)
             // FR-028: optionally also append to the source routine for the future.
             if (addToRoutine && session.routineId != null) {
                 val position = database.routineExerciseDao().nextPosition(session.routineId)
-                database.routineExerciseDao().insert(
+                val routineExerciseId = database.routineExerciseDao().insert(
                     com.gymora.data.local.entity.RoutineExerciseEntity(
                         routineId = session.routineId,
                         exerciseId = exerciseId,
                         position = position,
                         notes = null,
+                    ),
+                )
+                // Planned with the same first set, so the routine starts with it next time.
+                val first = firstSetValue(exerciseId, exerciseEntity.measurementType, side = null)
+                database.setTemplateDao().insert(
+                    SetTemplateEntity(
+                        routineExerciseId = routineExerciseId,
+                        setNumber = 1,
+                        targetReps = first.reps ?: 0,
+                        targetWeight = first.weight,
+                        targetWeightUnit = first.weightUnit?.name,
+                        measurementType = exerciseEntity.measurementType,
+                        targetDurationSeconds = first.durationSeconds,
+                        targetDistanceMeters = first.distanceMeters,
                     ),
                 )
             }
@@ -328,20 +368,51 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
         orderedWorkoutExerciseIds: List<Long>,
     ) {
         database.withTransaction {
-            // Two passes to respect UNIQUE(session_id, position).
-            orderedWorkoutExerciseIds.forEachIndexed { index, id ->
-                exerciseDao.updatePosition(id, -(index + 1))
-            }
-            orderedWorkoutExerciseIds.forEachIndexed { index, id ->
-                exerciseDao.updatePosition(id, index)
-            }
+            writePositions(orderedWorkoutExerciseIds)
             // A move can split a superset or strand a single member.
-            val entities = exerciseDao.getForSession(sessionId)
-            val groups = SupersetRules.normalize(entities.map { SupersetEntry(it.id, it.supersetGroup) })
-            entities.forEach { entity ->
-                val group = groups[entity.id]
-                if (group != entity.supersetGroup) exerciseDao.updateSupersetGroup(entity.id, group)
-            }
+            writeSupersetGroups(sessionId) { SupersetRules.normalize(it) }
+        }
+    }
+
+    override suspend fun joinSessionSuperset(sessionId: Long, anchorId: Long, memberId: Long) {
+        database.withTransaction {
+            val layout = SupersetRules.join(sessionEntries(sessionId), anchorId, memberId)
+            writePositions(layout.order)
+            writeSupersetGroups(sessionId) { layout.groups }
+        }
+    }
+
+    override suspend fun leaveSessionSuperset(sessionId: Long, workoutExerciseId: Long) {
+        database.withTransaction {
+            val layout = SupersetRules.leave(sessionEntries(sessionId), workoutExerciseId)
+            writePositions(layout.order)
+            writeSupersetGroups(sessionId) { layout.groups }
+        }
+    }
+
+    private suspend fun sessionEntries(sessionId: Long): List<SupersetEntry> =
+        exerciseDao.getForSession(sessionId).map { SupersetEntry(it.id, it.supersetGroup) }
+
+    /** Two passes to respect UNIQUE(session_id, position). */
+    private suspend fun writePositions(orderedWorkoutExerciseIds: List<Long>) {
+        orderedWorkoutExerciseIds.forEachIndexed { index, id ->
+            exerciseDao.updatePosition(id, -(index + 1))
+        }
+        orderedWorkoutExerciseIds.forEachIndexed { index, id ->
+            exerciseDao.updatePosition(id, index)
+        }
+    }
+
+    /** Computes superset groups from the session's current order and writes changed rows. */
+    private suspend fun writeSupersetGroups(
+        sessionId: Long,
+        compute: (List<SupersetEntry>) -> Map<Long, Long?>,
+    ) {
+        val entities = exerciseDao.getForSession(sessionId)
+        val groups = compute(entities.map { SupersetEntry(it.id, it.supersetGroup) })
+        entities.forEach { entity ->
+            val group = groups[entity.id]
+            if (group != entity.supersetGroup) exerciseDao.updateSupersetGroup(entity.id, group)
         }
     }
 

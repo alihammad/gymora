@@ -42,11 +42,11 @@ data class SettingsEntity(
             "health_steps_enabled",
         )
 
-        /** Defaults per data-model.md: KG / 90s / SYSTEM. */
+        /** Defaults per data-model.md: KG / 60s / SYSTEM. */
         val DEFAULTS = SettingsEntity(
             id = SINGLE_ROW_ID,
             weightUnit = WeightUnit.KG.name,
-            defaultRestSeconds = 90,
+            defaultRestSeconds = 60,
             theme = Theme.SYSTEM.name,
             updatedAt = 0L,
         )

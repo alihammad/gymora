@@ -17,7 +17,7 @@ class RestTimerTest {
     @Test
     fun defaultRestDurationFromSettings() {
         val settings = Settings.DEFAULTS
-        assertEquals(90, settings.defaultRestSeconds)
+        assertEquals(60, settings.defaultRestSeconds)
     }
 
     @Test

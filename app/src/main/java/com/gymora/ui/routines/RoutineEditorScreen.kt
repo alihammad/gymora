@@ -400,11 +400,27 @@ private fun ExerciseList(
         return
     }
     val blocks = SupersetRules.blocks(exercises) { it.supersetGroup }
+    val numbers = SupersetRules.numbers(blocks)
+    // Removing an exercise asks first; deleting a set does not.
+    var pendingRemoveId by rememberSaveable { mutableStateOf<Long?>(null) }
+    exercises.firstOrNull { it.routineExerciseId == pendingRemoveId }?.let { exercise ->
+        ConfirmDialog(
+            title = "Delete exercise?",
+            message = "Remove ${exercise.exerciseName} and its sets from this workout?",
+            confirmLabel = "Delete",
+            dismissLabel = "Cancel",
+            onConfirm = {
+                pendingRemoveId = null
+                viewModel.onRemoveExercise(exercise.routineExerciseId)
+            },
+            onDismiss = { pendingRemoveId = null },
+        )
+    }
     val card: @Composable (RoutineExerciseDetail) -> Unit = { exercise ->
         ExerciseCard(
             exercise = exercise,
             onAddSet = { viewModel.onAddSetTemplate(exercise.routineExerciseId) },
-            onRemove = { viewModel.onRemoveExercise(exercise.routineExerciseId) },
+            onRemove = { pendingRemoveId = exercise.routineExerciseId },
             onUpdateTemplate = viewModel::onUpdateSetTemplate,
             onDeleteTemplate = viewModel::onDeleteSetTemplate,
         )
@@ -413,7 +429,7 @@ private fun ExerciseList(
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         blocks.forEachIndexed { blockIndex, block ->
             if (block.size > 1) {
-                SupersetBlock {
+                SupersetBlock(numbers[blockIndex]) {
                     block.forEachIndexed { index, exercise ->
                         card(exercise)
                         if (index < block.lastIndex) {

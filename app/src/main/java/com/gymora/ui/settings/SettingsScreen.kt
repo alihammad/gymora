@@ -152,14 +152,10 @@ fun SettingsScreen(
 
             // Default rest duration (FR-050)
             SettingsSection(title = "Default Rest Duration") {
-                val presets = listOf(30, 60, 90, 120, 180)
+                val presets = listOf(30, 45, 60)
                 presets.forEach { seconds ->
-                    val label = when {
-                        seconds < 60 -> "${seconds}s"
-                        else -> "${seconds / 60} min"
-                    }
                     SettingsRadioRow(
-                        label = label,
+                        label = "${seconds}s",
                         selected = settings.defaultRestSeconds == seconds,
                         onClick = { viewModel.onRestDurationSelected(seconds) },
                     )

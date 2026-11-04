@@ -5,13 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gymora.domain.model.EntityNotFoundException
 import com.gymora.domain.model.MeasurementType
-import com.gymora.domain.model.SetField
+import com.gymora.domain.model.SetDefaults
 import com.gymora.domain.model.SetTemplateInput
 import com.gymora.domain.model.ValidationException
 import com.gymora.domain.repository.ExerciseRepository
 import com.gymora.domain.repository.HistoryRepository
 import com.gymora.domain.repository.RoutineRepository
+import com.gymora.domain.repository.SettingsRepository
 import com.gymora.domain.usecase.DeleteRoutineUseCase
+import com.gymora.domain.usecase.PreviousPerformanceUseCase
 import com.gymora.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -29,6 +31,8 @@ class RoutineEditorViewModel @Inject constructor(
     private val exerciseRepository: ExerciseRepository,
     private val historyRepository: HistoryRepository,
     private val deleteRoutineUseCase: DeleteRoutineUseCase,
+    private val previousPerformanceUseCase: PreviousPerformanceUseCase,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     /** Mutable: a "new routine" navigation creates the row first, then edits it. */
@@ -160,12 +164,30 @@ class RoutineEditorViewModel @Inject constructor(
         }
     }
 
+    /** Adds the exercise with one planned set: its last logged set, else the defaults. */
     fun onExercisePicked(exerciseId: Long) {
+        val type = _uiState.value.libraryExercises.firstOrNull { it.id == exerciseId }?.measurementType
+            ?: MeasurementType.WEIGHT_AND_REPS
         viewModelScope.launch {
-            routineRepository.addExercise(routineId, exerciseId, notes = null)
+            val routineExerciseId = routineRepository.addExercise(routineId, exerciseId, notes = null)
+            routineRepository.addSetTemplate(routineExerciseId, firstSetInput(exerciseId, type))
             _uiState.update { it.copy(showExercisePicker = false) }
             loadRoutine()
         }
+    }
+
+    private suspend fun firstSetInput(exerciseId: Long?, type: MeasurementType): SetTemplateInput {
+        val unit = settingsRepository.observeSettings().first().weightUnit
+        val previous = exerciseId?.let { previousPerformanceUseCase(it) }
+        val first = SetDefaults.firstSet(type, previous, side = null, unit = unit)
+        return SetTemplateInput(
+            targetReps = first.reps ?: 0,
+            targetWeight = first.weight,
+            weightUnit = first.weightUnit,
+            measurementType = type,
+            targetDurationSeconds = first.durationSeconds,
+            targetDistanceMeters = first.distanceMeters,
+        )
     }
 
     fun onExercisePickerDismissed() {
@@ -221,14 +243,16 @@ class RoutineEditorViewModel @Inject constructor(
         viewModelScope.launch {
             routineRepository.addSetTemplate(
                 routineExerciseId,
-                SetTemplateInput(
-                    targetReps = lastSet?.targetReps ?: if (type.has(SetField.REPS)) DEFAULT_REPS else 0,
-                    targetWeight = lastSet?.targetWeight,
-                    weightUnit = lastSet?.weightUnit,
-                    measurementType = type,
-                    targetDurationSeconds = lastSet?.targetDurationSeconds,
-                    targetDistanceMeters = lastSet?.targetDistanceMeters,
-                ),
+                lastSet?.let {
+                    SetTemplateInput(
+                        targetReps = it.targetReps,
+                        targetWeight = it.targetWeight,
+                        weightUnit = it.weightUnit,
+                        measurementType = type,
+                        targetDurationSeconds = it.targetDurationSeconds,
+                        targetDistanceMeters = it.targetDistanceMeters,
+                    )
+                } ?: firstSetInput(exercise?.exerciseId, type),
             )
             loadRoutine()
         }
@@ -264,6 +288,5 @@ class RoutineEditorViewModel @Inject constructor(
     companion object {
         const val NEW_ROUTINE_ID = 0L
         const val PROGRESS_SESSIONS = 20
-        const val DEFAULT_REPS = 10
     }
 }

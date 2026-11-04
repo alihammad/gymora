@@ -8,6 +8,6 @@ package com.gymora.ui.workout
 data class RestTimerState(
     val isRunning: Boolean = false,
     val endInstantMs: Long? = null,
-    val defaultSeconds: Int = 90,
+    val defaultSeconds: Int = 60,
     val remainingSeconds: Long = 0,
 )

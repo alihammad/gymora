@@ -63,6 +63,12 @@ interface WorkoutSessionRepository {
      */
     suspend fun reorderSessionExercises(sessionId: Long, orderedWorkoutExerciseIds: List<Long>)
 
+    /** Supersets [memberId] with [anchorId] for this session; the member moves to just after the anchor's superset. */
+    suspend fun joinSessionSuperset(sessionId: Long, anchorId: Long, memberId: Long)
+
+    /** Takes the exercise out of its superset for this session, placing it after the remaining members. */
+    suspend fun leaveSessionSuperset(sessionId: Long, workoutExerciseId: Long)
+
     suspend fun updateSessionNotes(sessionId: Long, notes: String?)
 
     /** Records ended_at, sets status COMPLETED, returns summary (FR-033/034/035). */

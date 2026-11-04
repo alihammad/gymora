@@ -28,11 +28,12 @@ private val RailDotY = 10.dp
 private val RailContentInset = 24.dp
 
 /**
- * Groups superset members under a "SUPERSET" label with a dotted rail down the
+ * Groups superset members under a "SUPERSET n" label with a dotted rail down the
  * left edge, so the exercises read as one block performed back to back.
  */
 @Composable
 fun SupersetBlock(
+    number: Int?,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -57,7 +58,7 @@ fun SupersetBlock(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "SUPERSET",
+            text = if (number == null) "SUPERSET" else "SUPERSET $number",
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -66,11 +67,14 @@ fun SupersetBlock(
     }
 }
 
-/** Renders one block from SupersetRules.blocks: a superset when it has 2+ members, else a lone card. */
+/**
+ * Renders one block from SupersetRules.blocks: a superset when it has 2+ members, else a lone card.
+ * [number] comes from SupersetRules.numbers.
+ */
 @Composable
-fun <T> ExerciseBlock(block: List<T>, card: @Composable (T) -> Unit) {
+fun <T> ExerciseBlock(block: List<T>, number: Int?, card: @Composable (T) -> Unit) {
     if (block.size > 1) {
-        SupersetBlock { block.forEach { card(it) } }
+        SupersetBlock(number) { block.forEach { card(it) } }
     } else {
         block.forEach { card(it) }
     }

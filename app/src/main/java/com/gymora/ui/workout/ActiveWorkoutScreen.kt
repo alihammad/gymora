@@ -2,7 +2,21 @@ package com.gymora.ui.workout
 
 import com.gymora.ui.components.GymBackdrops
 import com.gymora.ui.components.gymBackdrop
-import com.gymora.ui.components.AngularPanel
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.key
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.gymora.ui.components.SectionHeader
 import com.gymora.ui.components.GymoraLoading
 import androidx.compose.foundation.background
@@ -115,15 +129,11 @@ fun ActiveWorkoutScreen(
         }
     }
 
-    // The expanded exercise: the user's tap, else the first one; NO_EXPANDED once collapsed by the user.
-    var focusedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var reordering by rememberSaveable { mutableStateOf(false) }
+    // Exercise awaiting delete confirmation, and the one a superset is being set up from.
+    var pendingRemoveId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var supersetAnchorId by rememberSaveable { mutableStateOf<Long?>(null) }
     val allExercises = uiState.activeWorkout?.exercises.orEmpty()
-    val current = if (focusedId == NO_EXPANDED) {
-        null
-    } else {
-        allExercises.firstOrNull { it.workoutExerciseId == focusedId } ?: allExercises.firstOrNull()
-    }
 
     Scaffold(
         bottomBar = {
@@ -211,27 +221,25 @@ fun ActiveWorkoutScreen(
                         }
                     }
                     val blocks = if (reordering) emptyList() else SupersetRules.blocks(workout.exercises) { it.supersetGroup }
-                    items(blocks, key = { it.first().workoutExerciseId }) { block ->
-                        ExerciseBlock(block) { exercise ->
-                            if (exercise.workoutExerciseId == current?.workoutExerciseId) {
-                                ExerciseCard(
-                                    exercise = exercise,
-                                    previousPerformance = exercise.exerciseId?.let {
-                                        uiState.previousPerformanceMap[it]
-                                    },
-                                    onSetValuesChanged = viewModel::onSetValuesChanged,
-                                    onToggleComplete = viewModel::onToggleComplete,
-                                    onAddSet = viewModel::onAddSet,
-                                    onCollapse = { focusedId = NO_EXPANDED },
-                                    onRemove = { viewModel.onRemoveExercise(exercise.workoutExerciseId) },
-                                )
-                            } else {
-                                ExerciseSummaryRow(
-                                    exercise = exercise,
-                                    onFocus = { focusedId = exercise.workoutExerciseId },
-                                    onRemove = { viewModel.onRemoveExercise(exercise.workoutExerciseId) },
-                                )
-                            }
+                    val numbers = SupersetRules.numbers(blocks)
+                    itemsIndexed(blocks, key = { _, block -> block.first().workoutExerciseId }) { index, block ->
+                        // Every exercise stays expanded; nothing collapses.
+                        ExerciseBlock(block, numbers[index]) { exercise ->
+                            ExerciseCard(
+                                exercise = exercise,
+                                previousPerformance = exercise.exerciseId?.let {
+                                    uiState.previousPerformanceMap[it]
+                                },
+                                canSuperset = allExercises.size > 1,
+                                onSetValuesChanged = viewModel::onSetValuesChanged,
+                                onToggleComplete = viewModel::onToggleComplete,
+                                onAddSet = viewModel::onAddSet,
+                                onDeleteSet = viewModel::onDeleteSet,
+                                onRemove = { pendingRemoveId = exercise.workoutExerciseId },
+                                onSupersetWith = { supersetAnchorId = exercise.workoutExerciseId },
+                                onLeaveSuperset = { viewModel.onLeaveSuperset(exercise.workoutExerciseId) },
+                                onReorder = { reordering = true },
+                            )
                         }
                     }
                     item {
@@ -355,6 +363,33 @@ fun ActiveWorkoutScreen(
         )
     }
 
+    // Removing an exercise asks first; deleting a set does not.
+    allExercises.firstOrNull { it.workoutExerciseId == pendingRemoveId }?.let { exercise ->
+        ConfirmDialog(
+            title = "Delete exercise?",
+            message = "Remove ${exercise.exerciseName} and its sets from this workout?",
+            confirmLabel = "Delete",
+            dismissLabel = "Cancel",
+            onConfirm = {
+                pendingRemoveId = null
+                viewModel.onRemoveExercise(exercise.workoutExerciseId)
+            },
+            onDismiss = { pendingRemoveId = null },
+        )
+    }
+
+    allExercises.firstOrNull { it.workoutExerciseId == supersetAnchorId }?.let { anchor ->
+        SupersetPickerDialog(
+            anchor = anchor,
+            exercises = allExercises,
+            onPick = { member ->
+                supersetAnchorId = null
+                viewModel.onCreateSuperset(anchor.workoutExerciseId, member.workoutExerciseId)
+            },
+            onDismiss = { supersetAnchorId = null },
+        )
+    }
+
     // FR-033: finish confirmation with duration/exercises/sets/volume
     if (uiState.showFinishConfirm) {
         val workout = uiState.activeWorkout
@@ -384,51 +419,63 @@ fun ActiveWorkoutScreen(
     }
 }
 
-/** Collapsed row for an exercise that is not in focus; tap to bring it into focus. */
+/** Lists the other exercises to superset [anchor] with; members of its own superset are left out. */
 @Composable
-private fun ExerciseSummaryRow(
-    exercise: ActiveExercise,
-    onFocus: () -> Unit,
-    onRemove: () -> Unit,
+private fun SupersetPickerDialog(
+    anchor: ActiveExercise,
+    exercises: List<ActiveExercise>,
+    onPick: (ActiveExercise) -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    val done = exercise.sets.count { it.isCompleted }
-    val complete = exercise.sets.isNotEmpty() && done == exercise.sets.size
-    AngularPanel(modifier = Modifier.fillMaxWidth(), onClick = onFocus) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            if (complete) {
-                Icon(
-                    Icons.Filled.Check,
-                    contentDescription = "Completed",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(end = 12.dp),
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(exercise.exerciseName.uppercase(), style = MaterialTheme.typography.titleLarge)
-                Text(
-                    text = "$done of ${exercise.sets.size} sets",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onRemove) {
-                Icon(Icons.Filled.Close, contentDescription = "Remove ${exercise.exerciseName} from this workout")
-            }
-        }
+    val candidates = exercises.filter {
+        it.workoutExerciseId != anchor.workoutExerciseId &&
+            (anchor.supersetGroup == null || it.supersetGroup != anchor.supersetGroup)
     }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Superset ${anchor.exerciseName} with") },
+        text = {
+            if (candidates.isEmpty()) {
+                Text("Every other exercise is already in this superset.")
+            } else {
+                LazyColumn {
+                    items(candidates, key = { it.workoutExerciseId }) { exercise ->
+                        ListItem(
+                            headlineContent = { Text(exercise.exerciseName) },
+                            supportingContent = if (exercise.supersetGroup != null) {
+                                { Text("Leaves its current superset") }
+                            } else {
+                                null
+                            },
+                            modifier = Modifier.clickable { onPick(exercise) },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ExerciseCard(
     exercise: ActiveExercise,
     previousPerformance: PreviousPerformance?,
+    canSuperset: Boolean,
     onSetValuesChanged: (Long, SetEntry) -> Unit,
     onToggleComplete: (Long, Boolean) -> Unit,
     onAddSet: (Long) -> Unit,
-    onCollapse: () -> Unit,
+    onDeleteSet: (Long) -> Unit,
     onRemove: () -> Unit,
+    onSupersetWith: () -> Unit,
+    onLeaveSuperset: () -> Unit,
+    onReorder: () -> Unit,
 ) {
     var showGuide by rememberSaveable(exercise.workoutExerciseId) { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
     val hasGuide = exercise.formCues.isNotEmpty() || exercise.mediaFile != null
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -437,11 +484,64 @@ private fun ExerciseCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = exercise.exerciseName,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f).clickable(onClick = onCollapse),
-                )
+                // Long-press the name for superset, reorder and delete options.
+                Box(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = exercise.exerciseName,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .combinedClickable(
+                                onClick = {},
+                                onLongClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    menuOpen = true
+                                },
+                                onLongClickLabel = "Exercise options",
+                            )
+                            .padding(vertical = 8.dp),
+                    )
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        if (canSuperset) {
+                            DropdownMenuItem(
+                                text = { Text("Superset with…") },
+                                leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    onSupersetWith()
+                                },
+                            )
+                        }
+                        if (exercise.supersetGroup != null) {
+                            DropdownMenuItem(
+                                text = { Text("Remove from superset") },
+                                leadingIcon = { Icon(Icons.Filled.LinkOff, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    onLeaveSuperset()
+                                },
+                            )
+                        }
+                        if (canSuperset) {
+                            DropdownMenuItem(
+                                text = { Text("Reorder exercises") },
+                                leadingIcon = { Icon(Icons.Filled.SwapVert, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    onReorder()
+                                },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text("Delete exercise") },
+                            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                onRemove()
+                            },
+                        )
+                    }
+                }
                 if (hasGuide) {
                     IconButton(onClick = { showGuide = !showGuide }) {
                         Icon(
@@ -470,20 +570,60 @@ private fun ExerciseCard(
 
             val labels = SetLabels.of(exercise.sets)
             exercise.sets.forEachIndexed { index, set ->
-                SetRow(
-                    set = set,
-                    label = labels[index],
-                    // FR-046: pre-fill from previous performance if available
-                    previous = previousPerformance?.sets?.getOrNull(index),
-                    onValuesChanged = { onSetValuesChanged(set.id, it) },
-                    onToggleComplete = { onToggleComplete(set.id, it) },
-                )
+                // Keyed so a deleted set's swipe state is not handed to the set that takes its place.
+                key(set.id) {
+                    SwipeToDeleteSet(onDelete = { onDeleteSet(set.id) }) {
+                        SetRow(
+                            set = set,
+                            label = labels[index],
+                            // FR-046: pre-fill from previous performance if available
+                            previous = previousPerformance?.sets?.getOrNull(index),
+                            onValuesChanged = { onSetValuesChanged(set.id, it) },
+                            onToggleComplete = { onToggleComplete(set.id, it) },
+                        )
+                    }
+                }
             }
 
             TextButton(onClick = { onAddSet(exercise.workoutExerciseId) }) {
                 Text(if (exercise.sets.any { it.side != null }) "Add set (both sides)" else "Add set")
             }
         }
+    }
+}
+
+/** Swipe a set right-to-left to delete it; no confirmation. */
+@Composable
+private fun SwipeToDeleteSet(onDelete: () -> Unit, content: @Composable () -> Unit) {
+    val currentOnDelete by rememberUpdatedState(onDelete)
+    val state = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) currentOnDelete()
+            value == SwipeToDismissBoxValue.EndToStart
+        },
+    )
+    SwipeToDismissBox(
+        state = state,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            Box(
+                contentAlignment = Alignment.CenterEnd,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(horizontal = 16.dp),
+            ) {
+                Icon(
+                    Icons.Filled.Delete,
+                    contentDescription = "Delete set",
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+        },
+    ) {
+        // Opaque like the card, so the delete background only shows where the row has moved.
+        Box(modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)) { content() }
     }
 }
 
@@ -587,9 +727,6 @@ private fun SetRow(
         }
     }
 }
-
-/** Sentinel for "every exercise collapsed". */
-private const val NO_EXPANDED = -1L
 
 /** A set can only be checked once it has the value its measurement type needs (reps for rep-based sets). */
 private fun ActiveSet.hasLoggableValue(): Boolean =

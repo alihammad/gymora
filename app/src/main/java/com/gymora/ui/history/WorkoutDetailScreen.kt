@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -217,8 +218,9 @@ private fun WorkoutDetailContent(
             }
         }
         val blocks = SupersetRules.blocks(detail.exercises) { it.supersetGroup }
-        items(blocks, key = { it.first().workoutExerciseId }) { block ->
-            ExerciseBlock(block) { exercise ->
+        val numbers = SupersetRules.numbers(blocks)
+        itemsIndexed(blocks, key = { _, block -> block.first().workoutExerciseId }) { index, block ->
+            ExerciseBlock(block, numbers[index]) { exercise ->
                 if (uiState.isEditing) {
                     EditableExerciseCard(
                         exercise = exercise,

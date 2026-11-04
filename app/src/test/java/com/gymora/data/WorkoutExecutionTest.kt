@@ -9,6 +9,7 @@ import com.gymora.data.repository.WorkoutSessionRepositoryImpl
 import com.gymora.domain.model.ActiveWorkoutConflictException
 import com.gymora.domain.model.CreateExerciseInput
 import com.gymora.domain.model.MeasurementType
+import com.gymora.domain.model.SetDefaults
 import com.gymora.domain.model.SetTemplateInput
 import com.gymora.domain.model.ValidationException
 import com.gymora.domain.model.WeightUnit
@@ -248,5 +249,49 @@ class WorkoutExecutionTest {
     fun observeActiveSessionReturnsNullWhenNoneActive() = runTest {
         val active = sessionRepository.observeActiveSession().first()
         assertNull(active)
+    }
+
+    @Test
+    fun addedExerciseStartsWithADefaultSet() = runTest {
+        val (routineId, _) = createRoutineWithOneExercise()
+        val squatId = exerciseRepository.createCustom(CreateExerciseInput(name = "Squat")).id
+        val sessionId = sessionRepository.startFromRoutine(routineId)
+
+        sessionRepository.addExerciseToSession(sessionId, squatId, addToRoutine = false)
+
+        val set = sessionRepository.getActiveWorkout(sessionId).exercises.last().sets.single()
+        assertEquals(SetDefaults.REPS, set.reps)
+        assertEquals(SetDefaults.weight(WeightUnit.KG), set.weight)
+    }
+
+    @Test
+    fun addedExerciseStartsFromItsLastLoggedSet() = runTest {
+        val squatId = exerciseRepository.createCustom(CreateExerciseInput(name = "Squat")).id
+        val first = sessionRepository.startAdHoc(squatId)
+        val setId = sessionRepository.getActiveWorkout(first).exercises.single().sets.single().id
+        sessionRepository.updateSetValues(setId, 80.0, WeightUnit.KG, 5)
+        sessionRepository.completeSet(setId)
+        sessionRepository.finish(first)
+
+        val second = sessionRepository.startAdHoc(squatId)
+
+        val set = sessionRepository.getActiveWorkout(second).exercises.single().sets.single()
+        assertEquals(80.0, set.weight)
+        assertEquals(5, set.reps)
+    }
+
+    @Test
+    fun addedSetCopiesThePreviousSet() = runTest {
+        val (routineId, _) = createRoutineWithOneExercise()
+        val sessionId = sessionRepository.startFromRoutine(routineId)
+        val exercise = sessionRepository.getActiveWorkout(sessionId).exercises.single()
+        sessionRepository.updateSetValues(exercise.sets.single().id, 32.5, WeightUnit.KG, 12)
+
+        sessionRepository.addSet(exercise.workoutExerciseId)
+
+        val added = sessionRepository.getActiveWorkout(sessionId).exercises.single().sets.last()
+        assertEquals(32.5, added.weight)
+        assertEquals(12, added.reps)
+        assertTrue(!added.isCompleted)
     }
 }

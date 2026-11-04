@@ -45,7 +45,7 @@ class SettingsPersistenceTest {
     fun defaultSettingsAreReturnedOnFirstAccess() = runTest {
         val settings = settingsRepository.observeSettings().first()
         assertEquals(WeightUnit.KG, settings.weightUnit)
-        assertEquals(90, settings.defaultRestSeconds)
+        assertEquals(60, settings.defaultRestSeconds)
         assertEquals(Theme.SYSTEM, settings.theme)
     }
 

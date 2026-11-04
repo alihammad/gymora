@@ -1,7 +1,0 @@
-1. All exercises in the workout should be uncollapsed by default. Never collapse any exercise. 
-2. Create new workout  > Add exercise > Add first set by default. Add default weights and reps. If the exercise has been performed before, find the last weight and reps available in the history and start with that as default set.
-3. Any subsequent sets added manually > get the weight and reps from the previous set added. For exmaple, adding barbell chest press > first set is added by default with 30KG weight and 10 reps, the next set added manually should automatically have 30 KG as weight and 10 reps if default values  were not changed by the user. If the user changes the default values of the first set to a differnt weight and reps then copy them to the next set. 
-4. Add functionality to drag and drop exercises (re-order exercises)
-5. Add functionality to select two exercises and call them a superset. Each superset should have a name starting with "superset 1" and then "superset 2" and so on. I think long press one exercise should show set up superset menu. 
-6. If delete exercise is pressed, Ask before deleting the exercise. But don't repeat the same approval behaviour with deletion of a set, sets can be deleted without approval. 
-7. 
