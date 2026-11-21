@@ -55,6 +55,7 @@ class WorkoutDetailViewModel @Inject constructor(
     private val historyRepository: HistoryRepository,
     private val correctWorkoutUseCase: CorrectHistoricalWorkoutUseCase,
     private val exerciseRepository: ExerciseRepository,
+    private val modifySessionStructureUseCase: com.gymora.domain.usecase.ModifySessionStructureUseCase,
     settingsRepository: com.gymora.domain.repository.SettingsRepository,
 ) : ViewModel() {
 
@@ -245,6 +246,24 @@ class WorkoutDetailViewModel @Inject constructor(
                         it.copy(showDeleteConfirm = false, errorMessage = friendlyMessage(error))
                     }
                 }
+        }
+    }
+
+    /** Supersets this exercise (and its superset) with the next block. */
+    fun onLinkSupersetWithNext(workoutExerciseId: Long) {
+        modifyStructure { modifySessionStructureUseCase.linkSupersetWithNext(sessionId, workoutExerciseId) }
+    }
+
+    fun onLeaveSuperset(workoutExerciseId: Long) {
+        modifyStructure { modifySessionStructureUseCase.leaveSuperset(sessionId, workoutExerciseId) }
+    }
+
+    /** Structural edits apply immediately (like add/remove exercise); typed set values are kept. */
+    private fun modifyStructure(action: suspend () -> Unit) {
+        viewModelScope.launch {
+            runCatching { action() }
+                .onSuccess { loadDetail() }
+                .onFailure { error -> _uiState.update { it.copy(errorMessage = friendlyMessage(error)) } }
         }
     }
 

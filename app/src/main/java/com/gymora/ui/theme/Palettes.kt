@@ -28,6 +28,10 @@ data class GymoraPalette(
     val onError: Color,
     val warning: Color,
     val success: Color,
+    /** Fill of a completed set's check box. */
+    val setComplete: Color = primary,
+    /** Tint behind a completed set row. */
+    val setCompleteRow: Color = primary.copy(alpha = 0.16f),
 )
 
 private val ErrorRed = Color(0xFFFF5C5C)
@@ -169,6 +173,35 @@ val LightMinimalPalette = GymoraPalette(
     success = Color(0xFF16A34A),
 )
 
+/** Strong-inspired slate: cool grey-blue surfaces, a blue accent and green completed sets. */
+val SlatePalette = GymoraPalette(
+    isDark = true,
+    background = Color(0xFF282D35),
+    surface = Color(0xFF30363F),
+    surfaceLow = Color(0xFF22262D),
+    surfaceRaised = Color(0xFF363C46),
+    surfaceHighest = Color(0xFF3B414B),
+    primary = Color(0xFF3B9EF5),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFF2D3E52),
+    onPrimaryContainer = Color(0xFF9FCDFF),
+    primaryPressed = Color(0xFF2F8BDC),
+    secondary = Color(0xFF2ECC71),
+    onSecondary = Color(0xFF0F2A1A),
+    secondaryText = Color(0xFF4CD787),
+    textPrimary = Color(0xFFF4F6F8),
+    textSecondary = Color(0xFFA7AEB8),
+    textDisabled = Color(0xFF656C77),
+    outline = Color(0xFF474E59),
+    divider = Color(0xFF353B44),
+    error = Color(0xFFFF5A5F),
+    onError = Color(0xFFFFFFFF),
+    warning = WarningAmber,
+    success = Color(0xFF2ECC71),
+    setComplete = Color(0xFF2ECC71),
+    setCompleteRow = Color(0xFF2B5B41),
+)
+
 /** Resolves the palette for a persisted [Theme]; [systemDark] only matters for [Theme.SYSTEM]. */
 fun Theme.palette(systemDark: Boolean): GymoraPalette = when (this) {
     Theme.SYSTEM -> if (systemDark) NightVoltPalette else LightMinimalPalette
@@ -177,4 +210,11 @@ fun Theme.palette(systemDark: Boolean): GymoraPalette = when (this) {
     Theme.OBSIDIAN -> ObsidianPalette
     Theme.MIDNIGHT_BLUE -> MidnightBluePalette
     Theme.CHARCOAL_ORANGE -> CharcoalOrangePalette
+    Theme.SLATE -> SlatePalette
+}
+
+/** The design language (type, shapes, decoration) of a persisted [Theme]. */
+fun Theme.style(): GymoraStyle = when (this) {
+    Theme.SLATE -> SlateStyle
+    else -> PerformanceStyle
 }

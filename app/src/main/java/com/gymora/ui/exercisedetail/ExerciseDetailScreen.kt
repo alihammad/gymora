@@ -1,5 +1,6 @@
 package com.gymora.ui.exercisedetail
 
+import com.gymora.ui.theme.headingCase
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.res.painterResource
@@ -200,7 +201,7 @@ private fun ExerciseDetailContent(
         // Hero header
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = exercise.name.uppercase(),
+                text = headingCase(exercise.name),
                 style = DisplayHero.copy(fontSize = 44.sp, lineHeight = 43.sp),
             )
             val primaryName = exercise.muscleGroups

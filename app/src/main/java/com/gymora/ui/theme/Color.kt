@@ -21,6 +21,10 @@ data class ExtraColors(
     val onTileAccents: List<Color>,
     /** Accent colors safe to use as small text on the surface (secondary uses its readable variant). */
     val tileAccentTexts: List<Color>,
+    /** Fill of a completed set's check box. */
+    val setComplete: Color,
+    /** Tint behind a completed set row. */
+    val setCompleteRow: Color,
 )
 
 fun GymoraPalette.toExtraColors() = ExtraColors(
@@ -35,4 +39,6 @@ fun GymoraPalette.toExtraColors() = ExtraColors(
     tileAccents = listOf(primary, secondary),
     onTileAccents = listOf(onPrimary, onSecondary),
     tileAccentTexts = listOf(primary, secondaryText),
+    setComplete = setComplete,
+    setCompleteRow = setCompleteRow,
 )

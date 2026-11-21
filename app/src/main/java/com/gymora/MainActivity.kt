@@ -27,6 +27,7 @@ import com.gymora.ui.components.LocalWeightUnit
 import com.gymora.ui.navigation.GymoraNavHost
 import com.gymora.ui.theme.GymoraTheme
 import com.gymora.ui.theme.palette
+import com.gymora.ui.theme.style
 import com.gymora.widget.GymoraWidgetProvider
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -81,7 +82,7 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
 
-            GymoraTheme(palette = palette) {
+            GymoraTheme(palette = palette, style = settings.theme.style()) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,

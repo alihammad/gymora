@@ -1,5 +1,6 @@
 package com.gymora.ui.home
 
+import com.gymora.ui.theme.headingCase
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
@@ -383,7 +384,7 @@ private fun RoutineCard(
                 modifier = Modifier.size(36.dp),
             )
             Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text(text = routine.name.uppercase(), style = MaterialTheme.typography.titleLarge)
+                Text(text = headingCase(routine.name), style = MaterialTheme.typography.titleLarge)
                 Text(
                     text = buildString {
                         append("${routine.exerciseCount} exercises")

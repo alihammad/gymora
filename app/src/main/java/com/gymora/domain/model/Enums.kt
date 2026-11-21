@@ -17,6 +17,7 @@ enum class Theme(val displayName: String) {
     OBSIDIAN("Obsidian"),
     MIDNIGHT_BLUE("Midnight Blue"),
     CHARCOAL_ORANGE("Charcoal + Orange"),
+    SLATE("Slate"),
 }
 
 /** A value a set can record; which ones apply depends on the [MeasurementType]. */

@@ -1,5 +1,8 @@
 package com.gymora.ui.workout
 
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.ui.unit.sp
+import com.gymora.ui.theme.gymoraStyle
 import com.gymora.ui.components.GymBackdrops
 import com.gymora.ui.components.gymBackdrop
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -138,6 +141,9 @@ fun ActiveWorkoutScreen(
     var pendingRemoveId by rememberSaveable { mutableStateOf<Long?>(null) }
     var supersetAnchorId by rememberSaveable { mutableStateOf<Long?>(null) }
     val allExercises = uiState.activeWorkout?.exercises.orEmpty()
+    // Table layouts (Slate) log sets in a flat SET / PREVIOUS / values grid instead of cards.
+    val table = gymoraStyle.tableSets
+    val itemPadding = if (table) Modifier.padding(horizontal = 16.dp) else Modifier
 
     Scaffold(
         bottomBar = {
@@ -161,6 +167,33 @@ fun ActiveWorkoutScreen(
             }
         },
         topBar = {
+            if (table) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = formatElapsed(uiState.elapsedSeconds),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Minimise workout")
+                        }
+                    },
+                    actions = {
+                        if (reordering) {
+                            IconButton(onClick = { reordering = false }) {
+                                Icon(Icons.Filled.Check, contentDescription = "Done reordering")
+                            }
+                        }
+                        com.gymora.ui.components.TextButton(onClick = viewModel::onFinishRequested) {
+                            Text("FINISH", style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 1.sp))
+                        }
+                    },
+                )
+                return@Scaffold
+            }
             TopAppBar(
                 title = {
                     Column {
@@ -205,16 +238,30 @@ fun ActiveWorkoutScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = if (table) 0.dp else 16.dp),
                         contentPadding = PaddingValues(bottom = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                    if (allExercises.isNotEmpty() && !reordering) {
+                    if (table) {
+                        item(key = "workout-title") {
+                            Column(modifier = itemPadding.padding(top = 12.dp, bottom = 4.dp)) {
+                                Text(
+                                    text = workout.session.routineNameSnapshot ?: "Workout",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                )
+                                Text(
+                                    text = formatElapsed(uiState.elapsedSeconds),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    } else if (allExercises.isNotEmpty() && !reordering) {
                         item(key = "all-header") { SectionHeader("All exercises") }
                     }
                     if (reordering) {
                         item(key = "reorder-list") {
-                            ReorderableList(
+                            Box(itemPadding) { ReorderableList(
                                 items = workout.exercises,
                                 key = { it.workoutExerciseId },
                                 onMove = viewModel::onMoveExercise,
@@ -225,7 +272,7 @@ fun ActiveWorkoutScreen(
                                     handle = handle,
                                     isDragging = isDragging,
                                 )
-                            }
+                            } }
                         }
                     }
                     val blocks = if (reordering) emptyList() else SupersetRules.blocks(workout.exercises) { it.supersetGroup }
@@ -234,6 +281,24 @@ fun ActiveWorkoutScreen(
                         // Every exercise stays expanded; nothing collapses.
                         Column {
                             ExerciseBlock(block, numbers[index]) { exercise ->
+                                if (table) {
+                                    ExerciseTableSection(
+                                        exercise = exercise,
+                                        previousPerformance = exercise.exerciseId?.let {
+                                            uiState.previousPerformanceMap[it]
+                                        },
+                                        canSuperset = allExercises.size > 1,
+                                        onSetValuesChanged = viewModel::onSetValuesChanged,
+                                        onToggleComplete = viewModel::onToggleComplete,
+                                        onAddSet = viewModel::onAddSet,
+                                        onDeleteSet = viewModel::onDeleteSet,
+                                        onRemove = { pendingRemoveId = exercise.workoutExerciseId },
+                                        onSupersetWith = { supersetAnchorId = exercise.workoutExerciseId },
+                                        onLeaveSuperset = { viewModel.onLeaveSuperset(exercise.workoutExerciseId) },
+                                        onReorder = { reordering = true },
+                                    )
+                                    return@ExerciseBlock
+                                }
                                 ExerciseCard(
                                     exercise = exercise,
                                     previousPerformance = exercise.exerciseId?.let {
@@ -255,12 +320,41 @@ fun ActiveWorkoutScreen(
                                 SupersetLinkButton(
                                     linked = false,
                                     onClick = { viewModel.onLinkSupersetWithNext(block.last().workoutExerciseId) },
-                                    modifier = Modifier.padding(top = 4.dp),
+                                    modifier = itemPadding.padding(top = 4.dp),
                                 )
                             }
                         }
                     }
-                    item {
+                    if (table) {
+                        item(key = "table-actions") {
+                            Column(
+                                modifier = itemPadding.padding(top = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Button(
+                                    onClick = viewModel::onAddExerciseClicked,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                                ) {
+                                    Text("ADD EXERCISES", style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 1.sp))
+                                }
+                                Button(
+                                    onClick = viewModel::onCancelRequested,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.16f),
+                                        contentColor = MaterialTheme.colorScheme.error,
+                                    ),
+                                ) {
+                                    Text("CANCEL WORKOUT", style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 1.sp))
+                                }
+                            }
+                        }
+                    }
+                    if (!table) item {
                         OutlinedButton(
                             onClick = viewModel::onAddExerciseClicked,
                             modifier = Modifier.fillMaxWidth(),
@@ -269,7 +363,7 @@ fun ActiveWorkoutScreen(
                             Text("Add exercise")
                         }
                     }
-                    item {
+                    if (!table) item {
                         Button(
                             onClick = viewModel::onFinishRequested,
                             modifier = Modifier.fillMaxWidth(),
@@ -277,7 +371,7 @@ fun ActiveWorkoutScreen(
                             Text("FINISH WORKOUT")
                         }
                     }
-                    item {
+                    if (!table) item {
                         com.gymora.ui.components.TextButton(
                             onClick = viewModel::onCancelRequested,
                             modifier = Modifier.fillMaxWidth(),
@@ -460,46 +554,16 @@ private fun ExerciseCard(
                             )
                             .padding(vertical = 8.dp),
                     )
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        if (canSuperset) {
-                            DropdownMenuItem(
-                                text = { Text("Superset with…") },
-                                leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null) },
-                                onClick = {
-                                    menuOpen = false
-                                    onSupersetWith()
-                                },
-                            )
-                        }
-                        if (exercise.supersetGroup != null) {
-                            DropdownMenuItem(
-                                text = { Text("Remove from superset") },
-                                leadingIcon = { Icon(Icons.Filled.LinkOff, contentDescription = null) },
-                                onClick = {
-                                    menuOpen = false
-                                    onLeaveSuperset()
-                                },
-                            )
-                        }
-                        if (canSuperset) {
-                            DropdownMenuItem(
-                                text = { Text("Reorder exercises") },
-                                leadingIcon = { Icon(Icons.Filled.SwapVert, contentDescription = null) },
-                                onClick = {
-                                    menuOpen = false
-                                    onReorder()
-                                },
-                            )
-                        }
-                        DropdownMenuItem(
-                            text = { Text("Delete exercise") },
-                            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
-                            onClick = {
-                                menuOpen = false
-                                onRemove()
-                            },
-                        )
-                    }
+                    ExerciseOptionsMenu(
+                        expanded = menuOpen,
+                        onDismiss = { menuOpen = false },
+                        canSuperset = canSuperset,
+                        inSuperset = exercise.supersetGroup != null,
+                        onSupersetWith = onSupersetWith,
+                        onLeaveSuperset = onLeaveSuperset,
+                        onReorder = onReorder,
+                        onRemove = onRemove,
+                    )
                 }
                 if (hasGuide) {
                     IconButton(onClick = { showGuide = !showGuide }) {
@@ -551,9 +615,68 @@ private fun ExerciseCard(
     }
 }
 
+/** Superset, reorder and delete options of one exercise. */
+@Composable
+internal fun ExerciseOptionsMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    canSuperset: Boolean,
+    inSuperset: Boolean,
+    onSupersetWith: () -> Unit,
+    onLeaveSuperset: () -> Unit,
+    onReorder: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        if (canSuperset) {
+            DropdownMenuItem(
+                text = { Text("Superset with…") },
+                leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null) },
+                onClick = {
+                    onDismiss()
+                    onSupersetWith()
+                },
+            )
+        }
+        if (inSuperset) {
+            DropdownMenuItem(
+                text = { Text("Remove from superset") },
+                leadingIcon = { Icon(Icons.Filled.LinkOff, contentDescription = null) },
+                onClick = {
+                    onDismiss()
+                    onLeaveSuperset()
+                },
+            )
+        }
+        if (canSuperset) {
+            DropdownMenuItem(
+                text = { Text("Reorder exercises") },
+                leadingIcon = { Icon(Icons.Filled.SwapVert, contentDescription = null) },
+                onClick = {
+                    onDismiss()
+                    onReorder()
+                },
+            )
+        }
+        DropdownMenuItem(
+            text = { Text("Delete exercise") },
+            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+            onClick = {
+                onDismiss()
+                onRemove()
+            },
+        )
+    }
+}
+
 /** Swipe a set right-to-left to delete it; no confirmation. */
 @Composable
-private fun SwipeToDeleteSet(onDelete: () -> Unit, content: @Composable () -> Unit) {
+internal fun SwipeToDeleteSet(
+    onDelete: () -> Unit,
+    rowColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    shape: androidx.compose.ui.graphics.Shape? = RoundedCornerShape(14.dp),
+    content: @Composable () -> Unit,
+) {
     val currentOnDelete by rememberUpdatedState(onDelete)
     val state = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
@@ -569,7 +692,7 @@ private fun SwipeToDeleteSet(onDelete: () -> Unit, content: @Composable () -> Un
                 contentAlignment = Alignment.CenterEnd,
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(14.dp))
+                    .then(if (shape != null) Modifier.clip(shape) else Modifier)
                     .background(MaterialTheme.colorScheme.errorContainer)
                     .padding(horizontal = 16.dp),
             ) {
@@ -582,13 +705,13 @@ private fun SwipeToDeleteSet(onDelete: () -> Unit, content: @Composable () -> Un
         },
     ) {
         // Opaque like the card, so the delete background only shows where the row has moved.
-        Box(modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)) { content() }
+        Box(modifier = Modifier.background(rowColor)) { content() }
     }
 }
 
 /** Demo media and form cues of the exercise. */
 @Composable
-private fun FormGuide(exercise: ActiveExercise) {
+internal fun FormGuide(exercise: ActiveExercise) {
     Column(
         modifier = Modifier.padding(bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -688,7 +811,7 @@ private fun SetRow(
 }
 
 /** A set can only be checked once it has the value its measurement type needs (reps for rep-based sets). */
-private fun ActiveSet.hasLoggableValue(): Boolean =
+internal fun ActiveSet.hasLoggableValue(): Boolean =
     if (SetField.REPS in measurementType.fields) {
         (reps ?: 0) > 0
     } else {

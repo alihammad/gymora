@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.res.painterResource
 import com.gymora.R
+import com.gymora.ui.theme.gymoraStyle
 import kotlin.math.max
 
 /** Graded gym photos (Pexels licence, free for commercial use) used as screen backdrops. */
@@ -28,6 +29,7 @@ object GymBackdrops {
 fun Modifier.gymBackdrop(@DrawableRes image: Int, imageAlpha: Float = 0.5f): Modifier {
     val painter = painterResource(image)
     val background = MaterialTheme.colorScheme.background
+    if (!gymoraStyle.photoBackdrops) return drawBehind { drawRect(background) }
     return drawBehind {
         drawRect(background)
         val imgW = painter.intrinsicSize.width

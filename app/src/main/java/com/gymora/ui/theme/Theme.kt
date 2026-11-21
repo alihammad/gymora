@@ -110,20 +110,23 @@ object GymoraThemeTokens {
  * Gymora Material 3 theme. Never uses dynamic color.
  *
  * @param palette the selected theme's colors; see [com.gymora.domain.model.Theme] and [palette].
+ * @param style the selected theme's design language (type, shapes, decoration); see [style].
  * @param content the themed content.
  */
 @Composable
 fun GymoraTheme(
     palette: GymoraPalette = NightVoltPalette,
+    style: GymoraStyle = PerformanceStyle,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = remember(palette) { palette.toColorScheme() }
     val extraColors = remember(palette) { palette.toExtraColors() }
-    CompositionLocalProvider(LocalExtraColors provides extraColors) {
+    val materialShapes = remember(style) { style.shapes.toMaterial() }
+    CompositionLocalProvider(LocalExtraColors provides extraColors, LocalGymoraStyle provides style) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography,
-            shapes = MaterialShapes,
+            typography = style.text.typography,
+            shapes = materialShapes,
             content = content,
         )
     }

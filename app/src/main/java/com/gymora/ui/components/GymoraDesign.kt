@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,11 +38,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.gymora.ui.theme.BarlowCondensed
 import com.gymora.ui.theme.DisplayMetric
 import com.gymora.ui.theme.GymoraShapes
 import com.gymora.ui.theme.GymoraThemeTokens
+import com.gymora.ui.theme.HeadingFamily
 import com.gymora.ui.theme.LabelCaps
+import com.gymora.ui.theme.gymoraStyle
+import com.gymora.ui.theme.headingCase
 
 // Gymora performance-training components: hero cards, the high-energy CTA, big metrics and
 // angular chips. Screens compose these instead of raw Material widgets so the app reads as one product.
@@ -66,6 +67,21 @@ fun HeroCard(
     val scheme = MaterialTheme.colorScheme
     val lime = scheme.primary
     val clickable = if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier
+    if (!gymoraStyle.decorations) {
+        // Flat raised panel with a hairline border; the watermark stays as a quiet accent.
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(GymoraShapes.card)
+                .background(scheme.surfaceContainer)
+                .border(BorderStroke(1.dp, scheme.outlineVariant), GymoraShapes.card)
+                .then(clickable),
+        ) {
+            if (watermark != null) watermark()
+            content()
+        }
+        return
+    }
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -117,7 +133,7 @@ fun ActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     icon: ImageVector? = null,
-    height: Dp = 60.dp,
+    height: Dp = if (gymoraStyle.decorations) 60.dp else 52.dp,
 ) {
     val scheme = MaterialTheme.colorScheme
     val container = if (enabled) scheme.primary else scheme.surfaceContainerHighest
@@ -134,9 +150,13 @@ fun ActionButton(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = text.uppercase(),
+            text = headingCase(text),
             color = content,
-            style = MaterialTheme.typography.headlineSmall,
+            style = if (gymoraStyle.uppercaseHeadings) {
+                MaterialTheme.typography.headlineSmall
+            } else {
+                MaterialTheme.typography.titleMedium
+            },
             textAlign = TextAlign.Center,
         )
         if (icon != null) {
@@ -214,11 +234,13 @@ fun SectionHeader(
         modifier = modifier.fillMaxWidth().padding(top = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(4.dp).height(18.dp).background(action()))
-        Spacer(Modifier.width(8.dp))
+        if (gymoraStyle.decorations) {
+            Box(Modifier.width(4.dp).height(18.dp).background(action()))
+            Spacer(Modifier.width(8.dp))
+        }
         Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.titleLarge.copy(fontFamily = BarlowCondensed),
+            text = headingCase(title),
+            style = MaterialTheme.typography.titleLarge.copy(fontFamily = HeadingFamily),
             modifier = Modifier.weight(1f).semantics { heading() },
         )
         if (actionLabel != null && onAction != null) {
@@ -254,6 +276,7 @@ fun MuscleChip(text: String, modifier: Modifier = Modifier, selected: Boolean = 
 @Composable
 fun SegmentedProgress(done: Int, total: Int, modifier: Modifier = Modifier, height: Dp = 6.dp) {
     val scheme = MaterialTheme.colorScheme
+    val segmentShape = gymoraStyle.shapes.segment(height)
     Row(
         modifier = modifier.semantics { contentDescription = "$done of $total complete" },
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -263,7 +286,7 @@ fun SegmentedProgress(done: Int, total: Int, modifier: Modifier = Modifier, heig
                 Modifier
                     .weight(1f)
                     .height(height)
-                    .clip(CutCornerShape(topEnd = height))
+                    .clip(segmentShape)
                     .background(if (index < done) scheme.primary else scheme.surfaceContainerHighest),
             )
         }

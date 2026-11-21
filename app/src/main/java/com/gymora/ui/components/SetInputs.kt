@@ -9,6 +9,12 @@ import androidx.compose.ui.text.style.TextAlign
 import com.gymora.ui.theme.DisplayMetric
 import com.gymora.ui.theme.LabelCaps
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.background
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import com.gymora.ui.theme.GymoraShapes
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -66,6 +72,7 @@ data class SetEntry(
  * The fields own their text while typing (binding to a database round-trip drops
  * keystrokes), keyed by [key]; every valid edit reports the parsed [SetEntry].
  * [hint] shows as placeholders, e.g. last session's values.
+ * [compact] renders label-less table cells (see [setColumnLabels]); [completed] then drops their fill.
  */
 @Composable
 fun SetInputRow(
@@ -76,6 +83,8 @@ fun SetInputRow(
     modifier: Modifier = Modifier,
     hint: SetEntry? = null,
     large: Boolean = false,
+    compact: Boolean = false,
+    completed: Boolean = false,
 ) {
     val unit = LocalWeightUnit.current
     var weightText by remember(key) { mutableStateOf(SetFormat.number(initial.weight)) }
@@ -99,6 +108,43 @@ fun SetInputRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        if (compact) {
+            type.fields.forEach { field ->
+                when (field) {
+                    SetField.WEIGHT -> CompactValueField(
+                        value = weightText,
+                        placeholder = SetFormat.number(hint?.weight),
+                        keyboardType = KeyboardType.Decimal,
+                        completed = completed,
+                        accept = ::isDecimalInput,
+                        onValueChange = { weightText = it.replace(',', '.'); report() },
+                    )
+                    SetField.REPS -> CompactRepsField(
+                        reps = repsText.toIntOrNull(),
+                        hint = hint?.reps,
+                        completed = completed,
+                        onRepsChange = { repsText = it.toString(); report() },
+                    )
+                    SetField.DURATION -> CompactValueField(
+                        value = durationText,
+                        placeholder = SetFormat.duration(hint?.durationSeconds).ifEmpty { "m:ss" },
+                        keyboardType = KeyboardType.Phone,
+                        completed = completed,
+                        accept = SetFormat::isDurationInput,
+                        onValueChange = { durationText = it; report() },
+                    )
+                    SetField.DISTANCE -> CompactValueField(
+                        value = distanceText,
+                        placeholder = SetFormat.distance(hint?.distanceMeters, unit),
+                        keyboardType = KeyboardType.Decimal,
+                        completed = completed,
+                        accept = ::isDecimalInput,
+                        onValueChange = { distanceText = it.replace(',', '.'); report() },
+                    )
+                }
+            }
+            return@Row
+        }
         type.fields.forEach { field ->
             when (field) {
                 SetField.WEIGHT -> ValueField(
@@ -137,6 +183,101 @@ fun SetInputRow(
                 )
             }
         }
+    }
+}
+
+/** Short column headers matching the cells [SetInputRow] draws for [type] in compact mode. */
+fun setColumnLabels(type: MeasurementType, unit: WeightUnit): List<String> = type.fields.map { field ->
+    when (field) {
+        SetField.WEIGHT -> when (type) {
+            MeasurementType.WEIGHTED_BODYWEIGHT -> "+${unit.name}"
+            MeasurementType.ASSISTED_BODYWEIGHT -> "−${unit.name}"
+            else -> unit.name
+        }
+        SetField.REPS -> "REPS"
+        SetField.DURATION -> "TIME"
+        SetField.DISTANCE -> SetFormat.distanceUnitLabel(unit).uppercase()
+    }
+}
+
+private val CompactCellHeight = 36.dp
+
+@Composable
+private fun compactCellModifier(completed: Boolean): Modifier {
+    val shape = GymoraShapes.input
+    return Modifier
+        .fillMaxWidth()
+        .height(CompactCellHeight)
+        .clip(shape)
+        .background(if (completed) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHighest)
+}
+
+/** Table cell for typed values: filled pill with a centered number; the fill drops once the set is done. */
+@Composable
+private fun RowScope.CompactValueField(
+    value: String,
+    placeholder: String,
+    keyboardType: KeyboardType,
+    completed: Boolean,
+    accept: (String) -> Boolean,
+    onValueChange: (String) -> Unit,
+) {
+    val style = MaterialTheme.typography.titleMedium.copy(
+        textAlign = TextAlign.Center,
+        color = MaterialTheme.colorScheme.onSurface,
+    )
+    BasicTextField(
+        value = value,
+        onValueChange = { input -> if (accept(input.replace(',', '.'))) onValueChange(input) },
+        singleLine = true,
+        textStyle = style,
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        modifier = Modifier.weight(1f),
+        decorationBox = { inner ->
+            Box(compactCellModifier(completed).padding(horizontal = 6.dp), contentAlignment = Alignment.Center) {
+                if (value.isEmpty() && placeholder.isNotEmpty()) {
+                    Text(placeholder, style = style, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                }
+                inner()
+            }
+        },
+    )
+}
+
+/** Table cell for reps: same pill as [CompactValueField], tapping opens the reps wheel. */
+@Composable
+private fun RowScope.CompactRepsField(
+    reps: Int?,
+    hint: Int?,
+    completed: Boolean,
+    onRepsChange: (Int) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .weight(1f)
+            .then(compactCellModifier(completed))
+            .clickable(onClickLabel = "Choose reps") { open = true },
+    ) {
+        val style = MaterialTheme.typography.titleMedium
+        if (reps != null) {
+            Text(reps.toString(), style = style)
+        } else {
+            Text(
+                hint?.toString().orEmpty(),
+                style = style,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            )
+        }
+    }
+    if (open) {
+        RepsPickerDialog(
+            initial = reps ?: hint ?: DEFAULT_REPS,
+            onDismiss = { open = false },
+            onUpdate = { onRepsChange(it); open = false },
+        )
     }
 }
 
@@ -202,7 +343,7 @@ private fun RepsPickerDialog(initial: Int, onDismiss: () -> Unit, onUpdate: (Int
         }
     }
     Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface) {
+        Surface(shape = GymoraShapes.dialog, color = MaterialTheme.colorScheme.surface) {
             Column(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,

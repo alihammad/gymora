@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.gymora.ui.theme.GymoraShapes
 import com.gymora.ui.theme.GymoraThemeTokens
 import com.gymora.ui.theme.Sizes
+import com.gymora.ui.theme.gymoraStyle
 
 // Night volt component layer. These wrappers share the names of their Material 3
 // counterparts so a screen adopts the design by swapping its import only.
@@ -270,9 +271,11 @@ fun TopAppBar(
 @Composable
 fun gymoraTopAppBarColors(): TopAppBarColors {
     val scheme = MaterialTheme.colorScheme
+    // Slate sets the bar apart with a slightly darker band; Performance blends it into the page.
+    val bar = if (gymoraStyle.decorations) scheme.background else scheme.surfaceContainerLow
     return TopAppBarDefaults.topAppBarColors(
-        containerColor = scheme.background,
-        scrolledContainerColor = scheme.background,
+        containerColor = bar,
+        scrolledContainerColor = bar,
         navigationIconContentColor = scheme.onSurfaceVariant,
         titleContentColor = scheme.onSurface,
         actionIconContentColor = scheme.onSurfaceVariant,

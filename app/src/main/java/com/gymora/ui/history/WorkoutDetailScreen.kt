@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.LinkOff
+import com.gymora.ui.components.SupersetLinkButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -219,19 +221,30 @@ private fun WorkoutDetailContent(
         val blocks = SupersetRules.blocks(detail.exercises) { it.supersetGroup }
         val numbers = SupersetRules.numbers(blocks)
         itemsIndexed(blocks, key = { _, block -> block.first().workoutExerciseId }) { index, block ->
-            ExerciseBlock(block, numbers[index]) { exercise ->
-                if (uiState.isEditing) {
-                    EditableExerciseCard(
-                        exercise = exercise,
-                        editableSets = uiState.editableSets,
-                        onSetValuesChanged = viewModel::onSetValuesChanged,
-                        onToggleComplete = viewModel::onToggleComplete,
-                        onRemove = { viewModel.onRemoveExerciseClicked(exercise.workoutExerciseId) },
-                    )
-                } else {
-                    HistoricalExerciseCard(
-                        exercise = exercise,
-                        onExerciseHistory = { exercise.exerciseId?.let(onExerciseHistory) },
+            Column {
+                ExerciseBlock(block, numbers[index]) { exercise ->
+                    if (uiState.isEditing) {
+                        EditableExerciseCard(
+                            exercise = exercise,
+                            editableSets = uiState.editableSets,
+                            onSetValuesChanged = viewModel::onSetValuesChanged,
+                            onToggleComplete = viewModel::onToggleComplete,
+                            onRemove = { viewModel.onRemoveExerciseClicked(exercise.workoutExerciseId) },
+                            onLeaveSuperset = { viewModel.onLeaveSuperset(exercise.workoutExerciseId) },
+                        )
+                    } else {
+                        HistoricalExerciseCard(
+                            exercise = exercise,
+                            onExerciseHistory = { exercise.exerciseId?.let(onExerciseHistory) },
+                        )
+                    }
+                }
+                // Same one-tap link as the active workout and routine editor.
+                if (uiState.isEditing && index < blocks.lastIndex) {
+                    SupersetLinkButton(
+                        linked = false,
+                        onClick = { viewModel.onLinkSupersetWithNext(block.last().workoutExerciseId) },
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
             }
@@ -414,6 +427,7 @@ private fun EditableExerciseCard(
     onSetValuesChanged: (Long, SetEntry) -> Unit,
     onToggleComplete: (Long) -> Unit,
     onRemove: () -> Unit,
+    onLeaveSuperset: () -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -427,6 +441,14 @@ private fun EditableExerciseCard(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                 )
+                if (exercise.supersetGroup != null) {
+                    IconButton(onClick = onLeaveSuperset) {
+                        Icon(
+                            Icons.Filled.LinkOff,
+                            contentDescription = "Remove ${exercise.exerciseName} from superset",
+                        )
+                    }
+                }
                 IconButton(onClick = onRemove) {
                     Icon(
                         Icons.Filled.Close,
