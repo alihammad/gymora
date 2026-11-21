@@ -88,33 +88,6 @@ val ObsidianPalette = GymoraPalette(
     success = SuccessGreen,
 )
 
-/** Performance: graphite with lime reserved for wins and the primary action. */
-val GraphiteLimePalette = GymoraPalette(
-    isDark = true,
-    background = Color(0xFF101312),
-    surface = Color(0xFF1A211E),
-    surfaceLow = Color(0xFF151A18),
-    surfaceRaised = Color(0xFF232B27),
-    surfaceHighest = Color(0xFF2B3530),
-    primary = Color(0xFFB6F500),
-    onPrimary = Color(0xFF101312),
-    primaryContainer = Color(0xFF2A3A05),
-    onPrimaryContainer = Color(0xFFDDFB8A),
-    primaryPressed = Color(0xFFA3DB00),
-    secondary = Color(0xFF7DD3C0),
-    onSecondary = Color(0xFF101312),
-    secondaryText = Color(0xFF7DD3C0),
-    textPrimary = Color(0xFFFFFFFF),
-    textSecondary = Color(0xFF9BA8A2),
-    textDisabled = Color(0xFF5B6862),
-    outline = Color(0xFF38443E),
-    divider = Color(0xFF26302B),
-    error = ErrorRed,
-    onError = Color(0xFF101312),
-    warning = WarningAmber,
-    success = Color(0xFFB6F500),
-)
-
 /** Fitness intelligence: deep navy with electric blue. */
 val MidnightBluePalette = GymoraPalette(
     isDark = true,
@@ -138,33 +111,6 @@ val MidnightBluePalette = GymoraPalette(
     divider = Color(0xFF1E293B),
     error = ErrorRed,
     onError = Color(0xFF080D18),
-    warning = WarningAmber,
-    success = SuccessGreen,
-)
-
-/** AI fitness: black with violet. */
-val BlackPurplePalette = GymoraPalette(
-    isDark = true,
-    background = Color(0xFF09090B),
-    surface = Color(0xFF18181B),
-    surfaceLow = Color(0xFF111113),
-    surfaceRaised = Color(0xFF222226),
-    surfaceHighest = Color(0xFF2A2A2F),
-    primary = Color(0xFF8B5CF6),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFF2E1F5E),
-    onPrimaryContainer = Color(0xFFDDD2FE),
-    primaryPressed = Color(0xFF7C4DE8),
-    secondary = Color(0xFFA78BFA),
-    onSecondary = Color(0xFF09090B),
-    secondaryText = Color(0xFFA78BFA),
-    textPrimary = Color(0xFFFAFAFA),
-    textSecondary = Color(0xFFA1A1AA),
-    textDisabled = Color(0xFF5E5E66),
-    outline = Color(0xFF36363C),
-    divider = Color(0xFF26262B),
-    error = ErrorRed,
-    onError = Color(0xFF09090B),
     warning = WarningAmber,
     success = SuccessGreen,
 )
@@ -194,33 +140,6 @@ val CharcoalOrangePalette = GymoraPalette(
     onError = Color(0xFF101010),
     warning = WarningAmber,
     success = Color(0xFF4ADE80),
-)
-
-/** Wellness and strength: deep green with mint. */
-val DeepForestPalette = GymoraPalette(
-    isDark = true,
-    background = Color(0xFF07110D),
-    surface = Color(0xFF102019),
-    surfaceLow = Color(0xFF0B1812),
-    surfaceRaised = Color(0xFF17291F),
-    surfaceHighest = Color(0xFF1F3328),
-    primary = Color(0xFF22C55E),
-    onPrimary = Color(0xFF07110D),
-    primaryContainer = Color(0xFF0F3D22),
-    onPrimaryContainer = Color(0xFFBBF7D0),
-    primaryPressed = Color(0xFF1DAE53),
-    secondary = Color(0xFF86EFAC),
-    onSecondary = Color(0xFF07110D),
-    secondaryText = Color(0xFF86EFAC),
-    textPrimary = Color(0xFFF4F7F2),
-    textSecondary = Color(0xFF9DB3A5),
-    textDisabled = Color(0xFF5B7466),
-    outline = Color(0xFF2C4638),
-    divider = Color(0xFF1B2E24),
-    error = ErrorRed,
-    onError = Color(0xFF07110D),
-    warning = WarningAmber,
-    success = Color(0xFF22C55E),
 )
 
 /** Clean light theme: warm off-white, white cards, green and blue accents. */
@@ -256,9 +175,6 @@ fun Theme.palette(systemDark: Boolean): GymoraPalette = when (this) {
     Theme.LIGHT -> LightMinimalPalette
     Theme.DARK -> NightVoltPalette
     Theme.OBSIDIAN -> ObsidianPalette
-    Theme.GRAPHITE_LIME -> GraphiteLimePalette
     Theme.MIDNIGHT_BLUE -> MidnightBluePalette
-    Theme.BLACK_PURPLE -> BlackPurplePalette
     Theme.CHARCOAL_ORANGE -> CharcoalOrangePalette
-    Theme.DEEP_FOREST -> DeepForestPalette
 }

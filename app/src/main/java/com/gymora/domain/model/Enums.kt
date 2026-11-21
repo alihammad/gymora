@@ -15,11 +15,8 @@ enum class Theme(val displayName: String) {
     LIGHT("Light Minimal"),
     DARK("Night Volt"),
     OBSIDIAN("Obsidian"),
-    GRAPHITE_LIME("Graphite + Lime"),
     MIDNIGHT_BLUE("Midnight Blue"),
-    BLACK_PURPLE("Black + Purple"),
     CHARCOAL_ORANGE("Charcoal + Orange"),
-    DEEP_FOREST("Deep Forest"),
 }
 
 /** A value a set can record; which ones apply depends on the [MeasurementType]. */

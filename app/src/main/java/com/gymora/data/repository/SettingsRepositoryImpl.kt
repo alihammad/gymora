@@ -94,7 +94,8 @@ class SettingsRepositoryImpl @Inject constructor(
     private fun SettingsEntity.toDomain(): Settings = Settings(
         weightUnit = WeightUnit.valueOf(weightUnit),
         defaultRestSeconds = defaultRestSeconds,
-        theme = Theme.valueOf(theme),
+        // Removed themes (e.g. Graphite + Lime, Black + Purple, Deep Forest) fall back to the default.
+        theme = Theme.entries.firstOrNull { it.name == theme } ?: Theme.SYSTEM,
         weeklyGoal = weeklyGoal,
         reminderDays = EngagementCalculators.maskToDays(reminderDays),
         reminderTime = LocalTime.of(reminderMinuteOfDay / MINUTES_PER_HOUR, reminderMinuteOfDay % MINUTES_PER_HOUR),
