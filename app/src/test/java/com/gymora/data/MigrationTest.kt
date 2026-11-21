@@ -183,6 +183,38 @@ class MigrationTest {
         db.close()
     }
 
+    @Test
+    fun migrate7To8AddsBodyMetricsAndSplitsThighs() {
+        helper.createDatabase(DB_NAME, 7).use { db ->
+            db.execSQL(
+                "INSERT INTO body_measurements (id, measured_at, weight_kg, thigh_cm, sync_id, updated_at) " +
+                    "VALUES (1, 300, 80.0, 58.5, 'a', 400), (2, 500, 81.0, NULL, 'b', 600)",
+            )
+            // Installed devices carry the touch trigger from earlier opens.
+            db.execSQL(
+                com.gymora.data.local.sync.SyncTriggers.STATEMENTS
+                    .single { "sync_body_measurements_touch" in it },
+            )
+        }
+
+        val db = helper.runMigrationsAndValidate(DB_NAME, 8, true, GymoraDatabase.MIGRATION_7_8)
+
+        db.query(
+            "SELECT left_thigh_cm, right_thigh_cm, thigh_cm, neck_cm, calories_kcal, updated_at " +
+                "FROM body_measurements ORDER BY id",
+        ).use { c ->
+            c.moveToNext()
+            assertEquals(58.5, c.getDouble(0), 0.0)
+            assertEquals(58.5, c.getDouble(1), 0.0)
+            assertEquals("The old column keeps its value", 58.5, c.getDouble(2), 0.0)
+            assertTrue(c.isNull(3) && c.isNull(4))
+            assertEquals("Derived copy is not a sync edit", 400L, c.getLong(5))
+            c.moveToNext()
+            assertTrue(c.isNull(0) && c.isNull(1))
+        }
+        db.close()
+    }
+
     private companion object {
         const val DB_NAME = "migration-test.db"
         val UUID_REGEX = Regex("[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")

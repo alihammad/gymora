@@ -5,6 +5,7 @@ import com.gymora.data.local.db.GymoraDatabase
 import com.gymora.data.local.entity.RoutineEntity
 import com.gymora.data.local.entity.RoutineExerciseEntity
 import com.gymora.data.local.entity.SetTemplateEntity
+import com.gymora.data.local.sync.SyncTriggers
 import com.gymora.domain.model.MeasurementType
 import java.util.UUID
 import javax.inject.Inject
@@ -73,11 +74,18 @@ class RoutineSeederImpl @Inject constructor() : RoutineSeeder {
                     }
                 }
             }
+            // Untouched defaults lose to any real edit, including a copy already in the cloud
+            // from another phone; otherwise a fresh install would overwrite the user's version.
+            val db = database.openHelper.writableDatabase
+            SyncTriggers.quietly(db) { db.execSQL("UPDATE routines SET updated_at = $SEED_UPDATED_AT") }
         }
     }
 
     private companion object {
         const val DEFAULT_SET_COUNT = 3
+
+        /** Older than any real edit; see [seed]. */
+        const val SEED_UPDATED_AT = 1L
 
         data class SeedExercise(
             val name: String,

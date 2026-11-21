@@ -95,6 +95,8 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.gymora.ui.components.ConfirmDialog
 import com.gymora.ui.components.ExerciseBlock
+import com.gymora.ui.components.SupersetLinkButton
+import com.gymora.ui.components.ExercisePickerDialog
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -224,22 +226,32 @@ fun ActiveWorkoutScreen(
                     val numbers = SupersetRules.numbers(blocks)
                     itemsIndexed(blocks, key = { _, block -> block.first().workoutExerciseId }) { index, block ->
                         // Every exercise stays expanded; nothing collapses.
-                        ExerciseBlock(block, numbers[index]) { exercise ->
-                            ExerciseCard(
-                                exercise = exercise,
-                                previousPerformance = exercise.exerciseId?.let {
-                                    uiState.previousPerformanceMap[it]
-                                },
-                                canSuperset = allExercises.size > 1,
-                                onSetValuesChanged = viewModel::onSetValuesChanged,
-                                onToggleComplete = viewModel::onToggleComplete,
-                                onAddSet = viewModel::onAddSet,
-                                onDeleteSet = viewModel::onDeleteSet,
-                                onRemove = { pendingRemoveId = exercise.workoutExerciseId },
-                                onSupersetWith = { supersetAnchorId = exercise.workoutExerciseId },
-                                onLeaveSuperset = { viewModel.onLeaveSuperset(exercise.workoutExerciseId) },
-                                onReorder = { reordering = true },
-                            )
+                        Column {
+                            ExerciseBlock(block, numbers[index]) { exercise ->
+                                ExerciseCard(
+                                    exercise = exercise,
+                                    previousPerformance = exercise.exerciseId?.let {
+                                        uiState.previousPerformanceMap[it]
+                                    },
+                                    canSuperset = allExercises.size > 1,
+                                    onSetValuesChanged = viewModel::onSetValuesChanged,
+                                    onToggleComplete = viewModel::onToggleComplete,
+                                    onAddSet = viewModel::onAddSet,
+                                    onDeleteSet = viewModel::onDeleteSet,
+                                    onRemove = { pendingRemoveId = exercise.workoutExerciseId },
+                                    onSupersetWith = { supersetAnchorId = exercise.workoutExerciseId },
+                                    onLeaveSuperset = { viewModel.onLeaveSuperset(exercise.workoutExerciseId) },
+                                    onReorder = { reordering = true },
+                                )
+                            }
+                            // Same one-tap link as the routine editor, so exercises added mid-workout can be paired.
+                            if (index < blocks.lastIndex) {
+                                SupersetLinkButton(
+                                    linked = false,
+                                    onClick = { viewModel.onLinkSupersetWithNext(block.last().workoutExerciseId) },
+                                    modifier = Modifier.padding(top = 4.dp),
+                                )
+                            }
                         }
                     }
                     item {
@@ -278,69 +290,10 @@ fun ActiveWorkoutScreen(
 
     // Exercise picker (FR-028)
     if (uiState.showExercisePicker) {
-        var query by rememberSaveable { mutableStateOf("") }
-        val filtered = remember(uiState.libraryExercises, query) {
-            val q = query.trim()
-            if (q.isEmpty()) {
-                uiState.libraryExercises
-            } else {
-                uiState.libraryExercises.filter {
-                    it.name.contains(q, ignoreCase = true) ||
-                        it.muscleGroup?.displayName?.contains(q, ignoreCase = true) == true
-                }
-            }
-        }
-        AlertDialog(
-            onDismissRequest = viewModel::onExercisePickerDismissed,
-            title = { Text("Add exercise") },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search exercises") },
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                        trailingIcon = {
-                            if (query.isNotEmpty()) {
-                                IconButton(onClick = { query = "" }) {
-                                    Icon(Icons.Filled.Close, contentDescription = "Clear search")
-                                }
-                            }
-                        },
-                        singleLine = true,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    if (filtered.isEmpty()) {
-                        Text(
-                            "No exercises match \"${query.trim()}\".",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(vertical = 16.dp),
-                        )
-                    } else {
-                        LazyColumn {
-                            items(filtered, key = { it.id }) { exercise ->
-                                ListItem(
-                                    headlineContent = { Text(exercise.name) },
-                                    supportingContent = {
-                                        Text(exercise.muscleGroup?.displayName ?: "")
-                                    },
-                                    trailingContent = {
-                                        IconButton(onClick = { viewModel.onExercisePicked(exercise.id) }) {
-                                            Icon(Icons.Filled.Add, contentDescription = "Add ${exercise.name}")
-                                        }
-                                    },
-                                    modifier = Modifier.clickable { viewModel.onExercisePicked(exercise.id) },
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = viewModel::onExercisePickerDismissed) { Text("Cancel") }
-            },
+        ExercisePickerDialog(
+            exercises = uiState.libraryExercises,
+            onPick = viewModel::onExercisePicked,
+            onDismiss = viewModel::onExercisePickerDismissed,
         )
     }
 

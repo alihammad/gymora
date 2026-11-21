@@ -69,6 +69,9 @@ interface WorkoutSessionRepository {
     /** Takes the exercise out of its superset for this session, placing it after the remaining members. */
     suspend fun leaveSessionSuperset(sessionId: Long, workoutExerciseId: Long)
 
+    /** Supersets the exercise (and its superset) with the next one (and its superset) for this session. */
+    suspend fun linkSessionSupersetWithNext(sessionId: Long, workoutExerciseId: Long)
+
     suspend fun updateSessionNotes(sessionId: Long, notes: String?)
 
     /** Records ended_at, sets status COMPLETED, returns summary (FR-033/034/035). */

@@ -214,6 +214,7 @@ fun GymoraNavHost(
                     onWorkoutClick = { sessionId ->
                         navController.navigate(Destinations.WorkoutDetail.create(sessionId))
                     },
+                    onBodyMeasurements = { navController.navigate(Destinations.Body.route) },
                 )
             }
             composable(Destinations.Settings.route) {

@@ -32,6 +32,9 @@ interface AuthService {
 
     fun signOut()
 
+    /** Whether the user signed in recently enough for Firebase to allow deleting the account. */
+    val isLoginRecent: Boolean
+
     /** Permanently deletes the cloud account. Throws [AuthException.RecentLoginRequired] if the login is old. */
     suspend fun deleteCurrentUser()
 }
@@ -54,6 +57,8 @@ sealed class AuthException(message: String, cause: Throwable? = null) : Exceptio
         AuthException("For your security, sign out and sign in again, then delete the account.", cause)
     class NoGoogleAccount(cause: Throwable? = null) :
         AuthException("No Google account on this phone. Add one in system Settings, or use email.", cause)
+    class CloudDeleteFailed(cause: Throwable? = null) :
+        AuthException("Couldn't delete your cloud data. Check your connection and try again.", cause)
     class Failed(cause: Throwable? = null) :
         AuthException("Something went wrong. Please try again.", cause)
 }
@@ -87,6 +92,12 @@ class FirebaseAuthService @Inject constructor() : AuthService {
     }
 
     override fun signOut() = auth.signOut()
+
+    override val isLoginRecent: Boolean
+        get() {
+            val signedInAt = auth.currentUser?.metadata?.lastSignInTimestamp ?: return false
+            return System.currentTimeMillis() - signedInAt < RECENT_LOGIN_MS
+        }
 
     override suspend fun deleteCurrentUser() = mapErrors {
         auth.currentUser?.delete()?.await()
@@ -123,5 +134,10 @@ class FirebaseAuthService @Inject constructor() : AuthService {
             is FirebaseAuthException -> AuthException.Failed(e)
             else -> AuthException.Failed(e)
         }
+    }
+
+    private companion object {
+        /** Firebase asks for a fresh login before deletion after about five minutes. */
+        const val RECENT_LOGIN_MS = 4 * 60 * 1000L
     }
 }

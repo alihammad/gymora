@@ -120,8 +120,21 @@ class HealthConnectSync @Inject constructor(
         database.workoutSessionDao().getById(sessionId)?.let { client.insertRecords(listOf(sessionRecord(it))) }
     }
 
-    /** After a body measurement is saved. No-op unless sync is on and permitted. */
-    fun onBodyMeasurementSaved() = launchIfEnabled { writeOwnWeights() }
+    /**
+     * After body measurements are saved or deleted. Rewrites own weigh-ins and removes
+     * the ones for [removedIds] (entries deleted, or saved without a weight).
+     * No-op unless sync is on and permitted.
+     */
+    fun onBodyMeasurementsChanged(removedIds: Collection<Long> = emptyList()) = launchIfEnabled {
+        if (removedIds.isNotEmpty()) {
+            client.deleteRecords(
+                WeightRecord::class,
+                recordIdsList = emptyList(),
+                clientRecordIdsList = removedIds.map(::weightClientId),
+            )
+        }
+        writeOwnWeights()
+    }
 
     /** Writes every completed workout and own weigh-in, then imports other apps' weigh-ins. */
     suspend fun syncAll(): HealthSyncResult {
@@ -174,8 +187,9 @@ class HealthConnectSync @Inject constructor(
                         zoneOffset = zone.getOffset(time),
                         weight = Mass.kilograms(entry.weightKg!!),
                         metadata = Metadata.manualEntry(
-                            clientRecordId = "gymora-weight-${entry.id}",
-                            clientRecordVersion = entry.measuredAt,
+                            clientRecordId = weightClientId(entry.id),
+                            // Edits must raise the version or Health Connect keeps the old value.
+                            clientRecordVersion = maxOf(entry.updatedAt, entry.measuredAt),
                         ),
                     )
                 },
@@ -206,12 +220,6 @@ class HealthConnectSync @Inject constructor(
                         BodyMeasurementEntity(
                             measuredAt = record.time.toEpochMilli(),
                             weightKg = record.weight.inKilograms,
-                            shouldersCm = null,
-                            chestCm = null,
-                            aboveNavelCm = null,
-                            navelCm = null,
-                            belowNavelCm = null,
-                            thighCm = null,
                             externalId = record.metadata.id,
                         ),
                     )
@@ -221,6 +229,8 @@ class HealthConnectSync @Inject constructor(
         } while (pageToken != null)
         return imported
     }
+
+    private fun weightClientId(entryId: Long) = "gymora-weight-$entryId"
 
     companion object {
         private const val BATCH_SIZE = 100

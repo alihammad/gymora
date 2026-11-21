@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.gymora.account.AccountSession
 import com.gymora.account.AuthService
+import com.gymora.data.sync.SyncScheduler
 import com.gymora.domain.model.Settings
 import com.gymora.domain.repository.SettingsRepository
 import com.gymora.ui.components.LocalWeightUnit
@@ -46,6 +47,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var authService: AuthService
 
+    @Inject
+    lateinit var syncScheduler: SyncScheduler
+
     /** Routine to start a workout from, requested by the widget or a reminder; null once handled. */
     private var startRoutineRequest by mutableStateOf<Long?>(null)
 
@@ -57,6 +61,8 @@ class MainActivity : ComponentActivity() {
             accountSession.signOut(removeLocalData = false)
             return
         }
+        // Bring in anything changed on another phone since the app was last open.
+        if (savedInstanceState == null) syncScheduler.syncNow()
         // Only a fresh launch: after a configuration change the request was already handled.
         if (savedInstanceState == null) readStartRequest(intent)
         setContent {

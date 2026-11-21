@@ -17,8 +17,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * Android runs SQLite with recursive triggers on, so every trigger that updates its own
  * table is guarded by a WHEN clause its own update no longer satisfies.
  *
- * Room does not validate triggers, so they are created with IF NOT EXISTS from the
- * database callbacks (see DatabaseModule) rather than in migrations.
+ * While cloud sync applies a downloaded change ([quietly]), the touch, tombstone and
+ * child triggers stand down: the change is not a new local edit, and treating it as one
+ * would upload it again and bounce it between devices forever.
+ *
+ * Room does not validate triggers or tables it does not own, so they are (re)created from
+ * the database callbacks (see DatabaseModule) rather than in migrations. Triggers are
+ * dropped first so changed definitions reach existing databases.
  */
 object SyncTriggers {
 
@@ -33,6 +38,19 @@ object SyncTriggers {
         "lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || " +
             "substr(hex(randomblob(2)), 2) || '-' || substr('89ab', 1 + (random() & 3), 1) || " +
             "substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6)))"
+
+    /** Holds a row only while sync applies downloaded changes; see [quietly]. */
+    private const val APPLYING_TABLE = "sync_applying"
+
+    private const val NOT_APPLYING = "NOT EXISTS (SELECT 1 FROM $APPLYING_TABLE)"
+
+    /** Cloud sync's own bookkeeping, per account database; see SyncEngine. */
+    private val TABLES = listOf(
+        "CREATE TABLE IF NOT EXISTS $APPLYING_TABLE (x INTEGER)",
+        "CREATE TABLE IF NOT EXISTS sync_meta (collection TEXT NOT NULL, sync_id TEXT NOT NULL, " +
+            "remote_updated_at INTEGER NOT NULL, PRIMARY KEY(collection, sync_id))",
+        "CREATE TABLE IF NOT EXISTS sync_state (key TEXT NOT NULL PRIMARY KEY, value INTEGER NOT NULL)",
+    )
 
     /** Tables synced as their own document, with the extra condition for assigning a random id. */
     private val ROOTS = mapOf(
@@ -72,13 +90,13 @@ object SyncTriggers {
             """,
             """
             CREATE TRIGGER IF NOT EXISTS sync_${table}_touch AFTER UPDATE ON $table
-            WHEN NEW.updated_at <= OLD.updated_at BEGIN
+            WHEN NEW.updated_at <= OLD.updated_at AND $NOT_APPLYING BEGIN
                 UPDATE $table SET updated_at = ${touched("OLD.updated_at")} WHERE id = NEW.id;
             END
             """,
             """
             CREATE TRIGGER IF NOT EXISTS sync_${table}_delete AFTER DELETE ON $table
-            WHEN OLD.sync_id IS NOT NULL BEGIN
+            WHEN OLD.sync_id IS NOT NULL AND $NOT_APPLYING BEGIN
                 INSERT OR REPLACE INTO sync_tombstones (entity, sync_id, deleted_at)
                     VALUES ('$table', OLD.sync_id, $NOW_MS);
             END
@@ -92,11 +110,32 @@ object SyncTriggers {
             "delete" to "$touch = ${child.rootId("OLD")};",
         ).map { (event, body) ->
             "CREATE TRIGGER IF NOT EXISTS sync_${child.table}_$event AFTER ${event.uppercase()} " +
-                "ON ${child.table} BEGIN $body END"
+                "ON ${child.table} WHEN $NOT_APPLYING BEGIN $body END"
         }
     }
 
+    private val TRIGGER_NAMES = STATEMENTS.map {
+        Regex("""CREATE TRIGGER IF NOT EXISTS (\w+)""").find(it)!!.groupValues[1]
+    }
+
     fun install(db: SupportSQLiteDatabase) {
+        TABLES.forEach(db::execSQL)
+        TRIGGER_NAMES.forEach { db.execSQL("DROP TRIGGER IF EXISTS $it") }
         STATEMENTS.forEach(db::execSQL)
+    }
+
+    /**
+     * Runs [block] with the bookkeeping triggers stood down, for writes that are not
+     * local edits. Call inside a transaction, so a crash can't leave them off.
+     */
+    inline fun <T> quietly(db: SupportSQLiteDatabase, block: () -> T): T {
+        // Also for databases opened without [install], such as in tests.
+        db.execSQL("CREATE TABLE IF NOT EXISTS sync_applying (x INTEGER)")
+        db.execSQL("INSERT INTO sync_applying (x) VALUES (1)")
+        try {
+            return block()
+        } finally {
+            db.execSQL("DELETE FROM sync_applying")
+        }
     }
 }

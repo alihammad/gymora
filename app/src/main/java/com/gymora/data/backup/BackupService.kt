@@ -101,6 +101,9 @@ class BackupService @Inject constructor(
                 }
                 // Pre-v7 backups carry no sync ids for built-in exercises.
                 builtInSyncIds.backfill(db)
+                // The restored data is now the newest version, so cloud sync uploads it over older copies.
+                val now = System.currentTimeMillis()
+                SYNCED_TABLES.forEach { db.execSQL("UPDATE `$it` SET updated_at = ?", arrayOf<Any>(now)) }
             }
             replaceMedia(staging)
             summarize(tables, staging.listFiles().orEmpty().size)
@@ -226,6 +229,10 @@ class BackupService @Inject constructor(
         private const val STAGING_DIR = "restore_staging"
         private const val SETTINGS_TABLE = "settings"
         private const val DAMAGED = "The backup file is damaged."
+
+        /** Tables whose rows carry the `updated_at` that cloud sync compares. */
+        private val SYNCED_TABLES =
+            listOf(SETTINGS_TABLE, "exercises", "routines", "workout_sessions", "body_measurements")
 
         /** Parents before children: insert in this order, delete in reverse. */
         private val TABLES = listOf(

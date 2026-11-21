@@ -1,5 +1,6 @@
 package com.gymora.ui.account
 
+import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -57,6 +58,7 @@ fun AccountSection(
             active.email?.takeIf { it != active.displayName }?.let {
                 Text(it, style = MaterialTheme.typography.bodyMedium)
             }
+            SyncStatusRow(syncing = state.syncing, lastSyncedAt = state.lastSyncedAt, onSyncNow = viewModel::onSyncNow)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = viewModel::onSignOutClicked, enabled = !state.busy) { Text("Sign out") }
                 TextButton(onClick = viewModel::onDeleteClicked, enabled = !state.busy) {
@@ -103,7 +105,7 @@ fun AccountSection(
         ConfirmDialog(
             title = "Delete your account?",
             message = "This permanently deletes your account and every workout, routine, measurement " +
-                "and setting stored with it on this phone. This can't be undone. " +
+                "and setting stored with it, in the cloud and on this phone. This can't be undone. " +
                 "Export a backup first if you want to keep anything.",
             confirmLabel = "Delete forever",
             dismissLabel = "Cancel",
@@ -114,13 +116,34 @@ fun AccountSection(
     state.confirmRemove?.let { account ->
         ConfirmDialog(
             title = "Remove ${account.displayName} from this phone?",
-            message = "Their workouts, routines and settings on this phone are deleted. " +
-                "Data isn't synced to the cloud yet, so this can't be undone.",
+            message = "Their workouts, routines and settings are deleted from this phone. " +
+                "Their cloud copy stays, so signing in again brings back everything synced; " +
+                "changes since their last sync are lost.",
             confirmLabel = "Remove",
             dismissLabel = "Cancel",
             onConfirm = viewModel::onRemoveConfirmed,
             onDismiss = viewModel::onDialogDismissed,
         )
+    }
+}
+
+@Composable
+private fun SyncStatusRow(syncing: Boolean, lastSyncedAt: Long?, onSyncNow: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = when {
+                syncing -> "Syncing…"
+                lastSyncedAt == null -> "Not synced yet"
+                else -> "Synced " + DateUtils.getRelativeTimeSpanString(
+                    lastSyncedAt,
+                    System.currentTimeMillis(),
+                    DateUtils.MINUTE_IN_MILLIS,
+                )
+            },
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onSyncNow, enabled = !syncing) { Text("Sync now") }
     }
 }
 

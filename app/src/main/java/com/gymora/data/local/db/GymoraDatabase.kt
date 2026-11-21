@@ -42,7 +42,7 @@ import com.gymora.data.local.entity.WorkoutSetEntity
         com.gymora.data.local.entity.StepDayEntity::class, // v6
         com.gymora.data.local.entity.SyncTombstoneEntity::class, // v7
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class GymoraDatabase : RoomDatabase() {
@@ -191,6 +191,29 @@ abstract class GymoraDatabase : RoomDatabase() {
                     "CREATE TABLE IF NOT EXISTS `sync_tombstones` (" +
                         "`entity` TEXT NOT NULL, `sync_id` TEXT NOT NULL, `deleted_at` INTEGER NOT NULL, " +
                         "PRIMARY KEY(`entity`, `sync_id`))",
+                )
+            }
+        }
+
+        /**
+         * v7 → v8: more body measurements (caloric intake, neck, hips and left/right
+         * biceps, arms, thighs and calves). The old single thigh value seeds both thighs.
+         */
+        val MIGRATION_7_8 = object : androidx.room.migration.Migration(7, 8) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // See MIGRATION_1_2: the partial index must be dropped before validation.
+                db.execSQL("DROP INDEX IF EXISTS index_workout_sessions_single_active")
+                listOf(
+                    "calories_kcal", "neck_cm", "left_bicep_cm", "right_bicep_cm", "left_arm_cm",
+                    "right_arm_cm", "hips_cm", "left_thigh_cm", "right_thigh_cm", "left_calf_cm", "right_calf_cm",
+                ).forEach { db.execSQL("ALTER TABLE `body_measurements` ADD COLUMN `$it` REAL") }
+                // The sync triggers from earlier opens are still in the file. Drop the touch
+                // trigger (SyncTriggers.install recreates it on open): every device derives
+                // this copy itself, so it is not an edit to upload.
+                db.execSQL("DROP TRIGGER IF EXISTS sync_body_measurements_touch")
+                db.execSQL(
+                    "UPDATE `body_measurements` SET `left_thigh_cm` = `thigh_cm`, " +
+                        "`right_thigh_cm` = `thigh_cm` WHERE `thigh_cm` IS NOT NULL",
                 )
             }
         }

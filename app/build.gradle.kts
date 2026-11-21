@@ -96,9 +96,10 @@ dependencies {
     // Health Connect: write workouts and body weight, read weight from smart scales
     implementation(libs.health.connect.client)
 
-    // Accounts: Firebase sign-in (email and Google via Credential Manager)
+    // Accounts: Firebase sign-in (email and Google via Credential Manager) and cloud sync
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services)
@@ -115,6 +116,7 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.room.testing)
+    testImplementation(libs.work.testing)
 
     // Instrumented tests: Compose UI journeys
     androidTestImplementation(libs.androidx.test.runner)

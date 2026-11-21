@@ -40,4 +40,8 @@ class ModifySessionStructureUseCase @Inject constructor(
     suspend fun leaveSuperset(sessionId: Long, workoutExerciseId: Long) {
         workoutSessionRepository.leaveSessionSuperset(sessionId, workoutExerciseId)
     }
+
+    suspend fun linkSupersetWithNext(sessionId: Long, workoutExerciseId: Long) {
+        workoutSessionRepository.linkSessionSupersetWithNext(sessionId, workoutExerciseId)
+    }
 }

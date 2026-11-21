@@ -2,8 +2,10 @@ package com.gymora.ui.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gymora.domain.model.LatestMeasurements
 import com.gymora.domain.model.WeightUnit
 import com.gymora.domain.model.WorkoutStat
+import com.gymora.domain.repository.BodyMeasurementRepository
 import com.gymora.domain.repository.HistoryRepository
 import com.gymora.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,6 +25,8 @@ data class ProfileUiState(
     /** Workouts inside [period], oldest first (charts). */
     val chartWorkouts: List<WorkoutStat> = emptyList(),
     val weightUnit: WeightUnit = WeightUnit.KG,
+    /** Latest value of each body measurement, for the profile's body card. */
+    val body: LatestMeasurements = LatestMeasurements.from(emptyList()),
     val isLoading: Boolean = true,
 )
 
@@ -30,6 +34,7 @@ data class ProfileUiState(
 class ProfileViewModel @Inject constructor(
     private val historyRepository: HistoryRepository,
     settingsRepository: SettingsRepository,
+    bodyMeasurementRepository: BodyMeasurementRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -39,6 +44,11 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.observeSettings().collect { settings ->
                 _uiState.update { it.copy(weightUnit = settings.weightUnit) }
+            }
+        }
+        viewModelScope.launch {
+            bodyMeasurementRepository.observeAll().collect { entries ->
+                _uiState.update { it.copy(body = LatestMeasurements.from(entries)) }
             }
         }
         refresh()

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -55,7 +54,7 @@ import com.gymora.ui.components.SetEntry
 import com.gymora.ui.components.SetInputRow
 import com.gymora.domain.model.SupersetRules
 import com.gymora.ui.components.ExerciseBlock
-import com.gymora.domain.model.Exercise
+import com.gymora.ui.components.ExercisePickerDialog
 import com.gymora.ui.workout.formatElapsed
 import java.time.format.DateTimeFormatter
 
@@ -121,9 +120,9 @@ fun WorkoutDetailScreen(
 
     // Add-exercise picker dialog (edit mode, FR-042).
     if (uiState.showAddExercise) {
-        AddExerciseDialog(
+        ExercisePickerDialog(
             exercises = uiState.libraryExercises,
-            onSelected = viewModel::onExerciseSelected,
+            onPick = viewModel::onExerciseSelected,
             onDismiss = viewModel::onAddExerciseDismissed,
         )
     }
@@ -327,34 +326,6 @@ private fun EditableTimes(
             dismissButton = { TextButton(onClick = { showTime = false }) { Text("Cancel") } },
         )
     }
-}
-
-@Composable
-private fun AddExerciseDialog(
-    exercises: List<Exercise>,
-    onSelected: (Long) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add exercise") },
-        text = {
-            LazyColumn {
-                items(exercises, key = { it.id }) { exercise ->
-                    TextButton(
-                        onClick = { onSelected(exercise.id) },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(exercise.name, modifier = Modifier.fillMaxWidth())
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-    )
 }
 
 @Composable

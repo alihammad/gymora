@@ -7,6 +7,8 @@ import com.gymora.account.Account
 import com.gymora.account.AccountSession
 import com.gymora.account.AuthException
 import com.gymora.account.AuthService
+import com.gymora.data.sync.SyncEngine
+import com.gymora.data.sync.SyncScheduler
 import com.gymora.ui.navigation.Destinations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -32,6 +34,9 @@ data class AccountUiState(
     val confirmSignOut: Boolean = false,
     val confirmDelete: Boolean = false,
     val confirmRemove: Account? = null,
+    val syncing: Boolean = false,
+    /** Epoch millis of the last finished sync on this phone; null if never. */
+    val lastSyncedAt: Long? = null,
 ) {
     val canSubmit: Boolean
         get() = !busy && email.isNotBlank() && password.isNotEmpty() && (!creating || name.isNotBlank())
@@ -45,6 +50,8 @@ data class AccountUiState(
 class AccountViewModel @Inject constructor(
     private val auth: AuthService,
     private val session: AccountSession,
+    private val syncEngine: SyncEngine,
+    private val syncScheduler: SyncScheduler,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -56,6 +63,21 @@ class AccountViewModel @Inject constructor(
         ),
     )
     val uiState: StateFlow<AccountUiState> = _uiState.asStateFlow()
+
+    init {
+        if (!session.activeAccount.isGuest) {
+            viewModelScope.launch {
+                syncScheduler.isSyncing.collect { syncing ->
+                    _uiState.update { it.copy(syncing = syncing) }
+                    // Refreshed whenever a sync starts or ends.
+                    val last = syncEngine.lastSyncedAt()
+                    _uiState.update { it.copy(lastSyncedAt = last) }
+                }
+            }
+        }
+    }
+
+    fun onSyncNow() = syncScheduler.syncNow()
 
     fun onNameChanged(value: String) = _uiState.update { it.copy(name = value, error = null) }
 
@@ -106,7 +128,7 @@ class AccountViewModel @Inject constructor(
     fun onSignOutConfirmed() {
         _uiState.update { it.copy(confirmSignOut = false) }
         auth.signOut()
-        // Kept on the phone: the cloud copy does not exist until sync ships.
+        // Kept on the phone for a quick return; anything not yet synced uploads after signing back in.
         session.signOut(removeLocalData = false)
     }
 
@@ -114,7 +136,15 @@ class AccountViewModel @Inject constructor(
 
     fun onDeleteConfirmed() {
         _uiState.update { it.copy(confirmDelete = false) }
+        val uid = session.activeAccount.id
         launchAuth {
+            // Checked first: once the cloud data is gone, a refused login deletion would leave a half-deleted account.
+            if (!auth.isLoginRecent) throw AuthException.RecentLoginRequired()
+            try {
+                syncEngine.deleteCloudData(uid)
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                throw AuthException.CloudDeleteFailed(e)
+            }
             auth.deleteCurrentUser()
             session.signOut(removeLocalData = true)
         }

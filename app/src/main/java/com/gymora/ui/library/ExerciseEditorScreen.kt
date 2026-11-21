@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gymora.domain.model.MuscleGroup
@@ -88,43 +89,10 @@ fun ExerciseEditorScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            var menuExpanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = menuExpanded,
-                onExpandedChange = { menuExpanded = it },
-            ) {
-                OutlinedTextField(
-                    value = uiState.muscleGroup?.displayName ?: "None",
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Muscle group") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(menuExpanded) },
-                    modifier = Modifier
-                        .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                        .fillMaxWidth(),
-                )
-                ExposedDropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("None") },
-                        onClick = {
-                            viewModel.onMuscleGroupChanged(null)
-                            menuExpanded = false
-                        },
-                    )
-                    MuscleGroup.entries.forEach { group ->
-                        DropdownMenuItem(
-                            text = { Text(group.displayName) },
-                            onClick = {
-                                viewModel.onMuscleGroupChanged(group)
-                                menuExpanded = false
-                            },
-                        )
-                    }
-                }
-            }
+            MuscleGroupField(
+                selected = uiState.muscleGroup,
+                onSelected = viewModel::onMuscleGroupChanged,
+            )
 
             TrackingFields(
                 measurementType = uiState.measurementType,
@@ -165,3 +133,87 @@ fun ExerciseEditorScreen(
         }
     }
 }
+
+/** Muscle group picker: type to filter the list, or open it and choose. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MuscleGroupField(
+    selected: MuscleGroup?,
+    onSelected: (MuscleGroup?) -> Unit,
+) {
+    val selectedLabel = selected?.displayName ?: NO_MUSCLE_GROUP
+    var expanded by remember { mutableStateOf(false) }
+    // What the field shows: the selection, or the search text while the user types.
+    var query by remember(selected) { mutableStateOf(selectedLabel) }
+    val searching = query != selectedLabel
+    val matches = remember(query, searching) {
+        val q = query.trim()
+        if (!searching || q.isEmpty()) {
+            MuscleGroup.entries
+        } else {
+            MuscleGroup.entries.filter { it.displayName.contains(q, ignoreCase = true) }
+        }
+    }
+
+    fun close() {
+        expanded = false
+        query = selectedLabel
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { if (it) expanded = true else close() },
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = {
+                query = it
+                expanded = true
+            },
+            label = { Text("Muscle group") },
+            placeholder = { Text("Search muscle groups") },
+            singleLine = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryEditable)
+                .fillMaxWidth()
+                .onFocusChanged { focus ->
+                    when {
+                        // Clear the shown choice on focus so typing starts a fresh search.
+                        focus.isFocused && !searching -> query = ""
+                        !focus.isFocused -> close()
+                    }
+                },
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { close() },
+        ) {
+            if (!searching || query.isBlank()) {
+                DropdownMenuItem(
+                    text = { Text(NO_MUSCLE_GROUP) },
+                    onClick = {
+                        onSelected(null)
+                        expanded = false
+                        query = NO_MUSCLE_GROUP
+                    },
+                )
+            }
+            matches.forEach { group ->
+                DropdownMenuItem(
+                    text = { Text(group.displayName) },
+                    onClick = {
+                        onSelected(group)
+                        expanded = false
+                        query = group.displayName
+                    },
+                )
+            }
+            if (matches.isEmpty()) {
+                DropdownMenuItem(text = { Text("No muscle groups match") }, onClick = {}, enabled = false)
+            }
+        }
+    }
+}
+
+private const val NO_MUSCLE_GROUP = "None"

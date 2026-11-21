@@ -294,4 +294,20 @@ class WorkoutExecutionTest {
         assertEquals(12, added.reps)
         assertTrue(!added.isCompleted)
     }
+
+    @Test
+    fun exercisesAddedMidWorkoutCanBeLinkedAsASuperset() = runTest {
+        val (routineId, _) = createRoutineWithOneExercise()
+        val sessionId = sessionRepository.startFromRoutine(routineId)
+        val squat = exerciseRepository.createCustom(CreateExerciseInput(name = "Squat")).id
+        val row = exerciseRepository.createCustom(CreateExerciseInput(name = "Row")).id
+        sessionRepository.addExerciseToSession(sessionId, squat, addToRoutine = false)
+        sessionRepository.addExerciseToSession(sessionId, row, addToRoutine = true)
+        val (_, first, _) = sessionRepository.getActiveWorkout(sessionId).exercises
+
+        sessionRepository.linkSessionSupersetWithNext(sessionId, first.workoutExerciseId)
+
+        val groups = sessionRepository.getActiveWorkout(sessionId).exercises.map { it.supersetGroup }
+        assertEquals(listOf(null, first.workoutExerciseId, first.workoutExerciseId), groups)
+    }
 }

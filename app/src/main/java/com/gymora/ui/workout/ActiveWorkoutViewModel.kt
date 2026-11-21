@@ -356,6 +356,15 @@ class ActiveWorkoutViewModel @Inject constructor(
         }
     }
 
+    /** Supersets this exercise (and its superset) with the next one. */
+    fun onLinkSupersetWithNext(workoutExerciseId: Long) {
+        viewModelScope.launch {
+            runCatching { modifySessionStructureUseCase.linkSupersetWithNext(sessionId, workoutExerciseId) }
+                .onFailure { error -> _uiState.update { it.copy(errorMessage = friendlyMessage(error)) } }
+            loadSession()
+        }
+    }
+
     fun onLeaveSuperset(workoutExerciseId: Long) {
         viewModelScope.launch {
             runCatching { modifySessionStructureUseCase.leaveSuperset(sessionId, workoutExerciseId) }

@@ -390,6 +390,16 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun linkSessionSupersetWithNext(sessionId: Long, workoutExerciseId: Long) {
+        database.withTransaction {
+            writeSupersetGroups(sessionId) { entries ->
+                val index = entries.indexOfFirst { it.id == workoutExerciseId }
+                if (index < 0) throw EntityNotFoundException(workoutExerciseId)
+                SupersetRules.linkWithNext(entries, index)
+            }
+        }
+    }
+
     private suspend fun sessionEntries(sessionId: Long): List<SupersetEntry> =
         exerciseDao.getForSession(sessionId).map { SupersetEntry(it.id, it.supersetGroup) }
 

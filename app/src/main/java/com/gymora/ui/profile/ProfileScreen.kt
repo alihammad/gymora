@@ -11,7 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -20,12 +24,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gymora.domain.calculator.WorkoutCalculators
+import com.gymora.domain.model.BodyMetric
+import com.gymora.domain.model.LatestMeasurements
 import com.gymora.domain.model.WeightUnit
 import com.gymora.domain.model.WorkoutStat
+import com.gymora.ui.body.BodyUnits
 import com.gymora.ui.calendar.WorkoutCalendar
 import com.gymora.ui.components.Card
 import com.gymora.ui.components.FilterChip
@@ -38,7 +46,7 @@ import java.util.Locale
 private const val MILLIS_PER_HOUR = 3_600_000.0
 
 /**
- * Profile: bar charts of workout duration, volume and reps (one bar per workout,
+ * Profile: a body-measurements card (opens the full log), then bar charts of workout duration, volume and reps (one bar per workout,
  * filterable by period) followed by a month calendar, swiped left/right one month
  * per view, that labels every day trained with the routine done that day.
  */
@@ -46,6 +54,7 @@ private const val MILLIS_PER_HOUR = 3_600_000.0
 @Composable
 fun ProfileScreen(
     onWorkoutClick: (Long) -> Unit,
+    onBodyMeasurements: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -59,24 +68,11 @@ fun ProfileScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item {
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    ProfilePeriod.entries.forEach { p ->
-                        FilterChip(
-                            selected = state.period == p,
-                            onClick = { viewModel.onPeriodSelected(p) },
-                            label = { Text(p.label) },
-                        )
-                    }
-                }
-            }
+            // Body measurements, then the calendar, then the period charts.
+            item { BodyMeasurementsCard(state.body, state.weightUnit, onBodyMeasurements) }
             if (state.isLoading) {
                 item { GymoraLoading(modifier = Modifier.padding(16.dp)) }
             } else {
-                item { ChartsSection(state.chartWorkouts, state.weightUnit, zone) }
                 item {
                     Text(
                         "Calendar",
@@ -90,7 +86,67 @@ fun ProfileScreen(
                         onDayClick = { _, workouts -> onWorkoutClick(workouts.first().sessionId) },
                     )
                 }
+                item {
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()).padding(top = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        ProfilePeriod.entries.forEach { p ->
+                            FilterChip(
+                                selected = state.period == p,
+                                onClick = { viewModel.onPeriodSelected(p) },
+                                label = { Text(p.label) },
+                            )
+                        }
+                    }
+                }
+                item { ChartsSection(state.chartWorkouts, state.weightUnit, zone) }
             }
+        }
+    }
+}
+
+/** Latest weight and waist with the last entry date; tapping opens body measurements. */
+@Composable
+private fun BodyMeasurementsCard(latest: LatestMeasurements, unit: WeightUnit, onClick: () -> Unit) {
+    val metricUnits = unit == WeightUnit.KG
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.MonitorWeight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp),
+            )
+            Column(Modifier.weight(1f).padding(horizontal = 16.dp)) {
+                Text("Body measurements", style = MaterialTheme.typography.titleMedium)
+                val date = latest.date
+                if (date == null) {
+                    Text(
+                        "Log your weight, calories and body measurements",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    val parts = listOf(BodyMetric.WEIGHT, BodyMetric.WAIST).mapNotNull { m ->
+                        latest[m]?.let { "${m.label} ${BodyUnits.formatted(m, it, metricUnits)}" }
+                    }
+                    if (parts.isNotEmpty()) {
+                        Text(parts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text(
+                        "Last entry " + date.atZone(ZoneId.systemDefault()).toLocalDate()
+                            .format(DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault())),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
