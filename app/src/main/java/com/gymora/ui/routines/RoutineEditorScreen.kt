@@ -429,7 +429,10 @@ private fun ExerciseList(
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         blocks.forEachIndexed { blockIndex, block ->
             if (block.size > 1) {
-                SupersetBlock(numbers[blockIndex]) {
+                SupersetBlock(
+                    numbers[blockIndex],
+                    onRemove = { viewModel.onRemoveSuperset(block.first().routineExerciseId) },
+                ) {
                     block.forEachIndexed { index, exercise ->
                         card(exercise)
                         if (index < block.lastIndex) {

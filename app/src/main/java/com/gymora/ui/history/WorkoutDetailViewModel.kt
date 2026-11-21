@@ -258,6 +258,11 @@ class WorkoutDetailViewModel @Inject constructor(
         modifyStructure { modifySessionStructureUseCase.leaveSuperset(sessionId, workoutExerciseId) }
     }
 
+    /** Removes the whole superset; its members stay as individual exercises. */
+    fun onRemoveSuperset(workoutExerciseId: Long) {
+        modifyStructure { modifySessionStructureUseCase.removeSuperset(sessionId, workoutExerciseId) }
+    }
+
     /** Structural edits apply immediately (like add/remove exercise); typed set values are kept. */
     private fun modifyStructure(action: suspend () -> Unit) {
         viewModelScope.launch {

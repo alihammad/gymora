@@ -400,6 +400,15 @@ class WorkoutSessionRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun removeSessionSuperset(sessionId: Long, workoutExerciseId: Long) {
+        database.withTransaction {
+            writeSupersetGroups(sessionId) { entries ->
+                if (entries.none { it.id == workoutExerciseId }) throw EntityNotFoundException(workoutExerciseId)
+                SupersetRules.dissolve(entries, workoutExerciseId)
+            }
+        }
+    }
+
     private suspend fun sessionEntries(sessionId: Long): List<SupersetEntry> =
         exerciseDao.getForSession(sessionId).map { SupersetEntry(it.id, it.supersetGroup) }
 

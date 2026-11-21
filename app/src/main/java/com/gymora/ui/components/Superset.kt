@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -35,6 +36,8 @@ private val RailContentInset = 24.dp
 fun SupersetBlock(
     number: Int?,
     modifier: Modifier = Modifier,
+    /** When set, the header offers "Remove superset", turning every member back into a standalone exercise. */
+    onRemove: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val railColor = MaterialTheme.colorScheme.outline
@@ -57,24 +60,48 @@ fun SupersetBlock(
             .padding(start = RailContentInset),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = if (number == null) "SUPERSET" else "SUPERSET $number",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = if (number == null) "SUPERSET" else "SUPERSET $number",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            if (onRemove != null) {
+                TextButton(onClick = onRemove) {
+                    Icon(
+                        imageVector = Icons.Filled.LinkOff,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.size(6.dp))
+                    Text("Remove superset")
+                }
+            }
+        }
         content()
     }
 }
 
 /**
  * Renders one block from SupersetRules.blocks: a superset when it has 2+ members, else a lone card.
- * [number] comes from SupersetRules.numbers.
+ * [number] comes from SupersetRules.numbers. [onRemoveSuperset] receives the block's first member.
  */
 @Composable
-fun <T> ExerciseBlock(block: List<T>, number: Int?, card: @Composable (T) -> Unit) {
+fun <T> ExerciseBlock(
+    block: List<T>,
+    number: Int?,
+    onRemoveSuperset: ((T) -> Unit)? = null,
+    card: @Composable (T) -> Unit,
+) {
     if (block.size > 1) {
-        SupersetBlock(number) { block.forEach { card(it) } }
+        SupersetBlock(number, onRemove = onRemoveSuperset?.let { remove -> { remove(block.first()) } }) {
+            block.forEach { card(it) }
+        }
     } else {
         block.forEach { card(it) }
     }

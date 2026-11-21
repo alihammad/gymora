@@ -213,8 +213,13 @@ fun Theme.palette(systemDark: Boolean): GymoraPalette = when (this) {
     Theme.SLATE -> SlatePalette
 }
 
-/** The design language (type, shapes, decoration) of a persisted [Theme]. */
-fun Theme.style(): GymoraStyle = when (this) {
-    Theme.SLATE -> SlateStyle
-    else -> PerformanceStyle
+/**
+ * The design language (type, shapes, decoration) of a persisted [Theme]. Night Volt keeps the original
+ * Performance look; every other theme uses Slate with its own colors. [systemDark] only matters for
+ * [Theme.SYSTEM], which follows whichever palette it resolves to.
+ */
+fun Theme.style(systemDark: Boolean): GymoraStyle = when (this) {
+    Theme.DARK -> PerformanceStyle
+    Theme.SYSTEM -> if (systemDark) PerformanceStyle else SlateStyle
+    else -> SlateStyle
 }

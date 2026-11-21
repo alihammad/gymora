@@ -155,6 +155,12 @@ object SupersetRules {
         return SupersetLayout(rest.map { it.id }, normalize(rest))
     }
 
+    /** Removes the whole superset [id] belongs to: every member becomes a standalone exercise, order unchanged. */
+    fun dissolve(entries: List<SupersetEntry>, id: Long): Map<Long, Long?> {
+        val group = entries.first { it.id == id }.group ?: return normalize(entries)
+        return normalize(entries.map { if (it.group == group) it.copy(group = null) else it })
+    }
+
     /** Splits the superset between the exercise at [index] and the next one. */
     fun unlinkFromNext(entries: List<SupersetEntry>, index: Int): Map<Long, Long?> {
         require(index in 0 until entries.lastIndex) { "No next exercise to unlink from" }

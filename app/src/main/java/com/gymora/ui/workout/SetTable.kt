@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
@@ -296,7 +297,8 @@ private fun SetTableRow(
             Icon(
                 Icons.Filled.Check,
                 contentDescription = if (done) "Mark set incomplete" else "Complete set",
-                tint = if (done) Color.White else extra.textDisabled,
+                // Light accents (cyan, lime) need a dark check; deeper ones (green, blue) a white one.
+                tint = if (!done) extra.textDisabled else if (extra.setComplete.luminance() > 0.5f) Color.Black else Color.White,
             )
         }
     }

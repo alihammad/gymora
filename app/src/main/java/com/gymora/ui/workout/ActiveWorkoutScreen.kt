@@ -280,7 +280,11 @@ fun ActiveWorkoutScreen(
                     itemsIndexed(blocks, key = { _, block -> block.first().workoutExerciseId }) { index, block ->
                         // Every exercise stays expanded; nothing collapses.
                         Column {
-                            ExerciseBlock(block, numbers[index]) { exercise ->
+                            ExerciseBlock(
+                                block,
+                                numbers[index],
+                                onRemoveSuperset = { viewModel.onRemoveSuperset(it.workoutExerciseId) },
+                            ) { exercise ->
                                 if (table) {
                                     ExerciseTableSection(
                                         exercise = exercise,

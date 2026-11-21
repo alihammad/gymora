@@ -234,6 +234,17 @@ class RoutineEditorViewModel @Inject constructor(
         }
     }
 
+    /** Removes the whole superset; its members stay as individual exercises. */
+    fun onRemoveSuperset(routineExerciseId: Long) {
+        viewModelScope.launch {
+            runCatching { routineRepository.removeSuperset(routineId, routineExerciseId) }
+                .onSuccess { loadRoutine() }
+                .onFailure { error ->
+                    _uiState.update { it.copy(message = friendlyMessage(error)) }
+                }
+        }
+    }
+
     fun onAddSetTemplate(routineExerciseId: Long) {
         // New sets copy the exercise's last set so edited targets carry forward.
         val exercise = _uiState.value.routine?.exercises

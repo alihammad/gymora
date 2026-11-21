@@ -373,6 +373,15 @@ class ActiveWorkoutViewModel @Inject constructor(
         }
     }
 
+    /** Removes the whole superset; its members stay as individual exercises. */
+    fun onRemoveSuperset(workoutExerciseId: Long) {
+        viewModelScope.launch {
+            runCatching { modifySessionStructureUseCase.removeSuperset(sessionId, workoutExerciseId) }
+                .onFailure { error -> _uiState.update { it.copy(errorMessage = friendlyMessage(error)) } }
+            loadSession()
+        }
+    }
+
     fun onFinishRequested() {
         _uiState.update { it.copy(showFinishConfirm = true) }
     }

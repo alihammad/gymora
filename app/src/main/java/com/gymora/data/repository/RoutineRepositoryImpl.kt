@@ -233,6 +233,15 @@ class RoutineRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun removeSuperset(routineId: Long, routineExerciseId: Long) {
+        database.withTransaction {
+            applySupersetGroups(routineId) { entries ->
+                indexOf(entries, routineExerciseId) // throws if missing
+                SupersetRules.dissolve(entries, routineExerciseId)
+            }
+        }
+    }
+
     override suspend fun updateExerciseNotes(routineExerciseId: Long, notes: String?) {
         val entity = routineExerciseDao.getById(routineExerciseId)
             ?: throw EntityNotFoundException(routineExerciseId)

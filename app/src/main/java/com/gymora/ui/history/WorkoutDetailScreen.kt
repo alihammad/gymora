@@ -222,7 +222,15 @@ private fun WorkoutDetailContent(
         val numbers = SupersetRules.numbers(blocks)
         itemsIndexed(blocks, key = { _, block -> block.first().workoutExerciseId }) { index, block ->
             Column {
-                ExerciseBlock(block, numbers[index]) { exercise ->
+                ExerciseBlock(
+                    block,
+                    numbers[index],
+                    onRemoveSuperset = if (uiState.isEditing) {
+                        { viewModel.onRemoveSuperset(it.workoutExerciseId) }
+                    } else {
+                        null
+                    },
+                ) { exercise ->
                     if (uiState.isEditing) {
                         EditableExerciseCard(
                             exercise = exercise,

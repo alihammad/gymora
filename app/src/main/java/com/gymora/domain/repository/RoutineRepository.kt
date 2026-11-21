@@ -51,6 +51,9 @@ interface RoutineRepository {
     /** Splits the superset between this exercise and the next one. */
     suspend fun unlinkSupersetFromNext(routineId: Long, routineExerciseId: Long)
 
+    /** Removes the whole superset this exercise is in; its members stay as individual exercises. */
+    suspend fun removeSuperset(routineId: Long, routineExerciseId: Long)
+
     // Planned sets (FR-018)
     suspend fun addSetTemplate(routineExerciseId: Long, template: SetTemplateInput): Long
     suspend fun updateSetTemplate(templateId: Long, template: SetTemplateInput)

@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
 
-            GymoraTheme(palette = palette, style = settings.theme.style()) {
+            GymoraTheme(palette = palette, style = settings.theme.style(systemDark = isSystemInDarkTheme())) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,

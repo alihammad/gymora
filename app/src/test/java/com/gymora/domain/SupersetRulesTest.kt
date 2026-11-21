@@ -108,4 +108,16 @@ class SupersetRulesTest {
         assertEquals(listOf(1L, 2L), layout.order)
         assertEquals(mapOf(1L to null, 2L to null), layout.groups)
     }
+
+    @Test
+    fun `dissolve turns every member into a single and leaves other supersets intact`() {
+        val groups = SupersetRules.dissolve(entries(1L, 1L, 1L, null, 5L, 5L), id = 2L)
+        assertEquals(mapOf(1L to null, 2L to null, 3L to null, 4L to null, 5L to 5L, 6L to 5L), groups)
+    }
+
+    @Test
+    fun `dissolve on a single is a no-op`() {
+        val groups = SupersetRules.dissolve(entries(null, 2L, 2L), id = 1L)
+        assertEquals(mapOf(1L to null, 2L to 2L, 3L to 2L), groups)
+    }
 }
