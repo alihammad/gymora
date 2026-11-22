@@ -384,11 +384,17 @@ private fun RepsPickerDialog(initial: Int, onDismiss: () -> Unit, onUpdate: (Int
                             }
                         }
                     }
-                    // Lines framing the selected row.
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        HorizontalDivider(modifier = Modifier.padding(top = itemHeight * 2), color = MaterialTheme.colorScheme.onSurface)
-                        Spacer(Modifier.height(itemHeight))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface)
+                    // Lines framing the selected (middle) row. A row-high box centred in the
+                    // parent lines up exactly with the snapped item.
+                    Box(modifier = Modifier.fillMaxWidth().height(itemHeight)) {
+                        HorizontalDivider(
+                            modifier = Modifier.align(Alignment.TopCenter),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                 }
                 Spacer(Modifier.height(16.dp))
