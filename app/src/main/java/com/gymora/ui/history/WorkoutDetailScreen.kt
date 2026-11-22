@@ -394,7 +394,10 @@ private fun HistoricalExerciseCard(
                 }
             }
             val displayUnit = LocalWeightUnit.current
-            exercise.sets.zip(SetLabels.of(exercise.sets)).forEach { (set, label) ->
+            // Only ticked-off sets count as performed; skipped ones stay visible in edit mode.
+            exercise.sets.zip(SetLabels.of(exercise.sets))
+                .filter { (set, _) -> set.isCompleted }
+                .forEach { (set, label) ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

@@ -176,7 +176,7 @@ private fun PerformanceCard(performance: ExercisePerformance) {
                 ),
                 style = MaterialTheme.typography.titleSmall,
             )
-            performance.sets.forEach { set ->
+            performance.sets.filter { it.isCompleted }.forEach { set ->
                 SetSummaryRow(set)
             }
         }
