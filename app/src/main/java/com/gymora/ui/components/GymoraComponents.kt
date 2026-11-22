@@ -262,10 +262,14 @@ fun TopAppBar(
         modifier = modifier,
         navigationIcon = navigationIcon,
         actions = actions,
+        // Compact bar: the default 64dp left a tall empty band under the status bar.
+        expandedHeight = TOP_BAR_HEIGHT,
         colors = colors,
         scrollBehavior = scrollBehavior,
     )
 }
+
+private val TOP_BAR_HEIGHT = 48.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

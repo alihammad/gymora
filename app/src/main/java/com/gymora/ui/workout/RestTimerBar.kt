@@ -34,6 +34,7 @@ fun RestTimerBar(
     onAdd30s: () -> Unit,
     onRestart: () -> Unit,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     if (!state.isRunning) return
 
@@ -52,13 +53,13 @@ fun RestTimerBar(
                 Text("SET REST TIMER", style = LabelCaps, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     text = clock,
-                    style = DisplayMetric.copy(fontSize = 48.sp),
+                    style = DisplayMetric.copy(fontSize = if (compact) 32.sp else 48.sp),
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
             TextButton(onClick = onSkip) { Text("Skip") }
         }
-        Row(
+        if (!compact) Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {

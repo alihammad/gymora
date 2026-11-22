@@ -41,7 +41,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -112,7 +118,7 @@ import java.time.format.DateTimeFormatter
  * exercise, finish with confirmation, cancel with confirmation.
  * Optimized for fast gym use: large targets, minimal typing (FR-022, FR-062).
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ActiveWorkoutScreen(
     onFinished: (Long) -> Unit,
@@ -152,8 +158,9 @@ fun ActiveWorkoutScreen(
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.background)
                         // Keep the bar (and the content padding Scaffold derives from it) above the
-                        // system navigation bar, otherwise "Discard workout" sits under the home button.
-                        .navigationBarsPadding()
+                        // system navigation bar and, while typing, above the keyboard — the app is
+                        // edge-to-edge so the window doesn't resize for the IME on its own.
+                        .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -162,6 +169,8 @@ fun ActiveWorkoutScreen(
                         onSkip = viewModel::onRestTimerSkip,
                         onAdd30s = viewModel::onRestTimerAdd30s,
                         onRestart = viewModel::onRestTimerRestart,
+                        // Shrink to clock + Skip while the keyboard is up so the set rows stay visible.
+                        compact = WindowInsets.isImeVisible,
                     )
                 }
             }
